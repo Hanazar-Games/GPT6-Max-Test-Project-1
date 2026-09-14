@@ -1,0 +1,24 @@
+.release-link { border: 0; background: transparent; color: #c6d5df; font: 10px var(--mono); padding: 10px 0 10px 12px; white-space: nowrap; }
+.release-link:hover { color: var(--orange); }
+#releases h2 { margin-top: 22px; }
+.release-list, .release-history ul { padding-left: 18px; color: #acbfce; font-size: 12px; line-height: 1.9; }
+.release-list li { margin-bottom: 16px; }
+.release-list strong { display: block; color: #f5c8ab; font-weight: 500; }
+.release-history { margin: 24px 0; padding: 16px 0; border-block: 1px solid var(--line); }
+.release-history summary { cursor: pointer; color: #dccdff; font-size: 12px; padding: 8px 0; }
+.release-history summary span { float: right; color: #94a4b9; font-size: 10px; }
+.release-history h3 { font-size: 14px; font-weight: 500; margin: 22px 0 10px; }
+.release-history p { font-size: 11px; color: #9bb0c0; line-height: 1.8; }
+.audio-settings { border: 1px solid var(--line); padding: 16px; margin: 20px 0; min-width: 0; }
+.audio-settings legend { color: #efc2a6; font-size: 12px; padding: 0 8px; }
+.audio-settings label { display: grid; grid-template-columns: 1fr auto; align-items: center; font-size: 11px; color: #c0d2de; gap: 8px; margin-bottom: 14px; }
+.audio-settings output { color: #a4b7c7; font: 11px var(--mono); }
+.audio-settings input { grid-column: 1 / -1; width: 100%; min-width: 0; height: 28px; accent-color: #ff9a66; cursor: pointer; }
+.audio-settings .setting-button { width: 100%; margin-bottom: 8px; }
+#audio-status { display: block; font-size: 10px; color: #9eb2c2; line-height: 1.8; }
+@media (max-width: 600px) {
+  .menu-footer::before { content: '触屏驾驶 · 建议横屏'; font-size: 9px; letter-spacing: 0; }
+  .release-link { font-size: 9px; }
+  .release-list, .release-history ul { font-size: 11px; }
+  .audio-settings { padding: 12px; }
+}

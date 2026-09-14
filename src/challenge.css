@@ -1,0 +1,40 @@
+.rival-panel { position: absolute; right: 5.2%; top: 29%; width: 208px; border: 1px solid #b9a3ff35; border-left: 2px solid #b9a3ff; padding: 13px 16px; background: #101b2bc9; backdrop-filter: blur(8px); font-variant-numeric: tabular-nums; }
+.rival-heading { display: flex; align-items: center; gap: 7px; color: #cfbfff; font-size: 8px; letter-spacing: 1px; }
+.ghost-dot { width: 6px; height: 6px; display: inline-block; border: 1px solid #c4acff; transform: rotate(45deg); flex-shrink: 0; }
+#rival-delta { display: block; font: 29px var(--mono); margin: 10px 0 6px; letter-spacing: -1px; }
+#rival-split { color: #c3c9dc; font-size: 9px; letter-spacing: 0.6px; }
+.rival-live { margin-top: 12px; padding-top: 9px; border-top: 1px solid #c4acff22; font-size: 9px; color: #aa9bc8; }
+.split-flash { font: 11px var(--mono); margin-top: 9px; }
+[data-tone="ahead"], [data-tone="ahead"] #rival-delta { color: #8cf0ce; }
+[data-tone="behind"], [data-tone="behind"] #rival-delta { color: #ffb28c; }
+.flight-cue { margin-top: 12px; padding: 8px 11px; background: #0a192dbd; border: 1px solid #b9d6e333; color: #cfe4ea; text-align: center; min-width: 145px; }
+.flight-cue strong { display: block; font-size: 11px; font-weight: 500; letter-spacing: 1px; }
+.flight-cue small { display: block; font-size: 8px; color: #a4becd; margin-top: 5px; letter-spacing: 0; }
+.flight-cue[data-kind="hazard"] { color: #ffd1ad; background: #361c16d9; border-color: #ff9d6866; }
+.flight-cue[data-kind="hazard"] small { color: #efbd9d; }
+.ghost-setting { border-top: 1px solid #b9a3ff29; margin: 0 0 16px; padding: 16px 0; }
+.ghost-setting .setting-button[aria-pressed="true"] { color: #d1bfff; border-color: #b9a3ff70; }
+.ghost-availability { font-size: 10px; color: #ad9eca; margin: 0 0 17px; line-height: 1.7; }
+.result-challenge { font-size: 11px; line-height: 1.8; padding: 11px 0 15px; color: #c6b5ec; }
+#result { grid-template-columns: minmax(0, 1fr); }
+.result-card { min-width: 0; max-height: calc(100dvh - 50px); overflow-y: auto; }
+.result-challenge[data-tone="ahead"] { color: #8cf0ce; }
+.split-review { text-align: left; border: 1px solid #b0c9e225; background: #08142170; padding: 12px; }
+.split-review summary { cursor: pointer; color: #cfdae5; font-size: 10px; letter-spacing: 1px; }
+.split-review summary span { float: right; color: #8199ad; font-size: 9px; }
+.split-review[open] summary span { font-size: 0; }
+.split-review[open] summary span::after { content: '收起报告 ↑'; font-size: 9px; }
+.split-review table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.split-review th, .split-review td { padding: 8px 2px; text-align: right; border-bottom: 1px solid #9baec516; font-weight: 400; }
+.split-review th:first-child { text-align: left; color: #9cb2c3; }
+.split-review thead th { color: #9cb2c3; font-size: 9px; }
+.split-review p { font-size: 9px; line-height: 1.7; margin: 12px 0 0; color: #8a9eb3; }
+@media (max-width: 800px) { .rival-panel { width: 174px; padding: 11px 13px; } #rival-delta { font-size: 25px; } }
+@media (max-width: 600px) { .combo-panel { top: 185px; left: 6%; } .rival-panel { top: 289px; right: 6%; width: 130px; padding: 10px; } .rival-heading { font-size: 7px; gap: 5px; letter-spacing: 0; } #rival-delta { font-size: 21px; margin: 8px 0 5px; } #rival-split { font-size: 7px; letter-spacing: 0; } .rival-live { font-size: 7px; line-height: 1.7; margin-top: 8px; padding-top: 7px; } .split-flash { font-size: 9px; } .flight-direction { top: 237px; left: 6%; transform: none; align-items: flex-start; } .flight-direction .direction-symbol { display: none; } .flight-direction > small { margin-top: 6px; } .flight-cue { text-align: left; padding: 8px; min-width: 0; width: 143px; } .flight-cue strong { font-size: 10px; letter-spacing: 0; } .flight-cue small { font-size: 7px; line-height: 1.7; } .ghost-setting { gap: 10px; } .ghost-setting small { max-width: 190px; line-height: 1.7; } .ghost-availability { font-size: 9px; } .result-challenge { font-size: 10px; } .split-review { padding: 10px; } .split-review table { font-size: 9px; } .split-review thead th, .split-review p { font-size: 8px; } }
+@media (max-height: 650px) and (min-width: 601px) { .rival-panel { top: 140px; width: 165px; padding: 9px 11px; } .rival-heading { font-size: 7px; } #rival-delta { font-size: 22px; margin: 7px 0 4px; } #rival-split { font-size: 8px; } .rival-live { margin-top: 7px; padding-top: 6px; font-size: 8px; } .split-flash { font-size: 9px; margin-top: 6px; } .flight-cue { min-width: 0; padding: 6px 9px; margin-top: 7px; } .flight-cue strong { font-size: 9px; } .flight-cue small { font-size: 7px; } }
+@media (max-height: 500px) and (min-width: 601px) { .rival-panel { top: 132px; } .rival-live { display: none; } .rival-panel { padding: 8px 11px; } .flight-direction .direction-symbol { display: none; } .flight-direction > small { margin-top: 5px; } .combo-panel { top: 132px; } }
+@media (max-height: 700px) and (max-width: 600px) { .rival-panel { top: 283px; } .rival-live { display: none; } .flight-direction { top: 228px; } .flight-cue { margin-top: 7px; padding: 6px 8px; } }
+@media (max-width: 600px) { .toast { top: 156px; font-size: 8px; padding: 6px 10px; letter-spacing: 0; } }
+@media (max-height: 700px) and (max-width: 600px) { .jump-indicator { bottom: calc(max(32px, env(safe-area-inset-bottom)) + 54px); padding-block: 4px; } .rival-panel { padding: 8px; } #rival-delta { font-size: 19px; margin: 6px 0 4px; } .rival-heading { font-size: 6.5px; } .split-flash { font-size: 8px; margin-top: 6px; } }
+@media (max-height: 500px) and (min-width: 601px) { .jump-indicator { bottom: 77px; } .toast { top: auto; bottom: 18px; max-width: 40vw; font-size: 8px; padding: 6px 8px; } }
+@media (max-height: 500px) and (min-width: 601px) { .map-panel { width: 105px; padding: 7px; } .map-panel #minimap { height: 36px; } .map-heading { font-size: 7px; } }

@@ -1,0 +1,12 @@
+.flight-cue[data-kind="meteor"] { color: #ffd19c; border-color: #ffbd7760; background: #2c2416e6; }
+.flight-cue[data-kind="meteor"][data-danger="true"] { color: #ffae92; border-color: #ff775996; background: #351a16e6; }
+.flight-cue[data-kind="meteor"] small { color: #e4c3a7; line-height: 1.7; }
+.low-gravity .jump-indicator { border-color: #c6acff70; color: #d8c9ff; background: #211a36cf; }
+.low-gravity .jump-indicator .icon, .low-gravity #throttle-hint { color: #d0baff; }
+.environment-result { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 20px; color: #b4b2cc; font-size: 9px; padding: 12px 0; border-bottom: 1px solid #a5b0d320; }
+.environment-result b { color: #ddccff; font: 11px var(--mono); margin-left: 5px; }
+.environment-guide { border-left: 2px solid #bda6ff; background: #251d372f; padding: 13px 15px; margin: 0 0 18px; }
+.environment-guide strong { color: #d3baff; font-weight: 500; font-size: 11px; }
+.environment-guide p { font-size: 10px; line-height: 1.9; color: #b9b2cd; margin: 10px 0; }
+.environment-guide small { display: block; font-size: 9px; line-height: 1.8; color: #9d95b4; }
+@media (max-width: 600px) { .environment-result { font-size: 8px; gap: 8px; } .environment-result b { font-size: 9px; } .environment-guide { padding: 11px; } .environment-guide p { font-size: 9px; } .environment-guide small { font-size: 8px; } }

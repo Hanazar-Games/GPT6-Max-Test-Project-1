@@ -1,0 +1,74 @@
+.mission-specs b { font-weight: inherit; }
+.flight-loadout { position: absolute; top: 18%; right: 5.2%; width: 258px; padding: 21px; border: 1px solid #bdd6e429; background: #0a1824a6; backdrop-filter: blur(10px); }
+.loadout-label { display: flex; align-items: center; gap: 7px; color: #95abba; font-size: 8px; letter-spacing: 1.5px; }
+.loadout-label > span:last-child { margin-left: auto; font: 8px var(--mono); color: #647d91; }
+.flight-loadout > strong { display: block; font-weight: 500; font-size: 18px; letter-spacing: 2px; margin-top: 18px; }
+.flight-loadout > p { font-size: 10px; letter-spacing: 1px; color: #b8cbd7; margin: 10px 0 16px; }
+.session-best { font-size: 8px; color: #829eb1; letter-spacing: 0.6px; }
+.hangar-button { display: flex; align-items: center; justify-content: space-between; width: 100%; border-top: 1px solid #a6c3d42b; background: transparent; padding: 17px 0 0; margin-top: 20px; color: var(--mission, var(--orange)); font-size: 12px; letter-spacing: 2px; text-align: left; }
+.hangar-button small { display: block; font-size: 8px; letter-spacing: 1px; color: #9eb3c2; margin-top: 5px; }
+.hangar-button .icon { width: 18px; transition: transform 0.2s; }
+.hangar-button:hover .icon { transform: translateX(4px); }
+.hangar-button:hover { color: #fff; }
+#hangar { width: 930px; padding: 34px; }
+#hangar h2 { font-size: 27px; margin: 16px 0 24px; }
+.hangar-columns { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; }
+.hangar-section-title { color: #d5e0e7; font-size: 11px; letter-spacing: 2px; padding-bottom: 13px; display: flex; align-items: center; gap: 10px; }
+.hangar-section-title > span { color: #718da1; font: 10px var(--mono); letter-spacing: 1px; }
+.selection-list { display: grid; gap: 10px; }
+.mission-option, .craft-option { position: relative; border: 1px solid #aac7db22; background: #0b1825; color: #e2edf2; padding: 15px; text-align: left; display: flex; gap: 12px; min-height: 133px; width: 100%; transition: border-color 0.2s, background 0.2s; }
+.mission-option:hover, .craft-option:hover { background: #132738; border-color: #d6e9f364; }
+.mission-option[aria-pressed="true"], .craft-option[aria-pressed="true"] { border-color: var(--choice); background: linear-gradient(115deg, #c2d1e20c, transparent), #0e1e2d; }
+.option-index { color: var(--choice); font: 12px var(--mono); padding-top: 2px; }
+.option-label { display: block; font-size: 8px; color: var(--choice); letter-spacing: 1.5px; }
+.mission-option strong, .craft-option strong { display: block; font-size: 16px; letter-spacing: 1.5px; font-weight: 500; margin: 6px 0; }
+.mission-option p, .craft-option p { font-size: 9px; line-height: 1.7; color: #a1b7c7; margin: 5px 0; }
+.mission-option p { padding-right: 25px; max-width: 265px; }
+.mission-option small { font: 8px -apple-system, sans-serif; letter-spacing: 0.5px; color: #cfdae2; display: block; margin-top: 11px; }
+.mission-option small i { font-style: normal; color: #5c778a; margin: 0 5px; }
+.mission-option > svg { position: absolute; right: 10px; bottom: 7px; width: 65px; height: 40px; color: var(--choice); opacity: 0.32; pointer-events: none; }
+.selection-check { position: absolute; right: 12px; top: 12px; color: var(--choice); font-size: 13px; opacity: 0; }
+[aria-pressed="true"] > .selection-check { opacity: 1; }
+.craft-option > svg { width: 47px; height: 72px; flex-shrink: 0; align-self: center; color: var(--choice); }
+.craft-option-copy { flex: 1; }
+.craft-option p { font-size: 8px; }
+.craft-stats { display: flex; gap: 10px; margin-top: 11px; }
+.craft-stats > span { flex: 1; font-size: 7px; color: #8da8ba; }
+.craft-stats b { float: right; font: 8px var(--mono); color: #c4d5e1; }
+.craft-stats i { display: block; height: 2px; background: linear-gradient(90deg, var(--choice) var(--stat), #9fb7cb24 var(--stat)); margin-top: 6px; }
+.hangar-summary { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 21px 0; color: #cddce5; font-size: 11px; letter-spacing: 1px; }
+.hangar-summary b { font-size: 10px; color: #688a9e; margin: 0 7px; }
+.hangar-summary small { font-size: 8px; color: #94aebe; letter-spacing: 0.5px; }
+#hangar .primary-button { min-height: 54px; background: var(--mission); }
+.combo-panel { position: absolute; left: 5.2%; top: 29%; display: flex; align-items: baseline; gap: 9px; color: #b3cbd8; padding: 6px 10px; border-left: 1px solid #9dc3d34f; background: #0a1a268c; opacity: 0.85; }
+.combo-panel > span { font-size: 9px; letter-spacing: 2px; }
+.combo-panel strong { font: 28px var(--mono); color: #d2e3ec; }
+.combo-panel small { font: 10px var(--mono); color: var(--orange); }
+.combo-panel.active { opacity: 1; }
+.combo-panel.active strong { color: #90ebd1; text-shadow: 0 0 18px #79efc843; }
+.jump-indicator { position: absolute; bottom: 238px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: 10px; color: #bbd4e1; padding: 9px 14px; background: #0c1f2a86; border: 1px solid #94b9ce2f; }
+.jump-indicator .icon { width: 15px; height: 15px; color: #89dfe4; }
+.jump-indicator kbd { height: 20px; min-width: 20px; font-size: 9px; }
+.jump-indicator small { color: #7e9fae; font-size: 8px; }
+.touch-jump { color: #9be5ee; }
+.touch-jump.recharging { opacity: 0.5; }
+.result-card { width: 565px; }
+.modal-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
+.result-details { display: flex; justify-content: space-around; gap: 12px; margin: 16px 0; font-size: 9px; color: #8aa7b9; }
+.result-details b { font: 10px var(--mono); color: #c1d7e2; margin-left: 5px; }
+.result-medals { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.result-medals > span { display: flex; gap: 6px; align-items: center; font-size: 9px; color: #deccb2; background: #ffb97609; border: 1px solid #ffbd7d2b; padding: 8px 10px; }
+.result-medals b { color: #ffc784; font-size: 14px; font-weight: 400; }
+.result-rating { margin: 17px 0 23px; }
+.result-symbol { font-size: 40px; margin-top: 15px; }
+
+@media (max-width: 1100px) { .flight-loadout { width: 220px; padding: 17px; } .flight-loadout > strong { font-size: 16px; } .footer-note { max-width: 270px; } }
+@media (max-width: 800px) { #hangar { padding: 29px; } .hangar-columns { gap: 14px; } .mission-option, .craft-option { padding: 12px; gap: 8px; min-height: 140px; } .mission-option p { padding-right: 8px; } .craft-option > svg { width: 35px; } .craft-stats { gap: 5px; } .option-index { display: none; } .flight-loadout { width: 205px; padding: 16px; top: 20%; } .jump-indicator { bottom: 225px; font-size: 9px; } }
+@media (pointer: coarse) { .jump-indicator { bottom: 280px; } }
+@media (max-width: 600px) { .flight-loadout { top: auto; left: 7%; right: 7%; bottom: 95px; width: auto; padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; } .loadout-label { display: none; } .flight-loadout > strong { font-size: 13px; margin: 0; letter-spacing: 1px; } .flight-loadout > p { font-size: 9px; margin: 7px 0 0; grid-row: 2; } .session-best { grid-row: 3; margin-top: 8px; font-size: 7px; } .hangar-button { grid-column: 2; grid-row: 1 / 4; width: auto; border: 0; border-left: 1px solid var(--line); padding: 6px 0 6px 15px; margin: 0; gap: 8px; font-size: 11px; } .hangar-button small { font-size: 6px; } .hangar-button .icon { width: 15px; } #hangar { padding: 29px 20px 20px; } #hangar h2 { font-size: 20px; margin-top: 19px; } #hangar > .eyebrow { font-size: 7px; letter-spacing: 0.5px; } .hangar-columns { grid-template-columns: 1fr; gap: 23px; } .mission-option, .craft-option { min-height: 113px; padding: 13px; } .option-index { display: block; } .mission-option strong, .craft-option strong { font-size: 15px; } .mission-option p { max-width: 250px; } .craft-option > svg { width: 45px; height: 70px; } .craft-option p { font-size: 9px; } .hangar-summary { display: block; padding: 19px 0; } .hangar-summary small { display: block; line-height: 1.7; margin-top: 8px; } .combo-panel { top: 23%; gap: 6px; } .combo-panel > span { font-size: 7px; letter-spacing: 0; } .combo-panel strong { font-size: 22px; } .combo-panel small { font-size: 8px; } .jump-indicator { bottom: 227px; padding: 7px 9px; gap: 5px; font-size: 8px; } .jump-indicator kbd { display: none; } .jump-indicator small { font-size: 7px; } .touch-controls { left: 5%; right: 5%; } .touch-controls > div { gap: 5px; } .touch-controls button { min-width: 40px; padding: 0 10px; height: 49px; } .touch-controls .icon { width: 17px; height: 17px; } .touch-controls [data-control="brake"] { min-width: 37px; padding: 0 7px; } .result-details { font-size: 8px; gap: 7px; } .result-details b { font-size: 9px; margin-left: 3px; } .result-medals > span { font-size: 8px; padding: 6px 8px; } }
+@media (max-height: 700px) and (max-width: 600px) { .flight-loadout { bottom: 76px; padding: 11px 13px; } .session-best { display: none; } .hangar-button { grid-row: 1 / 3; } .hero { top: 16%; } .hero h1 { font-size: 40px; margin: 13px 0; } .hero .mission-specs { margin: 13px 0; } .hero .primary-button { min-height: 57px; padding: 13px 20px; } .hero .start-note { margin-top: 10px; } }
+@media (max-height: 650px) and (min-width: 601px) { .flight-loadout { top: 21%; width: 215px; padding: 14px 16px; } .flight-loadout > strong { margin-top: 12px; } .hangar-button { padding-top: 12px; margin-top: 13px; } .jump-indicator { bottom: 170px; } .combo-panel { top: 43%; } .result-card { padding-top: 24px; padding-bottom: 24px; } .result-symbol { font-size: 27px; margin-top: 8px; } }
+@media (max-height: 500px) and (min-width: 601px) { .flight-loadout { top: 23%; right: 5%; width: 210px; padding: 15px; } .flight-loadout > strong { margin-top: 14px; } .flight-loadout > p { margin: 9px 0 12px; } .session-best { display: none; } .hangar-button { margin-top: 13px; } .jump-indicator { bottom: 207px; padding: 5px 9px; font-size: 8px; } .jump-indicator small { display: none; } .combo-panel { top: 42%; } .combo-panel strong { font-size: 21px; } .combo-panel > span { font-size: 7px; } .combo-panel small { font-size: 8px; } .toast { top: 44%; font-size: 9px; } }
+@media (max-width: 360px) { .touch-controls { left: 4%; right: 4%; } .touch-controls > div { gap: 4px; } .touch-controls button { min-width: 35px; padding: 0 8px; } .touch-controls .touch-go { font-size: 10px; } .resource-panel { width: 164px; } .flight-loadout { left: 6%; right: 6%; } }
+@media (max-width: 600px) { .mission-specs > div { flex: 1; min-width: 0; padding: 0 15px; white-space: nowrap; } .mission-specs > div:first-child { padding-left: 0; } .mission-specs > div:last-child { padding-right: 0; } }
+@media (max-height: 700px) and (max-width: 600px) { .hero .start-note { display: none; } }
