@@ -7,14 +7,20 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 驾驶操作修复</h2>
+      <h2 id="release-title">v${version} · 网页访问适配</h2>
+      <p>从项目页面进入，也能顺利启航。</p>
+      <ul class="release-list">
+        <li><strong>修复页面加载</strong>解决从 GitHub Pages 项目页面打开时，游戏画面、界面和图标无法加载的问题。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>6 个版本</span></summary>
+        <article><h3>v1.1.4 · 驾驶操作修复</h3>
       <p>操作有回应，暂停不再被长按打断。</p>
       <ul class="release-list">
         <li><strong>屏幕按钮支持键盘</strong>聚焦驾驶按钮后，空格或 Enter 可执行对应动作；加速、转向、制动和冲刺支持按住，跃升按一次触发。</li>
         <li><strong>长按不会误触弹窗</strong>修复按住冲刺后暂停，重复按键误触“继续飞行”的问题；指南、公告及其他按钮也不会因长按反复激活。</li>
         <li><strong>跃升状态更准确</strong>低重力中尚未落地时，按钮保持不可用；落地、冷却结束且能量充足后恢复可用，辅助阅读工具也能识别该状态。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>5 个版本</span></summary>
+        </article>
         <article><h3>v1.1.3 · 飞行规则修复</h3>
       <p>免费加速更安心，最后一刻也能送达。</p>
       <ul class="release-list">

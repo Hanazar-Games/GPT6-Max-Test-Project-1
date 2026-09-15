@@ -1,6 +1,6 @@
 # 月面速递 · Lunar Courier
 
-当前版本 **1.1.4**。游戏首页的「更新公告」展示本版变更与历史公告，完整记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 **1.1.5**。游戏首页的「更新公告」展示本版变更与历史公告，完整记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 背景音乐为原创程序合成配乐，首次主动操作后启用。操作指南提供音乐、引擎／音效独立音量与总静音；暂停及结算界面也可进入设置。暂停或离开页面会停止声音，继续飞行后恢复；声音偏好仅保留在当前页面。
 
@@ -108,6 +108,18 @@ npm run preview
 ```
 
 `dist/` 可以部署至静态网站托管服务。场景、模型和音效均由程序生成，无需外部素材服务；不会保存玩家运行状态。
+
+## GitHub Pages
+
+构建采用相对资源路径，同一份 `dist/` 可用于域名根目录或仓库子目录。GitHub Pages 需发布构建后的文件，直接从 `main` 根目录发布源码无法运行游戏。
+
+1. 在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
+2. 将包含工作流的提交推送至 `main`，会自动触发部署；之后也可在 **Actions → Verify and deploy Pages → Run workflow** 选择 `main` 手动运行。
+3. 工作流使用 Node.js 22 执行 `npm ci`、测试和构建，通过后仅上传 `dist/` 并部署。部署成功后，从工作流的 `github-pages` 环境链接进入游戏。
+
+本仓库的 Pages 地址为 https://hanazar-games.github.io/GPT6-Max-Test-Project-1/ 。Pull request 只运行测试与构建，不发布网站；手动选择非 `main` 分支也不会部署。`dist/` 不提交到 Git。
+
+## 代码结构
 
 技术：Three.js、Vite、原生 JavaScript、Web Audio。`src/missions.js` 定义任务、飞船和航线；`src/game.js` 是独立于渲染的固定步长模拟；`src/ghost.js` 管理有界轨迹采样、时间插值、分段比较和会话纪录；`src/pilots.js` 模拟电脑领航员，`src/cup.js` 管理赛事晋级、积分、实时排名和奖杯。测试覆盖驾驶规则、幽灵、赛事结算与同分排序，以及全部 9 种任务/飞船组合和 27 条电脑航程的连续通关。切换任务会释放旧场景资源，并复用渲染器；多艘投影共享几何体，使用独立材质。
 
