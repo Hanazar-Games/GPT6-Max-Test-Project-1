@@ -51,17 +51,6 @@ export function meteorContact(meteor, before, after) {
   return null;
 }
 
-export function predictHeight(game, seconds) {
-  let { height, verticalSpeed, distance } = game;
-  for (let time = 0; time < seconds - 1e-8 && (height > 0 || verticalSpeed > 0); time += 1 / 60) {
-    const dt = Math.min(1 / 60, seconds - time);
-    verticalSpeed -= gravityAt(game.course, distance) * dt;
-    height = Math.max(0, height + verticalSpeed * dt);
-    distance += game.speed * dt;
-  }
-  return height;
-}
-
 export function getMeteorCue(game) {
   for (const meteor of game.course.meteors) {
     const distance = meteor.distance - game.distance;
@@ -73,7 +62,7 @@ export function getMeteorCue(game) {
     if (Math.abs(game.lane - meteor.lane) < meteor.radius + ENVIRONMENT.craftRadius) {
       let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
       let verticalSpeed = game.verticalSpeed;
-      const horizon = Math.min(6, Math.max(0, distance + meteor.radius + ENVIRONMENT.craftRadius) / Math.max(1, game.speed));
+      const horizon = game.speed > 0 ? Math.min(6, Math.max(0, distance + meteor.radius + ENVIRONMENT.craftRadius) / game.speed) : ENVIRONMENT.warning + ENVIRONMENT.blast;
       for (let time = 0; time < horizon; time += 1 / 60) {
         const dt = Math.min(1 / 60, horizon - time);
         verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) * dt : 0;

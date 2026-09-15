@@ -1,6 +1,6 @@
 import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
-import { ENVIRONMENT, gravityAt, meteorState, meteorContact, predictHeight, getMeteorCue } from './environment.js';
+import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
 
 export const PHYSICS = Object.freeze({ width: 15, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 
@@ -18,7 +18,7 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
     gates: 0, collected: new Set(), score: 0, immunity: 0,
     height: 0, verticalSpeed: 0, jumpCooldown: 0, jumpHeld: false,
     combo: 0, maxCombo: 0, perfectGates: 0, airDodges: 0, impacts: 0,
-    missedPickups: new Set(), passedObstacles: new Set(), activatedPads: new Set(), padBoost: 0,
+    missedPickups: new Set(), passedObstacles: new Set(), pendingObstacleDodges: new Set(), activatedPads: new Set(), padBoost: 0,
     meteorDodges: 0, glides: 0, resolvedMeteors: new Set(), pendingMeteorDodges: new Set(), clearedZones: new Set(), meteorWarnings: new Set(),
     reason: '', events: [], elapsed: 0,
   };
@@ -53,17 +53,45 @@ export function obstacleLane(obstacle, elapsed) {
   return obstacle.kind === 'drone' ? Math.sin(elapsed * obstacle.frequency + obstacle.phase) * 10 : obstacle.lane;
 }
 
+function obstacleContact(obstacle, before, after) {
+  let entry = 0;
+  let exit = 1;
+  const intervals = [
+    [before.distance - obstacle.distance, after.distance - obstacle.distance, 3],
+    [before.lane - obstacleLane(obstacle, before.elapsed), after.lane - obstacleLane(obstacle, after.elapsed), obstacle.radius + 1.1],
+  ];
+  for (const [start, end, radius] of intervals) {
+    const movement = end - start;
+    if (!movement) { if (Math.abs(start) >= radius) return null; continue; }
+    const a = (-radius - start) / movement;
+    const b = (radius - start) / movement;
+    entry = Math.max(entry, Math.min(a, b));
+    exit = Math.min(exit, Math.max(a, b));
+    if (entry >= exit) return null;
+  }
+  const time = after.height >= before.height ? entry : exit;
+  return { height: before.height + (after.height - before.height) * time };
+}
+
 export function getFlightCue(game) {
   const hazard = game.course.obstacles.find(obstacle => {
     const distance = obstacle.distance - game.distance;
-    if (game.speed < 3 || distance < 0 || distance > game.speed * 1.6) return false;
-    const arrival = distance / game.speed;
-    const height = predictHeight(game, arrival);
-    return height < 2.5 && Math.abs(game.lane - obstacleLane(obstacle, game.elapsed + arrival)) < obstacle.radius + 1.6;
+    if (distance < -3 || distance > game.speed * 1.6 + 3) return false;
+    let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
+    let verticalSpeed = game.verticalSpeed;
+    for (let step = 0; step < 96; step++) {
+      verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) / 60 : 0;
+      const after = { ...before, elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60, height: Math.max(0, before.height + verticalSpeed / 60) };
+      const contact = obstacleContact(obstacle, before, after);
+      if (contact && contact.height < 2.5) return true;
+      if (after.distance > obstacle.distance + 3) break;
+      before = after;
+    }
+    return false;
   });
   const meteor = getMeteorCue(game);
   if (meteor && (!hazard || meteor.danger && meteor.distance < hazard.distance - game.distance)) return meteor;
-  if (hazard) return { kind: 'hazard', distance: Math.ceil(hazard.distance - game.distance), hazard: hazard.kind };
+  if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind };
   const gate = game.course.gates[game.gates];
   if (!gate) return { kind: 'finish', distance: Math.ceil(game.mission.length - game.distance) };
   const offset = gate.lane - game.lane;
@@ -88,6 +116,12 @@ export function getDebrief(game) {
 export function updateGame(game, input, delta) {
   game.events = [];
   if (!['running', 'countdown'].includes(game.status)) return;
+  if (game.status === 'running' && (game.time <= 0 || game.hull <= 0)) {
+    game.status = 'lost';
+    game.reason = game.hull <= 0 ? 'hull' : 'time';
+    game.boosting = false;
+    return;
+  }
   const dt = Math.max(0, Math.min(delta, 0.1, game.status === 'running' ? game.time : Infinity));
   if (game.status === 'countdown') {
     game.countdown = Math.max(0, game.countdown - dt);
@@ -133,7 +167,7 @@ export function updateGame(game, input, delta) {
     game.lateralSpeed = 0;
     impact(game, 8);
   }
-  if (game.hull <= 0) { game.status = 'lost'; game.reason = 'hull'; return; }
+  if (game.hull <= 0) { game.status = 'lost'; game.reason = 'hull'; game.boosting = false; return; }
 
   const before = game.distance;
   game.distance = Math.min(game.mission.length, game.distance + game.speed * dt);
@@ -155,17 +189,18 @@ export function updateGame(game, input, delta) {
     }
   }
   for (const obstacle of game.course.obstacles) {
-    if (crosses(obstacle.distance, 3) && Math.abs(game.lane - obstacleLane(obstacle, game.elapsed)) < obstacle.radius + 1.1) {
-      if (game.height < 2.5) {
-        impact(game, obstacle.kind === 'drone' ? 28 : 24);
-        game.passedObstacles.add(obstacle.id);
-      }
-      else if (crosses(obstacle.distance) && !game.passedObstacles.has(obstacle.id)) {
-        game.passedObstacles.add(obstacle.id);
-        game.airDodges++;
-        game.score += 120;
-        game.events.push({ type: 'dodge', points: 120 });
-      }
+    const contact = obstacleContact(obstacle, previous, game);
+    if (contact?.height < 2.5) {
+      impact(game, obstacle.kind === 'drone' ? 28 : 24);
+      game.passedObstacles.add(obstacle.id);
+      game.pendingObstacleDodges.delete(obstacle.id);
+    } else if (contact && !game.passedObstacles.has(obstacle.id)) game.pendingObstacleDodges.add(obstacle.id);
+    if (game.pendingObstacleDodges.has(obstacle.id) && game.distance >= obstacle.distance + 3) {
+      game.pendingObstacleDodges.delete(obstacle.id);
+      game.passedObstacles.add(obstacle.id);
+      game.airDodges++;
+      game.score += 120;
+      game.events.push({ type: 'dodge', points: 120 });
     }
   }
   for (const pad of game.course.pads) {
@@ -235,6 +270,8 @@ export function updateGame(game, input, delta) {
       game.combo = 0;
       for (const id of game.pendingMeteorDodges) game.resolvedMeteors.add(id);
       game.pendingMeteorDodges.clear();
+      for (const id of game.pendingObstacleDodges) game.passedObstacles.add(id);
+      game.pendingObstacleDodges.clear();
       game.time = Math.max(0, game.time - 4);
       game.events.push({ type: 'miss' });
     }

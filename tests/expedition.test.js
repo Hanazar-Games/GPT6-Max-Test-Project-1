@@ -91,6 +91,8 @@ test('jumping over a rock avoids damage and grants an aerial dodge only once', (
   Object.assign(game, { distance: rock.distance - 0.2, lane: rock.lane, speed: 30, height: 4 });
   updateGame(game, { accelerate: true }, 1 / 60);
   assert.equal(game.hull, game.craft.hull);
+  assert.equal(game.airDodges, 0);
+  for (let i = 0; i < 7; i++) updateGame(game, { accelerate: true }, 1 / 60);
   assert.equal(game.airDodges, 1);
   const score = game.score;
   game.distance = rock.distance - 0.2;

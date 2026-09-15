@@ -7,7 +7,15 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 航行体验更新</h2>
+      <h2 id="release-title">v${version} · 避障判定修复</h2>
+      <p>跃过障碍，安全离开，奖励再入账。</p>
+      <ul class="release-list">
+        <li><strong>完整避障才获奖</strong>岩石与巡逻机的空中避障奖励改为通过整个障碍后结算，修复刚拿到奖励就撞上障碍的问题。</li>
+        <li><strong>接触判定更准确</strong>检查两帧之间的相对移动与高度，预警使用同一套接触规则；修复离开岩石后才降低高度仍被扣血，以及巡逻机移动中的漏判。</li>
+        <li><strong>停车预警与超时处理</strong>停在陨石圈后沿时也会提示即将到来的危险；任务时间已耗尽时不再触发跳跃、收集或加速带。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>2 个版本</span></summary>
+        <article><h3>v1.1.0 · 航行体验更新</h3>
       <p>这一次，让每段航程更清晰、更有节奏。</p>
       <ul class="release-list">
         <li><strong>听见月面</strong>新增原创合成背景音乐，音乐与音效可独立调节。暂停或离开页面时停止播放，继续飞行后恢复。</li>
@@ -15,7 +23,7 @@ export function mountReleases() {
         <li><strong>飞行边界修正</strong>修复艇体归零后同帧回血、任务超时后继续位移和收集的问题。</li>
         <li><strong>操作更顺手</strong>修复小屏仪表重叠；暂停及结算界面可进入声音设置，补全指南名称、键盘操作与多指触屏释放处理。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>1 个版本</span></summary>
+        </article>
         <article><h3>v1.0.0 · 开发基线</h3><p>原版本没有独立公告，以下按已有功能补录，不代表曾公开发布。</p><ul>
           <li>三条月面航线、三款飞船；加速、冲刺、跃升、核心收集与导航门。</li>
           <li>自由速递与个人幽灵、三站月环大奖赛、委托和改装组成的远征补给。</li>

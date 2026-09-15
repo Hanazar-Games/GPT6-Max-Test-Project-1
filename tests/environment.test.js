@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, makeCourse } from '../src/missions.js';
 import { createGame, startGame, updateGame, togglePause, getFlightCue } from '../src/game.js';
-import { ENVIRONMENT, gravityAt, meteorState, meteorContact, predictHeight } from '../src/environment.js';
+import { ENVIRONMENT, gravityAt, meteorState, meteorContact } from '../src/environment.js';
 import { pilotInput } from '../src/pilots.js';
 
 const meteor = { id: 0, distance: 100, lane: 0, radius: 5, first: 4, period: 10 };
@@ -141,15 +141,6 @@ test('low gravity is bounded by route zones and visibly extends a normal jump', 
   assert.equal(base.height, 0);
   assert.ok(game.height > 6);
   assert.equal(game.hull, 100);
-});
-
-test('height prediction follows gravity changes ahead and agrees with fixed-step motion', () => {
-  const game = flight();
-  game.course.gravityZones = [{ id: 0, start: 20, end: 60 }];
-  Object.assign(game, { distance: 15, height: 2, verticalSpeed: 10, speed: 36 });
-  const predicted = predictHeight(game, 1.5);
-  for (let step = 0; step < 90; step++) updateGame(game, { accelerate: true }, 1 / 60);
-  assert.ok(Math.abs(game.height - predicted) < 0.001);
 });
 
 test('airborne zone exits reward once, while ground exits and gate rewinds cannot farm rewards', () => {
