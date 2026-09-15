@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FlightInput, KEY_ACTIONS } from '../src/input.js';
-import { createGame, startGame, updateGame } from '../src/game.js';
+import { createGame, startGame, updateGame, isJumpReady } from '../src/game.js';
 
 function flight() {
   const game = createGame();
@@ -121,4 +121,26 @@ test('a held countdown jump launches once, while an earlier released tap expires
     }
     assert.equal(jumps, Number(held));
   }
+});
+
+test('jump readiness stays false during low-gravity flight even after cooldown expires', () => {
+  const game = createGame();
+  startGame(game);
+  for (let i = 0; i < 181; i++) updateGame(game, {}, 1 / 60);
+  game.distance = game.course.gravityZones[0].start + 10;
+  assert.equal(isJumpReady(game), true);
+  updateGame(game, { jump: true }, 1 / 60);
+  for (let i = 0; i < 100; i++) updateGame(game, {}, 1 / 60);
+  assert.equal(game.jumpCooldown, 0);
+  assert.ok(game.height > 5);
+  assert.equal(isJumpReady(game), false);
+  updateGame(game, { jumpPressed: true }, 1 / 60);
+  assert.ok(!game.events.some(event => event.type === 'jump'));
+  for (let i = 0; i < 100; i++) updateGame(game, {}, 1 / 60);
+  assert.equal(game.height, 0);
+  assert.equal(isJumpReady(game), true);
+  game.energy = 17.99;
+  assert.equal(isJumpReady(game), false);
+  game.energy = 18;
+  assert.equal(isJumpReady(game), true);
 });

@@ -51,7 +51,7 @@
 .jump-indicator kbd { height: 20px; min-width: 20px; font-size: 9px; }
 .jump-indicator small { color: #7e9fae; font-size: 8px; }
 .touch-jump { color: #9be5ee; }
-.touch-jump.recharging { opacity: 0.5; }
+.touch-jump[aria-disabled="true"] { opacity: 0.5; }
 .result-card { width: 565px; }
 .modal-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
 .result-details { display: flex; justify-content: space-around; gap: 12px; margin: 16px 0; font-size: 9px; color: #8aa7b9; }

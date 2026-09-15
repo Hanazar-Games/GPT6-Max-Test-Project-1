@@ -4,7 +4,7 @@ import './challenge.css';
 import './cup.css';
 import './supply.css';
 import './environment.css';
-import { createGame, startGame, updateGame, togglePause, getDebrief, getFlightCue, PHYSICS } from './game.js';
+import { createGame, startGame, updateGame, togglePause, getDebrief, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
 import { RACERS, buildField } from './pilots.js';
@@ -513,7 +513,7 @@ function updateHUD() {
     $('cue-detail').textContent = cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
   } else {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : cue.kind === 'finish' ? '◇ 返回基地' : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' }[cue.direction];
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (game.energy >= PHYSICS.jumpCost && game.jumpCooldown === 0 && game.height === 0 ? '跃升或左右避让' : '左右避让 · 注意航道边缘') : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
+    $('cue-detail').textContent = cue.kind === 'hazard' ? (isJumpReady(game) ? '跃升或左右避让' : '左右避让 · 注意航道边缘') : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   }
   refs['throttle-hint'].textContent = game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
   if (lowGravity) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
@@ -523,7 +523,7 @@ function updateHUD() {
   $('combo-panel').classList.toggle('active', game.combo >= 3);
   $('jump-status').textContent = game.height > 0 ? `低空跃升 ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪';
   if (lowGravity && game.height > 0) $('jump-status').textContent = `低重力滑翔 ${game.height.toFixed(1)}m`;
-  document.querySelector('[data-control="jump"]').classList.toggle('recharging', game.jumpCooldown > 0 || game.energy < PHYSICS.jumpCost);
+  document.querySelector('[data-control="jump"]').setAttribute('aria-disabled', String(!isJumpReady(game)));
   document.querySelectorAll('.speed-ticks i').forEach((tick, i) => tick.classList.toggle('active', i < game.speed / game.craft.boostSpeed * 24));
   updateRival();
   drawMap();
@@ -697,6 +697,7 @@ $('quality').addEventListener('click', () => {
 $('reload').addEventListener('click', () => location.reload());
 
 window.addEventListener('keydown', (event) => {
+  if (event.repeat && ['Space', 'Enter'].includes(event.code) && event.target.closest('button, a, summary')) { event.preventDefault(); return; }
   if (!$('error').hidden) return;
   if (document.querySelector('dialog[open]')) return;
   if (event.code === 'Tab' && ['paused', 'won', 'lost'].includes(game.status)) {
@@ -705,16 +706,17 @@ window.addEventListener('keydown', (event) => {
     if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus(); }
     else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus(); }
   }
-  if (event.code === 'Enter' && ['menu', 'won', 'lost'].includes(game.status) && !event.target.closest('button, a, summary')) {
+  if (event.code === 'Enter' && !event.repeat && ['menu', 'won', 'lost'].includes(game.status) && !event.target.closest('button, a, summary')) {
     event.preventDefault();
     if (expedition && game.status === 'won') continueExpedition();
     else if (cup && game.status === 'won') continueCup();
     else launch();
   }
   if ((event.code === 'Escape' || event.code === 'KeyP') && !event.repeat) { event.preventDefault(); pause(); }
-  const action = KEY_ACTIONS[event.code];
+  const control = event.target.closest('[data-control]');
+  const action = control && ['Space', 'Enter'].includes(event.code) ? control.dataset.control : KEY_ACTIONS[event.code];
   if (action && ['running', 'countdown'].includes(game.status)) {
-    if (event.code === 'Space' && event.target.closest('button, a')) return;
+    if (event.code === 'Space' && event.target.closest('button, a') && !control) return;
     event.preventDefault(); controls.press(event.code, action); syncControls();
   }
 });

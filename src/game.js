@@ -4,6 +4,10 @@ import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from
 
 export const PHYSICS = Object.freeze({ width: 15, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 
+export function isJumpReady(game) {
+  return game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost;
+}
+
 export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}) {
   const mission = MISSIONS.find(item => item.id === missionId);
   const base = CRAFTS.find(item => item.id === craftId);
@@ -138,7 +142,7 @@ export function updateGame(game, input, delta) {
   game.immunity = Math.max(0, game.immunity - dt);
   game.padBoost = Math.max(0, game.padBoost - dt);
   game.jumpCooldown = Math.max(0, game.jumpCooldown - dt);
-  if ((input.jumpPressed || input.jump && !game.jumpHeld) && game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost) {
+  if ((input.jumpPressed || input.jump && !game.jumpHeld) && isJumpReady(game)) {
     game.verticalSpeed = 11;
     game.energy -= PHYSICS.jumpCost;
     game.jumpCooldown = PHYSICS.jumpCooldown;

@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 飞行规则修复</h2>
+      <h2 id="release-title">v${version} · 驾驶操作修复</h2>
+      <p>操作有回应，暂停不再被长按打断。</p>
+      <ul class="release-list">
+        <li><strong>屏幕按钮支持键盘</strong>聚焦驾驶按钮后，空格或 Enter 可执行对应动作；加速、转向、制动和冲刺支持按住，跃升按一次触发。</li>
+        <li><strong>长按不会误触弹窗</strong>修复按住冲刺后暂停，重复按键误触“继续飞行”的问题；指南、公告及其他按钮也不会因长按反复激活。</li>
+        <li><strong>跃升状态更准确</strong>低重力中尚未落地时，按钮保持不可用；落地、冷却结束且能量充足后恢复可用，辅助阅读工具也能识别该状态。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>5 个版本</span></summary>
+        <article><h3>v1.1.3 · 飞行规则修复</h3>
       <p>免费加速更安心，最后一刻也能送达。</p>
       <ul class="release-list">
         <li><strong>加速带真正免费</strong>驱动期间按住冲刺不再重复耗能，并继续自动充能；跃升正常消耗 18 能量，加速带效果结束后恢复手动冲刺耗能。</li>
         <li><strong>过门判定更准确</strong>按穿越门面那一刻的位置判断是否通过及精准奖励，修复门边横移时误判漏门或错误发奖的问题。</li>
         <li><strong>最后一刻正常交付</strong>修复剩余时间内已抵达终点仍被判超时的问题；核心、导航门与艇体状态仍须满足交付要求。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>4 个版本</span></summary>
+        </article>
         <article><h3>v1.1.2 · 操作与重飞修复</h3>
       <p>每次跃升有回应，每次重飞稳稳出发。</p>
       <ul class="release-list">
