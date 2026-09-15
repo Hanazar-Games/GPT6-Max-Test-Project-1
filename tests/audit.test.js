@@ -144,3 +144,33 @@ test('rock warnings account for vulnerable height at the leading edge of the obs
   Object.assign(game, { distance: 93, speed: 36, height: 1.2, verticalSpeed: 11 });
   assert.equal(getFlightCue(game).kind, 'hazard');
 });
+
+test('a jump press released before the next simulation step still jumps once', () => {
+  const game = flight();
+  updateGame(game, { jump: false, jumpPressed: true }, 1 / 60);
+  assert.ok(game.height > 0);
+  assert.equal(game.events.filter(event => event.type === 'jump').length, 1);
+  for (let i = 0; i < 180; i++) {
+    updateGame(game, {}, 1 / 60);
+    assert.ok(!game.events.some(event => event.type === 'jump'));
+  }
+});
+
+test('releasing and repressing a held jump between steps rearms the next jump', () => {
+  const game = flight();
+  for (let i = 0; i < 180; i++) updateGame(game, { jump: true }, 1 / 60);
+  assert.equal(game.height, 0);
+  assert.equal(game.jumpCooldown, 0);
+  updateGame(game, { jump: true, jumpPressed: true }, 1 / 60);
+  assert.ok(game.height > 0);
+});
+
+test('a boost release between steps unlocks a recharged boost on repress', () => {
+  const game = flight();
+  for (let i = 0; i < 360; i++) updateGame(game, { boost: true }, 1 / 60);
+  assert.equal(game.boostLocked, true);
+  assert.ok(game.energy > 10);
+  updateGame(game, { boost: true, boostReleased: true }, 1 / 60);
+  assert.equal(game.boosting, true);
+  assert.equal(game.boostLocked, false);
+});

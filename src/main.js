@@ -15,6 +15,7 @@ import { World } from './world.js';
 import { AudioEngine } from './audio.js';
 import { ENVIRONMENT, gravityAt, meteorState } from './environment.js';
 import { mountReleases } from './releases.js';
+import { FlightInput, KEY_ACTIONS } from './input.js';
 
 const icons = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -114,9 +115,7 @@ let ghostPose = null;
 let ghostEnabled = true;
 let splitFlashUntil = 0;
 const audio = new AudioEngine();
-const keys = new Set();
-const touch = new Set();
-const pointers = new Map();
+const controls = new FlightInput();
 const panels = ['menu', 'hud', 'countdown', 'pause', 'result'].map($);
 const refs = Object.fromEntries(['sector', 'objective', 'timer', 'timer-fill', 'cargo', 'gates', 'speed', 'energy-value', 'energy-fill', 'hull-value', 'hull-fill', 'next-distance', 'next-label', 'progress', 'score', 'throttle-hint', 'countdown-number'].map((id) => [id, $(id)]));
 const map = $('minimap').getContext('2d');
@@ -216,8 +215,14 @@ function toast(message, tone = '') {
 }
 
 function clearInput() {
-  keys.clear(); touch.clear(); pointers.clear();
-  document.querySelectorAll('[data-control]').forEach((button) => button.classList.remove('pressed'));
+  controls.clear();
+  game.jumpHeld = false;
+  game.boostLocked = false;
+  syncControls();
+}
+
+function syncControls() {
+  document.querySelectorAll('[data-control]').forEach(button => button.classList.toggle('pressed', controls.held(button.dataset.control)));
 }
 
 function launch() {
@@ -254,8 +259,11 @@ function launch() {
   $('split-flash').textContent = '';
   $('split-review').open = false;
   world.sparks = [];
+  world.shake = 0;
+  world.cameraReady = false;
   lastCountdown = 4;
   accumulator = 0;
+  frameTime = performance.now();
   $('toast').classList.remove('visible');
   document.activeElement?.blur();
   syncPanels();
@@ -559,18 +567,11 @@ function processEvents() {
 
 function frame(now) {
   if (!$('error').hidden) return;
-  const dt = Math.min((now - frameTime) / 1000, 0.1);
+  const dt = Math.max(0, Math.min((now - frameTime) / 1000, 0.1));
   frameTime = now;
   if (document.hidden) { requestAnimationFrame(frame); return; }
-  const input = {
-    accelerate: keys.has('KeyW') || keys.has('ArrowUp') || touch.has('accelerate'),
-    brake: keys.has('KeyS') || keys.has('ArrowDown') || touch.has('brake'),
-    boost: keys.has('Space') || touch.has('boost'),
-    jump: keys.has('KeyF') || touch.has('jump'),
-    steer: Number(keys.has('KeyD') || keys.has('ArrowRight') || touch.has('right')) - Number(keys.has('KeyA') || keys.has('ArrowLeft') || touch.has('left')),
-  };
   accumulator += dt;
-  while (accumulator >= 1 / 60) { updateGame(game, input, 1 / 60); recorder?.capture(game); processEvents(); accumulator -= 1 / 60; }
+  while (accumulator >= 1 / 60) { updateGame(game, controls.read(), 1 / 60); recorder?.capture(game); processEvents(); accumulator -= 1 / 60; }
   ghostPose = sampleGhost(rival, game.elapsed);
   raceView = cup ? getRaceView(game, raceField) : null;
   projections = cup ? raceView.ghosts : ghostPose ? [{ id: 'personal', color: '#b9a3ff', pose: ghostPose }] : [];
@@ -711,12 +712,13 @@ window.addEventListener('keydown', (event) => {
     else launch();
   }
   if ((event.code === 'Escape' || event.code === 'KeyP') && !event.repeat) { event.preventDefault(); pause(); }
-  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code) && ['running', 'countdown'].includes(game.status)) {
+  const action = KEY_ACTIONS[event.code];
+  if (action && ['running', 'countdown'].includes(game.status)) {
     if (event.code === 'Space' && event.target.closest('button, a')) return;
-    event.preventDefault(); keys.add(event.code);
+    event.preventDefault(); controls.press(event.code, action); syncControls();
   }
 });
-window.addEventListener('keyup', (event) => keys.delete(event.code));
+window.addEventListener('keyup', event => { controls.release(event.code); syncControls(); });
 const pauseOnLeave = () => { audio.setBackground(true); clearInput(); if (['running', 'countdown'].includes(game.status)) pause(); };
 window.addEventListener('blur', pauseOnLeave);
 window.addEventListener('focus', () => audio.setBackground(document.hidden));
@@ -725,11 +727,13 @@ window.addEventListener('pageshow', () => audio.setBackground(document.hidden));
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseOnLeave(); else audio.setBackground(!document.hasFocus()); frameTime = performance.now(); accumulator = 0; });
 window.addEventListener('resize', () => world?.resize());
 document.querySelectorAll('[data-control]').forEach((button) => {
-  button.addEventListener('pointerdown', (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); pointers.set(event.pointerId, button.dataset.control); touch.add(button.dataset.control); button.classList.add('pressed'); unlockAudio(); });
+  button.addEventListener('pointerdown', event => {
+    if (!['running', 'countdown'].includes(game.status)) return;
+    event.preventDefault(); button.setPointerCapture(event.pointerId);
+    controls.press(`pointer:${event.pointerId}`, button.dataset.control); syncControls(); unlockAudio();
+  });
   const release = event => {
-    pointers.delete(event.pointerId);
-    if ([...pointers.values()].includes(button.dataset.control)) return;
-    touch.delete(button.dataset.control); button.classList.remove('pressed');
+    controls.release(`pointer:${event.pointerId}`, event.type === 'pointercancel'); syncControls();
   };
   button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   button.addEventListener('contextmenu', (event) => event.preventDefault());

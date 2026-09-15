@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 避障判定修复</h2>
+      <h2 id="release-title">v${version} · 操作与重飞修复</h2>
+      <p>每次跃升有回应，每次重飞稳稳出发。</p>
+      <ul class="release-list">
+        <li><strong>短按不再丢失</strong>修复低帧率下 F 和触屏跃升短按无响应，以及快速松开再按不能重新跃升的问题；长按仍只跳一次。</li>
+        <li><strong>冲刺正确恢复</strong>能量耗尽后，快速松开再按可恢复冲刺；多指与键盘混合操作分别跟踪，暂停和重飞清空待处理动作。</li>
+        <li><strong>重飞镜头归位</strong>镜头直接回到起点，清除上一程的残留震动，修复倒计时开始时镜头从远处急速拉回的问题。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>3 个版本</span></summary>
+        <article><h3>v1.1.1 · 避障判定修复</h3>
       <p>跃过障碍，安全离开，奖励再入账。</p>
       <ul class="release-list">
         <li><strong>完整避障才获奖</strong>岩石与巡逻机的空中避障奖励改为通过整个障碍后结算，修复刚拿到奖励就撞上障碍的问题。</li>
         <li><strong>接触判定更准确</strong>检查两帧之间的相对移动与高度，预警使用同一套接触规则；修复离开岩石后才降低高度仍被扣血，以及巡逻机移动中的漏判。</li>
         <li><strong>停车预警与超时处理</strong>停在陨石圈后沿时也会提示即将到来的危险；任务时间已耗尽时不再触发跳跃、收集或加速带。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>2 个版本</span></summary>
+        </article>
         <article><h3>v1.1.0 · 航行体验更新</h3>
       <p>这一次，让每段航程更清晰、更有节奏。</p>
       <ul class="release-list">

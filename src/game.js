@@ -138,7 +138,7 @@ export function updateGame(game, input, delta) {
   game.immunity = Math.max(0, game.immunity - dt);
   game.padBoost = Math.max(0, game.padBoost - dt);
   game.jumpCooldown = Math.max(0, game.jumpCooldown - dt);
-  if (input.jump && !game.jumpHeld && game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost) {
+  if ((input.jumpPressed || input.jump && !game.jumpHeld) && game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost) {
     game.verticalSpeed = 11;
     game.energy -= PHYSICS.jumpCost;
     game.jumpCooldown = PHYSICS.jumpCooldown;
@@ -150,7 +150,7 @@ export function updateGame(game, input, delta) {
     game.height = Math.max(0, game.height + game.verticalSpeed * dt);
     if (game.height === 0) { game.verticalSpeed = 0; game.events.push({ type: 'land' }); }
   }
-  if (!input.boost) game.boostLocked = false;
+  if (!input.boost || input.boostReleased) game.boostLocked = false;
   else if (game.energy <= 1) game.boostLocked = true;
   const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.energy > 1;
   game.boosting = !input.brake && (manualBoost || game.padBoost > 0);
