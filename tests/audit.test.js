@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, startGame, updateGame, togglePause, getFlightCue } from '../src/game.js';
 import { getMeteorCue } from '../src/environment.js';
+import { CRAFTS } from '../src/missions.js';
 
 function flight() {
   const game = createGame();
@@ -173,4 +174,130 @@ test('a boost release between steps unlocks a recharged boost on repress', () =>
   updateGame(game, { boost: true, boostReleased: true }, 1 / 60);
   assert.equal(game.boosting, true);
   assert.equal(game.boostLocked, false);
+});
+
+test('holding boost during a powered pad gives the same free acceleration and recharge', () => {
+  for (const craft of CRAFTS) {
+    const held = createGame('tranquility', craft.id);
+    startGame(held);
+    Object.assign(held, { status: 'running', energy: 40, padBoost: 1.8 });
+    const released = structuredClone(held);
+    for (let step = 0; step < 60; step++) {
+      updateGame(held, { boost: true }, 1 / 60);
+      updateGame(released, {}, 1 / 60);
+      assert.equal(held.energy, released.energy, craft.id);
+      assert.equal(held.speed, released.speed, craft.id);
+      assert.equal(held.distance, released.distance, craft.id);
+    }
+    assert.ok(held.energy > 40);
+  }
+});
+
+test('jumping on a powered pad charges only the jump cost and still recharges', () => {
+  const game = flight();
+  Object.assign(game, { energy: 40, padBoost: 1 });
+  updateGame(game, { boost: true, jump: true }, 1 / 60);
+  assert.ok(game.height > 0);
+  assert.equal(game.energy, 40 - 18 + game.craft.recharge / 60);
+});
+
+test('manual boost resumes its energy cost after a pad expires', () => {
+  const game = flight();
+  Object.assign(game, { energy: 40, padBoost: 0.01 });
+  updateGame(game, { boost: true }, 1 / 60);
+  assert.equal(game.padBoost, 0);
+  assert.equal(game.boosting, true);
+  assert.equal(game.energy, 40 - 25 / 60);
+});
+
+test('braking on a powered pad slows the craft without consuming boost energy', () => {
+  const game = flight();
+  Object.assign(game, { energy: 40, padBoost: 1, speed: 50 });
+  updateGame(game, { boost: true, brake: true }, 1 / 60);
+  assert.equal(game.boosting, false);
+  assert.ok(game.speed < 50);
+  assert.ok(game.energy > 40);
+});
+
+test('leaving the gate width after crossing cannot turn a valid pass into a miss', () => {
+  for (const side of [-1, 1]) {
+    const game = createGame();
+    startGame(game);
+    const gate = game.course.gates[0];
+    Object.assign(game, { status: 'running', distance: gate.distance - 0.01, speed: 36, lane: side * (gate.width - 0.02), lateralSpeed: side * 8 });
+    updateGame(game, { accelerate: true, steer: side }, 1 / 60);
+    assert.equal(game.gates, 1);
+    assert.equal(game.score, 300);
+    assert.ok(game.distance > gate.distance);
+  }
+});
+
+test('entering the gate width after crossing still misses and rewinds before the gate', () => {
+  for (const side of [-1, 1]) {
+    const game = createGame();
+    startGame(game);
+    const gate = game.course.gates[0];
+    Object.assign(game, { status: 'running', distance: gate.distance - 0.01, speed: 36, lane: side * (gate.width + 0.02), lateralSpeed: -side * 8 });
+    updateGame(game, { accelerate: true, steer: -side }, 1 / 60);
+    assert.equal(game.gates, 0);
+    assert.equal(game.distance, gate.distance - 35);
+    assert.equal(game.score, 0);
+    assert.ok(game.time < game.mission.duration - 4);
+  }
+});
+
+test('perfect gate rewards use the lane at crossing on both sides of the center', () => {
+  for (const side of [-1, 1]) for (const [lane, steer, perfect] of [[2.48, 1, true], [2.52, -1, false]]) {
+    const game = createGame();
+    startGame(game);
+    const gate = game.course.gates[0];
+    Object.assign(game, { status: 'running', distance: gate.distance - 0.01, speed: 36, lane: side * lane, lateralSpeed: side * steer * 8 });
+    updateGame(game, { accelerate: true, steer: side * steer }, 1 / 60);
+    assert.equal(game.gates, 1);
+    assert.equal(game.perfectGates, Number(perfect));
+    assert.equal(game.score, perfect ? 500 : 300);
+  }
+});
+
+function finalApproach() {
+  const game = createGame();
+  startGame(game);
+  Object.assign(game, { status: 'running', elapsed: game.mission.duration - 0.01, time: 0.01, distance: game.mission.length - 0.1, speed: game.craft.speed, gates: 6 });
+  for (const pickup of game.course.pickups.slice(0, game.mission.cargo)) game.collected.add(pickup.id);
+  return game;
+}
+
+test('a complete delivery arriving within the final available step succeeds', () => {
+  const game = finalApproach();
+  assert.ok((game.mission.length - game.distance) / game.speed < game.time);
+  updateGame(game, { accelerate: true }, 1 / 60);
+  assert.equal(game.status, 'won');
+  assert.equal(game.reason, '');
+  assert.equal(game.distance, game.mission.length);
+  assert.equal(game.time, 0);
+  const score = game.score;
+  updateGame(game, { accelerate: true }, 1 / 60);
+  assert.equal(game.score, score);
+});
+
+test('the final available step cannot grant distance beyond the deadline', () => {
+  const game = finalApproach();
+  game.distance = game.mission.length - 1;
+  updateGame(game, { accelerate: true }, 1 / 60);
+  assert.equal(game.status, 'lost');
+  assert.equal(game.reason, 'time');
+  assert.ok(game.distance < game.mission.length);
+});
+
+test('last-moment arrival still requires cargo and a surviving craft', () => {
+  const empty = finalApproach();
+  empty.collected.clear();
+  updateGame(empty, { accelerate: true }, 1 / 60);
+  assert.equal(empty.status, 'lost');
+  assert.equal(empty.reason, 'cargo');
+  const damaged = finalApproach();
+  Object.assign(damaged, { hull: 8, lane: 15, lateralSpeed: 16 });
+  updateGame(damaged, { accelerate: true, steer: 1 }, 1 / 60);
+  assert.equal(damaged.status, 'lost');
+  assert.equal(damaged.reason, 'hull');
 });

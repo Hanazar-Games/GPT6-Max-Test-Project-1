@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 操作与重飞修复</h2>
+      <h2 id="release-title">v${version} · 飞行规则修复</h2>
+      <p>免费加速更安心，最后一刻也能送达。</p>
+      <ul class="release-list">
+        <li><strong>加速带真正免费</strong>驱动期间按住冲刺不再重复耗能，并继续自动充能；跃升正常消耗 18 能量，加速带效果结束后恢复手动冲刺耗能。</li>
+        <li><strong>过门判定更准确</strong>按穿越门面那一刻的位置判断是否通过及精准奖励，修复门边横移时误判漏门或错误发奖的问题。</li>
+        <li><strong>最后一刻正常交付</strong>修复剩余时间内已抵达终点仍被判超时的问题；核心、导航门与艇体状态仍须满足交付要求。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>4 个版本</span></summary>
+        <article><h3>v1.1.2 · 操作与重飞修复</h3>
       <p>每次跃升有回应，每次重飞稳稳出发。</p>
       <ul class="release-list">
         <li><strong>短按不再丢失</strong>修复低帧率下 F 和触屏跃升短按无响应，以及快速松开再按不能重新跃升的问题；长按仍只跳一次。</li>
         <li><strong>冲刺正确恢复</strong>能量耗尽后，快速松开再按可恢复冲刺；多指与键盘混合操作分别跟踪，暂停和重飞清空待处理动作。</li>
         <li><strong>重飞镜头归位</strong>镜头直接回到起点，清除上一程的残留震动，修复倒计时开始时镜头从远处急速拉回的问题。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>3 个版本</span></summary>
+        </article>
         <article><h3>v1.1.1 · 避障判定修复</h3>
       <p>跃过障碍，安全离开，奖励再入账。</p>
       <ul class="release-list">

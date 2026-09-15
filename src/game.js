@@ -152,7 +152,7 @@ export function updateGame(game, input, delta) {
   }
   if (!input.boost || input.boostReleased) game.boostLocked = false;
   else if (game.energy <= 1) game.boostLocked = true;
-  const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.energy > 1;
+  const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.padBoost === 0 && game.energy > 1;
   game.boosting = !input.brake && (manualBoost || game.padBoost > 0);
   const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
   const acceleration = input.brake ? 40 : targetSpeed > game.speed ? (game.boosting ? 32 : 20) : 9;
@@ -253,8 +253,10 @@ export function updateGame(game, input, delta) {
 
   const gate = game.course.gates[game.gates];
   if (gate && crosses(gate.distance)) {
-    if (Math.abs(game.lane - gate.lane) < gate.width) {
-      const perfect = Math.abs(game.lane - gate.lane) < 2.5 && game.speed >= game.craft.speed * 0.8;
+    const fraction = game.distance > before ? (gate.distance - before) / (game.distance - before) : 1;
+    const offset = previous.lane + (game.lane - previous.lane) * fraction - gate.lane;
+    if (Math.abs(offset) < gate.width) {
+      const perfect = Math.abs(offset) < 2.5 && game.speed >= game.craft.speed * 0.8;
       game.gates++;
       if (perfect) game.perfectGates++;
       game.score += perfect ? 500 : 300;
@@ -277,13 +279,16 @@ export function updateGame(game, input, delta) {
     }
   }
 
-  if (game.hull <= 0 || game.time <= 0) {
+  if (game.hull <= 0) {
     game.status = 'lost';
-    game.reason = game.hull <= 0 ? 'hull' : 'time';
+    game.reason = 'hull';
   } else if (game.distance >= game.mission.length) {
     game.status = game.gates === game.course.gates.length && game.collected.size >= game.mission.cargo ? 'won' : 'lost';
     game.reason = game.status === 'won' ? '' : game.collected.size < game.mission.cargo ? 'cargo' : 'gates';
     if (game.status === 'won') game.score += Math.round(game.time * 25 + game.hull / game.craft.hull * 1000);
+  } else if (game.time <= 0) {
+    game.status = 'lost';
+    game.reason = 'time';
   }
   if (game.status === 'won' || game.status === 'lost') game.boosting = false;
 }
