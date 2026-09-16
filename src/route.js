@@ -32,3 +32,12 @@ export function routeFrame(curve, length, distance, lane = 0, height = 0) {
 export function speedFov(speed) {
   return 62 + 42 * MathUtils.clamp(speed / 460, 0, 1) ** 0.75;
 }
+
+export function menuCameraPose(frame, aspect, clock) {
+  const fit = Math.max(1, 1.6 / aspect), lateral = Math.min(1, aspect / 1.6);
+  const position = frame.point.clone().addScaledVector(frame.tangent, -20 * fit).addScaledVector(frame.right, (-12 + Math.sin(clock * 0.09) * 1.5) * lateral * fit);
+  const target = frame.point.clone().addScaledVector(frame.tangent, 12 * fit).addScaledVector(frame.right, -8 * lateral * fit);
+  position.y += 9 * fit;
+  target.y += 3 * fit;
+  return { position, target };
+}

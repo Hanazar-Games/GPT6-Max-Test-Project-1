@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { obstacleLane } from './game.js';
 import { EnvironmentView } from './environment-view.js';
-import { createRoute, routeFrame, speedFov } from './route.js';
+import { createRoute, routeFrame, speedFov, menuCameraPose } from './route.js';
 import { makeCraftModel, configureCraftModel } from './craft-view.js';
 import { makeMountainRoad, makePlanetScenery } from './planet-view.js';
 import { makeReflectionMap, makeSurfaceTexture, terrainElevation } from './surface-view.js';
@@ -473,6 +473,7 @@ export class World {
   }
 
   resize() {
+    this.cameraReady = false;
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
@@ -487,7 +488,7 @@ export class World {
     this.environment.render(game.status === 'menu' ? 0 : game.elapsed);
     const menu = game.status === 'menu';
     const frame = this.frame(game.distance, game.lane, 1.9 + game.height);
-    const { point, tangent, right } = frame;
+    const { point, right } = frame;
     this.craft.position.copy(point);
     this.orient(this.craft, frame);
     this.craftBody.position.y = Math.sin(this.clock * 3.5) * 0.13;
@@ -559,11 +560,9 @@ export class World {
     const desired = point.clone();
     const look = point.clone();
     if (menu) {
-      desired.addScaledVector(tangent, -20).addScaledVector(right, -12);
-      desired.y += 9;
-      desired.addScaledVector(right, Math.sin(this.clock * 0.09) * 1.5);
-      look.addScaledVector(tangent, 12).addScaledVector(right, -8);
-      look.y += 3;
+      const pose = menuCameraPose(frame, this.camera.aspect, this.clock);
+      desired.copy(pose.position);
+      look.copy(pose.target);
     } else {
       desired.copy(this.frame(game.distance - 19 - game.speed * 0.018, game.lane, 2 + game.height).point);
       desired.addScaledVector(right, -game.lateralSpeed * 0.07);

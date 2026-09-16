@@ -1,0 +1,54 @@
+@media (max-width: 600px) {
+  .touch-controls button, .touch-controls [data-control="brake"] { min-width: 44px; }
+}
+
+@media (pointer: coarse) and (min-width: 601px) and (min-height: 501px) and (max-height: 650px) {
+  .hud-bottom { bottom: 110px; }
+}
+
+@media (max-width: 600px) and (max-height: 450px) and (orientation: landscape) {
+  .header { height: 52px; padding-inline: 5%; }
+  .brand { font-size: 13px; }
+  .brand-mark { width: 28px; }
+  .hero { top: 66px; left: 5%; width: 48%; }
+  .hero h1 { font-size: 30px; margin: 9px 0; }
+  .hero .eyebrow { font-size: 7px; letter-spacing: 0; }
+  .hero-copy { font-size: 8px; line-height: 1.5; }
+  .hero .mission-specs, .start-note { display: none; }
+  .hero .primary-button { margin-top: 10px; min-height: 48px; padding: 10px 12px; font-size: 12px; }
+  .flight-loadout { top: 80px; bottom: auto; left: auto; right: 5%; width: 36%; display: block; padding: 13px; }
+  .flight-loadout > strong { font-size: 12px; margin: 0; }
+  .flight-loadout > p { font-size: 8px; line-height: 1.6; }
+  .hangar-button { width: 100%; min-height: 44px; border-left: 0; border-top: 1px solid var(--line); margin-top: 10px; padding: 10px 0 0; font-size: 10px; }
+  .menu-footer { bottom: 8px; padding-top: 7px; }
+  .hud-top { top: 58px; }
+  .mission-heading strong { margin: 5px 0; }
+  .timer-box > strong { font-size: 25px; margin-block: 3px; }
+  .cargo-box { flex-direction: row; gap: 10px; }
+  .cargo-box strong { font-size: 15px; }
+  .hud-bottom { bottom: 68px; }
+  .speed-panel { width: 115px; }
+  .speed-panel strong { font-size: 34px; }
+  .speed-ticks { margin: 3px 0 5px; height: 5px; }
+  .resource-panel { width: 155px; margin: 0; }
+  .resource-track { margin-top: 6px; }
+  .hull-row { margin-top: 8px; }
+  .map-panel, .flight-help { display: none; }
+  .combo-panel { top: 124px; left: 5%; }
+  .combo-panel strong { font-size: 18px; }
+  .flight-direction { top: 111px; left: 50%; transform: translateX(-50%); align-items: center; }
+  .flight-direction > small { margin-top: 4px; font-size: 7px; }
+  .flight-cue { width: 132px; margin-top: 6px; padding: 5px; }
+  .flight-cue strong { font-size: 9px; }
+  .flight-cue small { margin-top: 3px; }
+  .rival-panel, .expedition-hud { top: 105px; right: 5%; width: 155px; padding: 6px; }
+  #rival-delta { font-size: 18px; margin: 4px 0; }
+  .expedition-hud .contract-list { margin-top: 5px; }
+  .expedition-hud .contract-list li { padding: 3px 0; }
+  .jump-indicator { bottom: 108px; padding: 4px 7px; }
+  .jump-indicator small { display: none; }
+  .touch-controls { bottom: max(12px, env(safe-area-inset-bottom)); }
+  .touch-controls button { height: 44px; }
+  .toast { top: auto; bottom: 8px; max-width: 35vw; font-size: 8px; }
+  .countdown > strong { font-size: 75px; line-height: 1.2; }
+}

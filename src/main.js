@@ -4,6 +4,7 @@ import './challenge.css';
 import './cup.css';
 import './supply.css';
 import './environment.css';
+import './compact.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
@@ -687,6 +688,13 @@ async function unlockAudio() {
   const ready = await audio.unlock();
   $('audio-status').textContent = ready ? '原创合成配乐 · 暂停或离开页面时停止播放。音量仅保留在当前页面。' : '浏览器尚未启用声音，可再次点击声音按钮尝试开启。';
 }
+const activateAudio = event => {
+  if (event.isTrusted && audio.enabled && !audio.background && audio.context?.state !== 'running' && !event.target.closest?.('#sound, #audio-toggle')) unlockAudio();
+};
+window.addEventListener('pointerdown', activateAudio, { passive: true });
+window.addEventListener('keydown', event => {
+  if (!event.repeat && (event.key.length === 1 || event.code === 'Enter')) activateAudio(event);
+});
 const toggleAudio = () => {
   unlockAudio();
   const enabled = audio.toggle();

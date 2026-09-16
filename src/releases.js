@@ -7,7 +7,15 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 星境精工</h2>
+      <h2 id="release-title">v${version} · 视听与小屏修复</h2>
+      <p>完整看见飞船，顺手驾驶，随操作听见星海。</p>
+      <ul class="release-list">
+        <li><strong>首次操作就有配乐</strong>修复打开机库、指南等菜单时背景音乐没有启用的问题；已选择静音时，切换地图或操作菜单不会自动解除静音。</li>
+        <li><strong>飞船完整入镜</strong>修复竖屏和平板下菜单飞船被裁切的问题；镜头随屏幕比例调整，切换横竖屏后立即重新取景，适配全部星球与三款飞船。</li>
+        <li><strong>小屏横屏更好驾驶</strong>重新安排首页和飞行仪表，修复任务标题、导航提示与触控区重叠；扩大窄屏驾驶按钮，避免底部按钮覆盖速度和能量仪表。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>10 个版本</span></summary>
+        <article><h3>v1.4.0 · 星境精工</h3>
       <p>二十种星球景观，近看也有新的细节。</p>
       <ul class="release-list">
         <li><strong>20 星专属地标</strong>补齐山脊层岩、六棱晶簇、风蚀石柱、冰刃、玄武岩、砂岩拱、潮汐灯塔、风暴线圈与暗夜尖塔；菌伞、珊瑚、古迹和星门同步细化。</li>
@@ -16,7 +24,7 @@ export function mountReleases() {
         <li><strong>细节与性能一起改善</strong>增加金属与座舱环境反射，合并重复部件；修正地表高度偏差导致的悬空物件，检查道路净空与换图资源释放。</li>
         <li><strong>机库入口不再被遮挡</strong>修复较矮桌面窗口中星球信息卡与飞行配置卡重叠的问题。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>9 个版本</span></summary>
+        </article>
         <article><h3>v1.3.0 · 星图超速</h3>
       <p>二十颗星球，一张更辽阔的极速星图。</p>
       <ul class="release-list">
