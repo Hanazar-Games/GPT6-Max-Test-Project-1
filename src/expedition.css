@@ -2,6 +2,10 @@
 .flight-loadout { position: absolute; top: 18%; right: 5.2%; width: 258px; padding: 21px; border: 1px solid #bdd6e429; background: #0a1824a6; backdrop-filter: blur(10px); }
 .loadout-label { display: flex; align-items: center; gap: 7px; color: #95abba; font-size: 8px; letter-spacing: 1.5px; }
 .loadout-label > span:last-child { margin-left: auto; font: 8px var(--mono); color: #647d91; }
+@media (min-width: 801px) and (min-height: 651px) {
+  .coordinates { bottom: 42%; padding: 12px; background: #07131cc2; border-left: 1px solid #bdd6e429; backdrop-filter: blur(6px); }
+  .scene-label { left: 62%; top: 57%; }
+}
 .flight-loadout > strong { display: block; font-weight: 500; font-size: 18px; letter-spacing: 2px; margin-top: 18px; }
 .flight-loadout > p { font-size: 10px; letter-spacing: 1px; color: #b8cbd7; margin: 10px 0 16px; }
 .session-best { font-size: 8px; color: #829eb1; letter-spacing: 0.6px; }
@@ -16,6 +20,7 @@
 .hangar-section-title { color: #d5e0e7; font-size: 11px; letter-spacing: 2px; padding-bottom: 13px; display: flex; align-items: center; gap: 10px; }
 .hangar-section-title > span { color: #718da1; font: 10px var(--mono); letter-spacing: 1px; }
 .selection-list { display: grid; gap: 10px; }
+#mission-options { max-height: 438px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #526b7c #0b1825; padding: 2px 6px 2px 2px; }
 .mission-option, .craft-option { position: relative; border: 1px solid #aac7db22; background: #0b1825; color: #e2edf2; padding: 15px; text-align: left; display: flex; gap: 12px; min-height: 133px; width: 100%; transition: border-color 0.2s, background 0.2s; }
 .mission-option:hover, .craft-option:hover { background: #132738; border-color: #d6e9f364; }
 .mission-option[aria-pressed="true"], .craft-option[aria-pressed="true"] { border-color: var(--choice); background: linear-gradient(115deg, #c2d1e20c, transparent), #0e1e2d; }

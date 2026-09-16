@@ -7,11 +7,11 @@ export function createExpedition(craftId) {
 }
 
 export function getContracts(game) {
-  const final = game.mission.id === 'frontier';
+  const final = game.mission.difficulty === 2;
   return [
     { id: 'cargo', name: '额外补给', target: game.mission.cargo + (final ? 4 : 3), progress: game.collected.size, hint: '多收集蓝色核心' },
     { id: 'precision', name: '精准领航', target: final ? 5 : 4, progress: game.perfectGates, hint: '高速穿过门中央' },
-    game.mission.id === 'eclipse'
+    game.mission.difficulty === 1
       ? { id: 'dodge', name: '低空侦察', target: 1, progress: game.airDodges, hint: '按 F 跃过一处障碍' }
       : { id: 'pads', name: '能源勘探', target: 2, progress: game.activatedPads.size, hint: '驶过两条绿色加速带' },
   ].map(item => ({ ...item, reward: 2, done: item.progress >= item.target }));

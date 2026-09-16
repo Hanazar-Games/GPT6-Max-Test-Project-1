@@ -57,12 +57,12 @@ export function obstacleLane(obstacle, elapsed) {
   return obstacle.kind === 'drone' ? Math.sin(elapsed * obstacle.frequency + obstacle.phase) * 10 : obstacle.lane;
 }
 
-function obstacleContact(obstacle, before, after) {
+function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.radius + 1.1) {
   let entry = 0;
   let exit = 1;
   const intervals = [
-    [before.distance - obstacle.distance, after.distance - obstacle.distance, 3],
-    [before.lane - obstacleLane(obstacle, before.elapsed), after.lane - obstacleLane(obstacle, after.elapsed), obstacle.radius + 1.1],
+    [before.distance - obstacle.distance, after.distance - obstacle.distance, forward],
+    [before.lane - obstacleLane(obstacle, before.elapsed), after.lane - obstacleLane(obstacle, after.elapsed), lateral],
   ];
   for (const [start, end, radius] of intervals) {
     const movement = end - start;
@@ -86,7 +86,7 @@ export function getFlightCue(game) {
     for (let step = 0; step < 96; step++) {
       verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) / 60 : 0;
       const after = { ...before, elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60, height: Math.max(0, before.height + verticalSpeed / 60) };
-      const contact = obstacleContact(obstacle, before, after);
+      const contact = courseContact(obstacle, before, after);
       if (contact && contact.height < 2.5) return true;
       if (after.distance > obstacle.distance + 3) break;
       before = after;
@@ -159,7 +159,7 @@ export function updateGame(game, input, delta) {
   const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.padBoost === 0 && game.energy > 1;
   game.boosting = !input.brake && (manualBoost || game.padBoost > 0);
   const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
-  const acceleration = input.brake ? 40 : targetSpeed > game.speed ? (game.boosting ? 32 : 20) : 9;
+  const acceleration = input.brake ? 160 : targetSpeed > game.speed ? (game.boosting ? 110 : 75) : 30;
   game.speed += Math.sign(targetSpeed - game.speed) * Math.min(Math.abs(targetSpeed - game.speed), acceleration * dt);
   game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
 
@@ -178,7 +178,7 @@ export function updateGame(game, input, delta) {
   const crosses = (distance, margin = 0) => before <= distance + margin && game.distance >= distance - margin;
 
   for (const pickup of game.course.pickups) {
-    if (!game.collected.has(pickup.id) && crosses(pickup.distance, 2) && Math.abs(game.lane - pickup.lane) < game.craft.pickupRange && game.height < 2.3) {
+    if (!game.collected.has(pickup.id) && courseContact(pickup, previous, game, 2, game.craft.pickupRange)?.height < 2.3) {
       game.collected.add(pickup.id);
       game.energy = Math.min(100, game.energy + 22);
       game.hull = Math.min(game.craft.hull, game.hull + 4);
@@ -193,7 +193,7 @@ export function updateGame(game, input, delta) {
     }
   }
   for (const obstacle of game.course.obstacles) {
-    const contact = obstacleContact(obstacle, previous, game);
+    const contact = courseContact(obstacle, previous, game);
     if (contact?.height < 2.5) {
       impact(game, obstacle.kind === 'drone' ? 28 : 24);
       game.passedObstacles.add(obstacle.id);
@@ -208,7 +208,7 @@ export function updateGame(game, input, delta) {
     }
   }
   for (const pad of game.course.pads) {
-    if (!input.brake && !game.activatedPads.has(pad.id) && crosses(pad.distance, 3) && Math.abs(game.lane - pad.lane) < 4 && game.height < 0.5) {
+    if (!input.brake && !game.activatedPads.has(pad.id) && courseContact(pad, previous, game, 3, 4)?.height < 0.5) {
       game.activatedPads.add(pad.id);
       game.padBoost = 1.8;
       game.speed = Math.max(game.speed, game.craft.speed + 7);
@@ -220,7 +220,7 @@ export function updateGame(game, input, delta) {
   for (const meteor of game.course.meteors) {
     const state = meteorState(meteor, game.elapsed);
     const warningKey = `${meteor.id}/${state.impactAt}`;
-    if (state.phase === 'warning' && meteor.distance >= game.distance - 8 && meteor.distance < game.distance + 140 && !game.meteorWarnings.has(warningKey)) {
+    if (state.phase === 'warning' && meteor.distance >= game.distance - 8 && meteor.distance < game.distance + Math.max(140, game.speed * 2.6) && !game.meteorWarnings.has(warningKey)) {
       game.meteorWarnings.add(warningKey);
       game.events.push({ type: 'meteor-warning' });
     }

@@ -18,10 +18,13 @@ class Node {
   stop(time) { this.stopped = time; }
 }
 class Context {
+  sampleRate = 44100;
   currentTime = 0; state = 'suspended'; destination = new Node(); oscillators = [];
   createGain() { return new Node(); }
   createBiquadFilter() { return new Node(); }
   createOscillator() { const node = new Node(); this.oscillators.push(node); return node; }
+  createBuffer(channels, length) { return { getChannelData: () => new Float32Array(length) }; }
+  createBufferSource() { const node = new Node(); this.oscillators.push(node); return node; }
   async resume() { this.state = 'running'; }
   async close() { this.state = 'closed'; }
 }
@@ -94,8 +97,35 @@ test('a delayed frame cannot enqueue missed music, and ended voices disconnect',
   assert.equal(audio.voices.size, 0);
   audio.context.currentTime = 120;
   audio.update(running);
-  assert.ok(audio.voices.size > 0 && audio.voices.size <= 4);
+  assert.ok(audio.voices.size > 0 && audio.voices.size <= 10);
   const voices = [...audio.voices];
   for (const voice of voices) voice.oscillator.onended();
   assert.ok(voices.every(voice => !voice.oscillator.connections.length && !voice.gain.connections.length));
+});
+
+test('switching planets cancels old music while retaining event sounds', async () => {
+  const audio = await setup();
+  audio.update({ ...running, mission: { music: { root: 45, bpm: 124 } } });
+  audio.event('pickup');
+  const music = [...audio.voices].filter(voice => voice.bus === 'music');
+  const effects = [...audio.voices].filter(voice => voice.bus === 'sfx');
+  audio.update({ ...running, mission: { music: { root: 39, bpm: 142 } } });
+  assert.ok(music.every(voice => !audio.voices.has(voice)));
+  assert.ok(effects.every(voice => audio.voices.has(voice)));
+  assert.equal(audio.themeRoot, 39);
+  assert.ok([...audio.voices].some(voice => voice.bus === 'music'));
+});
+
+test('high-speed percussion is stopped by pause and music mute without silencing SFX', async () => {
+  const audio = await setup();
+  audio.beat = 15;
+  audio.themeRoot = 45;
+  audio.update({ ...running, speed: 240 });
+  assert.ok([...audio.voices].some(voice => voice.oscillator.buffer));
+  audio.setVolume('music', 0);
+  assert.equal(audio.voices.size, 0);
+  audio.event('pickup');
+  assert.ok(audio.voices.size > 0);
+  audio.setState('paused');
+  assert.equal(audio.voices.size, 0);
 });

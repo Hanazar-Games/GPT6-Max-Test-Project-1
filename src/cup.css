@@ -19,7 +19,7 @@ body[data-mode="cup"] #start { background: #ffd096; }
 .racer-line { display: block; color: #c4d3dc; line-height: 1.8; }
 .racer-line b { float: right; font: inherit; color: #8ea9bc; }
 .cup-result { margin: 20px 0; padding: 16px; border: 1px solid #d1b77a3b; background: #0917209c; text-align: left; }
-.cup-stage-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-bottom: 17px; border-bottom: 1px solid #b9cbd224; }
+.cup-stage-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-bottom: 17px; border-bottom: 1px solid #b9cbd224; }
 .cup-stage-strip > span { color: #708ca0; font-size: 8px; line-height: 1.8; }
 .cup-stage-strip b { display: block; font: 13px var(--mono); margin-bottom: 4px; color: #90a1b4; }
 .cup-stage-strip [data-state="done"], .cup-stage-strip [data-state="done"] b { color: #9becd0; }

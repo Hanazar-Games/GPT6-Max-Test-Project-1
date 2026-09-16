@@ -5,8 +5,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { obstacleLane } from './game.js';
 import { EnvironmentView } from './environment-view.js';
+import { createRoute, routeFrame, speedFov } from './route.js';
+import { makeCraftModel, configureCraftModel } from './craft-view.js';
+import { makeMountainRoad, makePlanetScenery } from './planet-view.js';
 
-const UP = new THREE.Vector3(0, 1, 0);
 let seed = 4517;
 function random() {
   seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -22,10 +24,10 @@ export class World {
     this.renderer.toneMappingExposure = 1.1;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.domElement.setAttribute('aria-label', '月球峡谷三维游戏场景');
+    this.renderer.domElement.setAttribute('aria-label', '星球盘山公路三维游戏场景');
     container.append(this.renderer.domElement);
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.2, 2600);
+    this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.2, 4000);
     this.clock = 0;
     this.quality = 'high';
     this.lastStatus = 'menu';
@@ -67,9 +69,9 @@ export class World {
     this.drones = [];
     this.pads = [];
     this.scene.background = new THREE.Color(this.mission.sky);
-    this.scene.fog = new THREE.FogExp2(this.mission.fog, 0.0016 + this.mission.difficulty * 0.0003);
-    this.curve = new THREE.CatmullRomCurve3(this.mission.points.map(point => new THREE.Vector3(...point)), true, 'catmullrom', 0.35);
-    this.samples = this.curve.getSpacedPoints(360);
+    this.scene.fog = new THREE.FogExp2(this.mission.fog, 0.0008);
+    this.curve = createRoute(this.mission);
+    this.samples = this.curve.getSpacedPoints(600);
     this.materials = {
       metal: new THREE.MeshStandardMaterial({ color: '#b5bec5', metalness: 0.55, roughness: 0.42, flatShading: true }),
       dark: new THREE.MeshStandardMaterial({ color: '#182936', metalness: 0.6, roughness: 0.5 }),
@@ -82,6 +84,7 @@ export class World {
     this.makeTerrain();
     this.makeTrack();
     this.makeRocks();
+    makePlanetScenery(this, random);
     this.makeGates();
     this.makePickups();
     this.makePads();
@@ -91,23 +94,22 @@ export class World {
     this.makeGhosts();
     this.setCraft(game.craft);
     this.makeDust();
+    this.makeSpeedLines();
     this.makeEffects();
   }
 
   frame(distance, lane = 0, height = 0) {
-    const t = ((distance / this.mission.length) % 1 + 1) % 1;
-    const point = this.curve.getPointAt(t);
-    const tangent = this.curve.getTangentAt(t).normalize();
-    const right = new THREE.Vector3().crossVectors(tangent, UP).normalize();
-    point.addScaledVector(right, lane);
-    point.y += height;
-    return { point, tangent, right };
+    return routeFrame(this.curve, this.mission.length, distance, lane, height);
+  }
+
+  orient(object, frame) {
+    object.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(frame.right.clone().negate(), frame.up, frame.tangent));
   }
 
   place(object, distance, lane = 0, height = 0) {
-    const { point, tangent } = this.frame(distance, lane, height);
-    object.position.copy(point);
-    object.rotation.y = Math.atan2(tangent.x, tangent.z);
+    const frame = this.frame(distance, lane, height);
+    object.position.copy(frame.point);
+    this.orient(object, frame);
     this.scene.add(object);
     return object;
   }
@@ -124,7 +126,7 @@ export class World {
   }
 
   makeLights() {
-    this.scene.add(new THREE.HemisphereLight(this.mission.difficulty === 1 ? '#cfc3f4' : '#c5def3', this.mission.fog, 2.6));
+    this.scene.add(new THREE.HemisphereLight(new THREE.Color(this.mission.color).lerp(new THREE.Color('#e3f0ff'), 0.65), this.mission.fog, 2.6));
     const sun = new THREE.DirectionalLight(this.mission.difficulty === 2 ? '#ffd8a4' : '#fff0d8', 3.4);
     sun.position.set(-100, 220, 140);
     this.scene.add(sun);
@@ -150,11 +152,12 @@ export class World {
     geometry.setAttribute('position', new THREE.BufferAttribute(stars, 3));
     this.scene.add(new THREE.Points(geometry, new THREE.PointsMaterial({ color: '#d5edff', size: 1.2, sizeAttenuation: true, fog: false })));
 
-    const planet = this.mesh(new THREE.SphereGeometry(70, 64, 48), new THREE.ShaderMaterial({
+    const planet = this.mesh(new THREE.SphereGeometry(95, 48, 32), new THREE.ShaderMaterial({
+      uniforms: { sea: { value: new THREE.Color(this.mission.fog) }, landColor: { value: new THREE.Color().setHSL(this.mission.ground, this.mission.saturation + 0.15, 0.38) }, cloudColor: { value: new THREE.Color(this.mission.color).lerp(new THREE.Color('#ffffff'), 0.8) } },
       vertexShader: `varying vec3 vNormal; varying vec3 vPosition;
         void main() { vNormal = normalize(normalMatrix * normal); vPosition = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `varying vec3 vNormal; varying vec3 vPosition;
+      fragmentShader: `uniform vec3 sea; uniform vec3 landColor; uniform vec3 cloudColor; varying vec3 vNormal; varying vec3 vPosition;
         float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
         float noise(vec3 p) { vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
           return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
@@ -162,53 +165,69 @@ export class World {
         float fbm(vec3 p) { return noise(p) * 0.55 + noise(p * 2.07) * 0.27 + noise(p * 4.13) * 0.13 + noise(p * 8.27) * 0.05; }
         void main() { vec3 p = vPosition * 0.047;
           float land = smoothstep(0.47, 0.55, fbm(p));
-          vec3 color = mix(vec3(0.035, 0.19, 0.3), vec3(0.24, 0.4, 0.34), land);
+          vec3 color = mix(sea, landColor, land);
           float cloud = smoothstep(0.47, 0.68, fbm(p * 2.7 + vec3(12.0, 7.0, 3.0)));
-          color = mix(color, vec3(0.77, 0.87, 0.88), cloud * 0.9);
+          color = mix(color, cloudColor, cloud * 0.9);
           float light = max(dot(normalize(vNormal), normalize(vec3(-0.7, 0.5, 0.7))), 0.04);
           float rim = pow(1.0 - max(vNormal.z, 0.0), 3.0);
           gl_FragColor = vec4(color * light + vec3(0.12, 0.46, 0.65) * rim * 0.55, 1.0); }`,
     }), this.scene);
     const origin = this.frame(0);
-    planet.position.copy(origin.point).addScaledVector(origin.tangent, 520).addScaledVector(origin.right, 215);
-    planet.position.y += 135;
+    planet.position.copy(origin.point).addScaledVector(origin.tangent, 850).addScaledVector(origin.right, 330);
+    planet.position.y += 340;
     planet.rotation.z = 0.25;
-    const atmosphere = this.mesh(new THREE.SphereGeometry(73, 48, 32), new THREE.ShaderMaterial({
+    const atmosphere = this.mesh(new THREE.SphereGeometry(99, 40, 24), new THREE.ShaderMaterial({
       transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: 'varying vec3 n; void main() { n = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: 'varying vec3 n; void main() { float a = pow(1.0 - abs(n.z), 3.0); gl_FragColor = vec4(0.2, 0.6, 0.9, a * 0.4); }',
     }), this.scene);
     atmosphere.position.copy(planet.position);
+    if (['sandstone', 'spires', 'storm'].includes(this.mission.biome)) {
+      const rings = this.mesh(new THREE.RingGeometry(125, 186, 96), new THREE.MeshBasicMaterial({ color: this.mission.color, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false, fog: false }), this.scene);
+      rings.position.copy(planet.position);
+      rings.rotation.set(1.2, 0.3, 0.4);
+    }
   }
 
   groundInfo(x, z) {
     let nearest = Infinity;
     let y = 0;
-    for (const p of this.samples) {
-      const d = (p.x - x) ** 2 + (p.z - z) ** 2;
-      if (d < nearest) { nearest = d; y = p.y; }
+    let low = Infinity;
+    for (let i = 0; i < this.samples.length - 1; i++) {
+      const p = this.samples[i], q = this.samples[i + 1];
+      const dx = q.x - p.x, dz = q.z - p.z;
+      const t = Math.max(0, Math.min(1, ((x - p.x) * dx + (z - p.z) * dz) / (dx * dx + dz * dz)));
+      const d = (p.x + dx * t - x) ** 2 + (p.z + dz * t - z) ** 2;
+      const level = p.y + (q.y - p.y) * t;
+      if (d < nearest) { nearest = d; y = level; }
+      if (d < 42 * 42) low = Math.min(low, level);
     }
     const distance = Math.sqrt(nearest);
-    const blend = THREE.MathUtils.smoothstep(distance, 24, 100);
-    const wave = Math.sin(x * 0.018 + Math.cos(z * 0.017) * 2) * Math.cos(z * 0.023) * 18;
-    const detail = Math.sin(x * 0.08) * Math.cos(z * 0.064) * 4;
-    const peaks = Math.max(0, Math.sin(x * 0.013 - z * 0.009)) ** 3 * 48;
-    return { y: y - 0.7 + blend * (wave + detail + peaks + 9), distance };
+    const blend = THREE.MathUtils.smoothstep(distance, 36, 145);
+    const wave = Math.sin(x * 0.01 + Math.cos(z * 0.013) * 2) * Math.cos(z * 0.016) * 35;
+    const peaks = Math.max(0, Math.sin(x * 0.009 - z * 0.007)) ** 3 * 160;
+    return { y: Math.min(y, low) - 7 + blend * (wave + peaks - 24), distance };
   }
 
   makeTerrain() {
-    let geometry = new THREE.PlaneGeometry(1500, 1500, 180, 180);
+    this.routeBounds = new THREE.Box3().setFromPoints(this.samples);
+    const bounds = this.routeBounds.clone().expandByScalar(400);
+    const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+    let geometry = new THREE.PlaneGeometry(size.x, size.z, 200, 200);
     geometry.rotateX(-Math.PI / 2);
+    geometry.translate(center.x, 0, center.z);
     const positions = geometry.attributes.position;
     for (let i = 0; i < positions.count; i++) {
       positions.setY(i, this.groundInfo(positions.getX(i), positions.getZ(i)).y);
     }
-    geometry = geometry.toNonIndexed();
+    const indexed = geometry;
+    geometry = indexed.toNonIndexed();
+    indexed.dispose();
     geometry.computeVertexNormals();
     const colors = new Float32Array(geometry.attributes.position.count * 3);
     const color = new THREE.Color();
     for (let i = 0; i < colors.length; i += 9) {
-      color.setHSL(this.mission.ground + random() * 0.025, 0.10 + random() * 0.08, 0.24 + random() * 0.09);
+      color.setHSL(this.mission.ground + random() * 0.025, this.mission.saturation, (this.mission.biome === 'ice' ? 0.53 : 0.23) + random() * 0.1);
       for (let j = 0; j < 3; j++) color.toArray(colors, i + j * 3);
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -217,52 +236,12 @@ export class World {
   }
 
   makeTrack() {
-    const positions = [];
-    const indices = [];
-    for (let i = 0; i <= 600; i++) {
-      for (const lane of [-17, 17]) {
-        const { point } = this.frame(i / 600 * this.mission.length, lane, -0.38);
-        positions.push(...point.toArray());
-      }
-      if (i < 600) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
-    const track = this.mesh(geometry, new THREE.MeshLambertMaterial({ color: '#3a4852', side: THREE.DoubleSide }), this.scene);
-    track.receiveShadow = true;
-
-    for (const lane of [-17.4, 17.4]) {
-      const points = Array.from({ length: 401 }, (_, i) => this.frame(i / 400 * this.mission.length, lane, -0.22).point);
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: '#83a0ae', transparent: true, opacity: 0.45 }));
-      this.scene.add(line);
-    }
-    const markerGeometry = new THREE.BoxGeometry(0.22, 0.12, 2.1);
-    const markerMaterial = new THREE.MeshStandardMaterial({ color: '#9bdce5', emissive: '#5294aa', emissiveIntensity: 0.7 });
-    const markers = new THREE.InstancedMesh(markerGeometry, markerMaterial, 240);
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < 120; i++) {
-      for (let side = 0; side < 2; side++) {
-        const { point, tangent } = this.frame(i * this.mission.length / 120, side ? 16.3 : -16.3, -0.1);
-        dummy.position.copy(point);
-        dummy.rotation.y = Math.atan2(tangent.x, tangent.z);
-        dummy.updateMatrix();
-        markers.setMatrixAt(i * 2 + side, dummy.matrix);
-      }
-    }
-    this.scene.add(markers);
-    for (let i = 0; i < 55; i++) {
-      const marker = new THREE.Group();
-      this.box([0.2, 1.6, 0.2], this.materials.dark, marker, [0, 0.5, 0]);
-      this.box([0.4, 0.25, 0.4], i % 5 === 0 ? this.materials.glow : this.materials.cyan, marker, [0, 1.35, 0]);
-      this.place(marker, i / 55 * this.mission.length, i % 2 ? 19 : -19);
-    }
+    makeMountainRoad(this);
   }
 
   makeRocks() {
     const geometry = new THREE.IcosahedronGeometry(1, 0);
-    const material = new THREE.MeshLambertMaterial({ color: '#62717a', flatShading: true });
+    const material = new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(this.mission.ground, this.mission.saturation * 0.6, 0.34), flatShading: true });
     const rocks = new THREE.InstancedMesh(geometry, material, 390);
     rocks.castShadow = true;
     rocks.receiveShadow = true;
@@ -277,8 +256,10 @@ export class World {
         if (ground.distance > 22 + size * 2) break;
       }
       if (ground.distance <= 22 + size * 2) {
-        p.set(620, 0, (random() - 0.5) * 800);
-        ground = this.groundInfo(p.x, p.z);
+        dummy.scale.setScalar(0);
+        dummy.updateMatrix();
+        rocks.setMatrixAt(i, dummy.matrix);
+        continue;
       }
       dummy.position.set(p.x, ground.y + size * 0.2, p.z);
       dummy.rotation.set(random() * 3, random() * 6, random() * 2);
@@ -390,43 +371,16 @@ export class World {
 
   makeCraft() {
     this.craft = new THREE.Group();
-    this.craftBody = new THREE.Group();
+    const model = makeCraftModel(this.materials);
+    this.craftBody = model.body;
+    this.flames = model.flames;
     this.craft.add(this.craftBody);
     this.magnetRing = this.mesh(new THREE.TorusGeometry(1, 0.012, 4, 48), new THREE.MeshBasicMaterial({ color: '#94ebc6', transparent: true, opacity: 0.35, depthWrite: false }), this.craft, [0, -0.5, 0]);
     this.magnetRing.rotation.x = Math.PI / 2;
     this.magnetRing.visible = false;
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 4); shape.lineTo(-1.4, 0.4); shape.lineTo(-1.35, -2.4);
-    shape.lineTo(1.35, -2.4); shape.lineTo(1.4, 0.4); shape.closePath();
-    const hull = this.mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.75, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.18, bevelSegments: 1, steps: 1 }), this.materials.metal, this.craftBody);
-    hull.rotation.x = Math.PI / 2;
-    hull.position.y = 0.7;
-    hull.castShadow = true;
-    const cockpit = this.mesh(new THREE.SphereGeometry(1, 16, 10), new THREE.MeshStandardMaterial({ color: '#12344c', metalness: 0.85, roughness: 0.14 }), this.craftBody, [0, 0.7, 0.25]);
-    cockpit.scale.set(0.85, 0.7, 1.65);
-    this.box([0.18, 0.04, 2.5], this.materials.orange, this.craftBody, [0, 0.74, 2.5]);
-    this.flames = [];
-    for (const side of [-1, 1]) {
-      const pod = this.box([0.95, 0.7, 4.6], this.materials.orange, this.craftBody, [side * 2.35, 0, -0.6]);
-      pod.castShadow = true;
-      this.box([1.6, 0.18, 1.4], this.materials.dark, this.craftBody, [side * 1.4, 0.1, -0.5]);
-      this.box([0.7, 0.5, 0.45], this.materials.dark, this.craftBody, [side * 2.35, 0, -2.9]);
-      this.box([0.8, 0.12, 2.5], this.materials.cyan, this.craftBody, [side * 2.35, -0.42, -0.6]);
-      const flame = this.mesh(new THREE.ConeGeometry(0.3, 2.4, 10), new THREE.MeshBasicMaterial({ color: '#8bedff', transparent: true, opacity: 0.85 }), this.craftBody, [side * 2.35, 0, -4]);
-      flame.rotation.x = -Math.PI / 2;
-      this.flames.push(flame);
-      this.box([0.5, 0.18, 0.25], this.materials.cyan, this.craftBody, [side * 2.35, 0.1, 1.75]);
-    }
     this.engineLight = new THREE.PointLight('#67dafb', 15, 12, 2);
     this.engineLight.position.set(0, 0, -1.5);
     this.craft.add(this.engineLight);
-    this.cargoRack = new THREE.Group();
-    this.cargoRack.name = 'cargo-rack';
-    for (const side of [-1, 1]) {
-      this.box([0.8, 1.1, 2.2], this.materials.dark, this.cargoRack, [side * 1.2, 0.85, -1.4]);
-      this.box([0.83, 0.12, 2.23], this.materials.orange, this.cargoRack, [side * 1.2, 1.25, -1.4]);
-    }
-    this.craftBody.add(this.cargoRack);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = shadowCanvas.height = 64;
     const ctx = shadowCanvas.getContext('2d');
@@ -440,11 +394,9 @@ export class World {
 
   setCraft(craft) {
     this.materials.orange.color.set(craft.color);
-    this.craftBody.scale.set(...craft.scale);
-    this.cargoRack.visible = craft.id === 'hauler';
+    configureCraftModel(this.craftBody, craft);
     for (const ghost of this.ghosts) {
-      ghost.body.scale.set(...craft.scale);
-      ghost.body.getObjectByName('cargo-rack').visible = craft.id === 'hauler';
+      configureCraftModel(ghost.body, craft);
     }
   }
 
@@ -503,6 +455,16 @@ export class World {
     this.scene.add(this.dust);
   }
 
+  makeSpeedLines() {
+    this.speedParticles = Array.from({ length: 48 }, () => ({ angle: random() * Math.PI * 2, radius: 8 + random() * 15, z: -10 - random() * 110 }));
+    this.speedVertices = new Float32Array(48 * 6);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(this.speedVertices, 3));
+    this.speedLines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: '#bbeaff', transparent: true, opacity: 0, depthWrite: false }));
+    this.speedLines.frustumCulled = false;
+    this.scene.add(this.speedLines);
+  }
+
   setQuality(quality) {
     this.quality = quality;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, quality === 'high' ? 1.5 : 0.75));
@@ -525,15 +487,16 @@ export class World {
     const motionTime = game.status === 'menu' ? this.clock : game.elapsed;
     this.environment.render(game.status === 'menu' ? 0 : game.elapsed);
     const menu = game.status === 'menu';
-    const { point, tangent, right } = this.frame(game.distance, game.lane, 1.9 + game.height);
+    const frame = this.frame(game.distance, game.lane, 1.9 + game.height);
+    const { point, tangent, right } = frame;
     this.craft.position.copy(point);
-    this.craft.rotation.y = Math.atan2(tangent.x, tangent.z);
+    this.orient(this.craft, frame);
     this.craftBody.position.y = Math.sin(this.clock * 3.5) * 0.13;
     this.magnetRing.visible = game.craft.pickupRange > 3.7 && game.height < 2.3;
     this.magnetRing.scale.setScalar(game.craft.pickupRange);
     this.magnetRing.material.opacity = 0.25 + Math.sin(this.clock * 2) * 0.08;
-    this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * 0.018, Math.min(1, dt * 7));
-    this.craftBody.rotation.x = -game.speed * 0.0015 + game.verticalSpeed * 0.013;
+    this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * 0.009, Math.min(1, dt * 7));
+    this.craftBody.rotation.x = -game.speed * 0.0004 + game.verticalSpeed * 0.013;
     this.craft.visible = game.immunity <= 0 || Math.sin(this.clock * 35) > -0.6;
     for (let index = 0; index < this.ghosts.length; index++) {
       const ghost = this.ghosts[index];
@@ -543,21 +506,23 @@ export class World {
       const { pose, color } = projection;
       const ghostFrame = this.frame(pose.distance, pose.lane, 1.9 + pose.height);
       ghost.group.position.copy(ghostFrame.point);
-      ghost.group.rotation.y = Math.atan2(ghostFrame.tangent.x, ghostFrame.tangent.z);
-      ghost.body.rotation.z = pose.lateralSpeed * 0.018;
-      ghost.body.rotation.x = -pose.speed * 0.0015;
+      this.orient(ghost.group, ghostFrame);
+      ghost.body.rotation.z = pose.lateralSpeed * 0.009;
+      ghost.body.rotation.x = -pose.speed * 0.0004;
       ghost.material.color.set(color);
       ghost.ring.material.color.set(color);
       const separation = ghost.group.position.distanceTo(point);
       ghost.material.opacity = THREE.MathUtils.lerp(0.09, 0.32, Math.min(1, separation / 10));
       ghost.ring.material.opacity = THREE.MathUtils.lerp(0.1, 0.7, Math.min(1, separation / 12));
     }
-    this.shadow.position.copy(point); this.shadow.position.y -= 2.1 + game.height;
+    const groundFrame = this.frame(game.distance, game.lane, -0.25);
+    this.shadow.position.copy(groundFrame.point);
+    this.orient(this.shadow, groundFrame);
+    this.shadow.rotateX(-Math.PI / 2);
     this.shadow.scale.setScalar(1 + game.height * 0.08);
     this.shadow.material.opacity = 1 - game.height * 0.1;
-    this.shadow.rotation.z = -this.craft.rotation.y;
     for (const flame of this.flames) {
-      const power = game.boosting ? 2.8 : 0.3 + game.speed * 0.021;
+      const power = 0.35 + game.speed * 0.009 + (game.boosting ? 0.6 : 0);
       flame.scale.set(1, power * (0.9 + Math.sin(this.clock * 47) * 0.1), 1);
       flame.position.z = -3 - 1.2 * power;
     }
@@ -565,7 +530,8 @@ export class World {
     for (const drone of this.drones) {
       const frame = this.frame(drone.obstacle.distance, obstacleLane(drone.obstacle, motionTime));
       drone.group.position.copy(frame.point);
-      drone.group.rotation.z = Math.cos(motionTime * drone.obstacle.frequency + drone.obstacle.phase) * -0.12;
+      this.orient(drone.group, frame);
+      drone.group.rotateZ(Math.cos(motionTime * drone.obstacle.frequency + drone.obstacle.phase) * -0.12);
     }
     for (const pad of this.pads) pad.light.color.set(game.activatedPads.has(pad.id) ? '#3b6353' : '#78ecae');
     if (animated) {
@@ -598,24 +564,39 @@ export class World {
       desired.addScaledVector(tangent, -20).addScaledVector(right, -12);
       desired.y += 9;
       desired.addScaledVector(right, Math.sin(this.clock * 0.09) * 1.5);
-      look.addScaledVector(tangent, 34).addScaledVector(right, -5);
-      look.y += 5.5;
+      look.addScaledVector(tangent, 12).addScaledVector(right, -8);
+      look.y += 3;
     } else {
-      desired.addScaledVector(tangent, game.boosting ? -18.5 : -15.5);
+      desired.copy(this.frame(game.distance - 19 - game.speed * 0.018, game.lane, 2 + game.height).point);
       desired.addScaledVector(right, -game.lateralSpeed * 0.07);
       desired.y += 7;
-      look.copy(this.frame(game.distance + 28, game.lane * 0.6, 3).point);
+      look.copy(this.frame(game.distance + 32 + game.speed * 0.12, game.lane * 0.6, 3).point);
     }
     if (this.lastStatus === 'menu' && !menu) this.cameraReady = false;
     this.lastStatus = game.status;
-    if (!this.cameraReady) { this.camera.position.copy(desired); this.cameraReady = true; }
-    this.camera.position.lerp(desired, 1 - Math.exp(-dt * 6));
+    const fov = menu ? 58 : speedFov(game.speed);
+    if (!this.cameraReady) { this.camera.position.copy(desired); this.camera.fov = fov; this.cameraReady = true; }
+    this.camera.position.lerp(desired, 1 - Math.exp(-dt * (menu ? 6 : 16 + game.speed * 0.1)));
     this.shake = Math.max(0, this.shake - dt * 2);
     this.camera.position.x += Math.sin(this.clock * 90) * this.shake * 0.25;
     this.camera.position.y += Math.cos(this.clock * 73) * this.shake * 0.2;
     this.camera.lookAt(look);
-    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, menu ? 58 : game.boosting ? 72 : 62, Math.min(1, dt * 3));
+    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, fov, animated ? 1 - Math.exp(-dt * 4) : 0);
     this.camera.updateProjectionMatrix();
+    const intensity = THREE.MathUtils.clamp((game.speed - 70) / 170, 0, 1);
+    this.speedLines.visible = game.status === 'running' && intensity > 0;
+    this.speedLines.position.copy(this.camera.position);
+    this.speedLines.quaternion.copy(this.camera.quaternion);
+    this.speedLines.material.opacity = intensity * 0.28;
+    if (this.speedLines.visible) {
+      this.speedParticles.forEach((particle, index) => {
+        particle.z += game.speed * dt;
+        if (particle.z > -4) particle.z -= 116;
+        const x = Math.cos(particle.angle) * particle.radius, y = Math.sin(particle.angle) * particle.radius;
+        this.speedVertices.set([x, y, particle.z, x, y, particle.z - 1 - intensity * 6], index * 6);
+      });
+      this.speedLines.geometry.attributes.position.needsUpdate = true;
+    }
     this.followLight.position.copy(point).add(new THREE.Vector3(-25, 55, 20));
     this.followLight.target.position.copy(point);
     this.dust.position.copy(point);

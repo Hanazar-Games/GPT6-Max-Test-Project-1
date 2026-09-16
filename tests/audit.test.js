@@ -44,11 +44,11 @@ test('destroyed craft cannot be revived by a pickup later in the same step', () 
 
 test('a simulation step cannot travel or collect beyond the remaining time', () => {
   const game = flight();
-  Object.assign(game, { time: 0.001, speed: 36 });
+  Object.assign(game, { time: 0.001, speed: game.craft.speed });
   game.course.pickups = [{ id: 0, distance: 3, lane: 0 }];
   updateGame(game, { accelerate: true }, 0.1);
   assert.equal(game.status, 'lost');
-  assert.ok(game.distance <= 0.036 + 1e-8);
+  assert.ok(game.distance <= game.craft.speed * 0.001 + 1e-8);
   assert.equal(game.collected.size, 0);
   assert.equal(game.elapsed, 0.001);
 });
@@ -251,7 +251,7 @@ test('perfect gate rewards use the lane at crossing on both sides of the center'
     const game = createGame();
     startGame(game);
     const gate = game.course.gates[0];
-    Object.assign(game, { status: 'running', distance: gate.distance - 0.01, speed: 36, lane: side * lane, lateralSpeed: side * steer * 8 });
+    Object.assign(game, { status: 'running', distance: gate.distance - 0.01, speed: game.craft.speed, lane: side * lane, lateralSpeed: side * steer * 8 });
     updateGame(game, { accelerate: true, steer: side * steer }, 1 / 60);
     assert.equal(game.gates, 1);
     assert.equal(game.perfectGates, Number(perfect));
@@ -282,7 +282,7 @@ test('a complete delivery arriving within the final available step succeeds', ()
 
 test('the final available step cannot grant distance beyond the deadline', () => {
   const game = finalApproach();
-  game.distance = game.mission.length - 1;
+  game.distance = game.mission.length - game.speed * game.time - 0.01;
   updateGame(game, { accelerate: true }, 1 / 60);
   assert.equal(game.status, 'lost');
   assert.equal(game.reason, 'time');

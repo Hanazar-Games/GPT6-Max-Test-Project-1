@@ -105,7 +105,7 @@ test('only the fastest complete successful flight replaces the ghost, while scor
   assert.equal(records.get('tranquility/scout').score, 6000);
   assert.equal(records.get('tranquility/scout').time, 45);
   first.game.distance = 0;
-  assert.equal(ghost.samples.at(-1).distance, 1800);
+  assert.equal(ghost.samples.at(-1).distance, first.game.mission.length);
 });
 
 test('failed or incomplete recordings never overwrite a successful ghost', () => {

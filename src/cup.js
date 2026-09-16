@@ -55,7 +55,7 @@ export function getTrophy(cup) {
     { tier: 'gold', name: '月环冠军', color: '#ffe097' },
     { tier: 'silver', name: '月环亚军', color: '#d4e5f0' },
     { tier: 'bronze', name: '月环季军', color: '#eeb38e' },
-    { tier: 'finisher', name: '三站征服者', color: '#8ee9d1' },
+    { tier: 'finisher', name: '十星征服者', color: '#8ee9d1' },
   ][Math.min(place, 4) - 1] };
 }
 

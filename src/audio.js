@@ -1,3 +1,5 @@
+import { composeBeat } from './music.js';
+
 export class AudioEngine {
   constructor(createContext = () => new AudioContext()) {
     this.createContext = createContext;
@@ -31,6 +33,9 @@ export class AudioEngine {
         this.engineGain.gain.value = 0;
         this.engine.connect(this.filter).connect(this.engineGain).connect(this.sfx);
         this.engine.start();
+        this.noiseBuffer = this.context.createBuffer(1, this.context.sampleRate, this.context.sampleRate);
+        const noise = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < noise.length; i++) noise[i] = Math.random() * 2 - 1;
         this.ready = true;
       }
       await this.context.resume();
@@ -99,22 +104,35 @@ export class AudioEngine {
     if (!bus || bus === 'music') this.nextBeat = 0;
   }
 
-  tone(frequency, duration = 0.15, offset = 0, type = 'sine', bus = 'sfx', volume = 0.3) {
+  tone(frequency, duration = 0.15, offset = 0, type = 'sine', bus = 'sfx', volume = 0.3, kind = 'tone') {
     if (!this.context || this.context.state !== 'running' || !this.enabled || this.background || this.state === 'paused' || !this.volumes[bus] || this.voices.size >= 48) return;
     const start = this.context.currentTime + offset;
-    const oscillator = this.context.createOscillator();
+    const noise = kind === 'hat' || kind === 'snare';
+    const oscillator = noise ? this.context.createBufferSource() : this.context.createOscillator();
     const gain = this.context.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, start);
+    let filter;
+    if (noise) {
+      oscillator.buffer = this.noiseBuffer;
+      oscillator.loop = true;
+      filter = this.context.createBiquadFilter();
+      filter.type = kind === 'hat' ? 'highpass' : 'bandpass';
+      filter.frequency.value = frequency;
+      oscillator.connect(filter).connect(gain);
+    } else {
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, start);
+      if (kind === 'kick') oscillator.frequency.exponentialRampToValueAtTime(42, start + duration);
+      oscillator.connect(gain);
+    }
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(volume, start + (bus === 'music' ? 0.03 : 0.01));
+    gain.gain.linearRampToValueAtTime(volume, start + (kind === 'pad' ? 0.18 : kind === 'hat' || kind === 'kick' ? 0.004 : 0.01));
     gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-    oscillator.connect(gain).connect(this[bus]);
+    gain.connect(this[bus]);
     oscillator.start(start);
     oscillator.stop(start + duration + 0.02);
     const voice = { oscillator, gain, bus, start };
     this.voices.add(voice);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); this.voices.delete(voice); };
+    oscillator.onended = () => { oscillator.disconnect(); filter?.disconnect(); gain.disconnect(); this.voices.delete(voice); };
   }
 
   event(type) {
@@ -136,26 +154,27 @@ export class AudioEngine {
 
   update(game) {
     this.setState(game.status);
+    const theme = game.mission?.music ?? { root: 45, bpm: 124 };
+    if (this.themeRoot !== theme.root) {
+      this.stopVoices('music');
+      this.themeRoot = theme.root;
+      this.beat = 0;
+    }
     if (!this.engine || this.context.state !== 'running' || this.background) return;
     const now = this.context.currentTime;
-    this.target(this.engine.frequency, 35 + game.speed * 1.9, 0.08);
-    this.target(this.filter.frequency, game.boosting ? 550 : 180 + game.speed * 4, 0.1);
-    this.target(this.engineGain.gain, game.status === 'running' ? 0.06 + game.speed * 0.002 : 0, game.status === 'running' ? 0.1 : 0.01);
+    const intensity = Math.max(0, Math.min(1, game.speed / 240));
+    this.target(this.engine.frequency, 35 + intensity * 190, 0.08);
+    this.target(this.filter.frequency, 180 + intensity * 700, 0.1);
+    this.target(this.engineGain.gain, game.status === 'running' ? 0.035 + intensity * 0.08 : 0, game.status === 'running' ? 0.1 : 0.01);
     if (!this.enabled || !this.volumes.music || !['menu', 'running'].includes(game.status)) return;
     if (this.nextBeat < now) this.nextBeat = now + 0.03;
     while (this.nextBeat < now + 0.2) {
-      const root = [45, 41, 48, 43][Math.floor(this.beat / 16) % 4];
       const offset = this.nextBeat - now;
-      const note = midi => 440 * 2 ** ((midi - 69) / 12);
-      const melody = [12, 19, 24, 22, 19, 15, 24, 19][this.beat % 8];
-      this.tone(note(root + melody), 0.5, offset, 'sine', 'music', 0.16);
-      if (this.beat % 4 === 0) {
-        this.tone(note(root), 1.1, offset, 'triangle', 'music', 0.2);
-        this.tone(note(root + 7), 1.05, offset, 'sine', 'music', 0.09);
+      for (const note of composeBeat(this.beat, theme, intensity, game.status === 'menu')) {
+        this.tone(note.frequency, note.duration, offset, note.type, 'music', note.volume, note.kind);
       }
-      if (game.status === 'running' && this.beat % 2 === 0) this.tone(55, 0.09, offset, 'sine', 'music', 0.18);
       this.beat++;
-      this.nextBeat += game.status === 'menu' ? 0.42 : 0.3;
+      this.nextBeat += 60 / (theme.bpm * (game.status === 'menu' ? 1.25 : 2));
     }
   }
 }

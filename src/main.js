@@ -12,10 +12,13 @@ import { createCup, completeStage, advanceStage, getStandings, getTrophy, getRac
 import { createExpedition, settleExpedition, buyUpgrade, advanceExpedition, getContracts } from './expedition.js';
 import { mountExpeditionUI, renderExpeditionHUD, renderExpeditionResult, renderSupply } from './expedition-ui.js';
 import { World } from './world.js';
+import { createRoute } from './route.js';
 import { AudioEngine } from './audio.js';
 import { ENVIRONMENT, gravityAt, meteorState } from './environment.js';
 import { mountReleases } from './releases.js';
 import { FlightInput, KEY_ACTIONS } from './input.js';
+
+const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
 
 const icons = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -38,23 +41,23 @@ document.querySelector('#app').innerHTML = `
   <div class="shade"></div><div class="screen-edge"></div>
   <header class="header">
     <a class="brand" href="#" aria-label="月面速递首页"><span class="brand-mark"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="m20 4 15 28-15-6-15 6L20 4Z" stroke="currentColor" stroke-width="1.6"/><path d="m20 15 4 8-4-2-4 2 4-8Z" fill="currentColor"/></svg></span><span>月面速递<small>LUNAR COURIER</small></span></a>
-    <div class="header-center"><span class="status-dot"></span> 地月运输局 <span class="slash">/</span> 独立飞行计划</div>
+    <div class="header-center"><span class="status-dot"></span> 星际运输局 <span class="slash">/</span> 独立飞行计划</div>
     <div class="header-actions"><span class="live-label">系统在线 <span class="status-dot"></span></span><button id="sound" class="icon-button" aria-label="关闭声音" title="声音">${icon('sound')}</button><button id="help" class="icon-button" aria-label="操作指南" title="操作指南">${icon('help')}</button><button id="pause-button" class="icon-button" aria-label="暂停游戏" title="暂停 · Esc" hidden>${icon('pause')}</button></div>
   </header>
 
   <main id="menu" class="menu">
     <div class="hero">
       <div class="eyebrow"><span class="orange-line"></span> <span id="mission-caption">一场远离地球的极速任务</span> <span id="mission-number" class="mission-number">001</span></div>
-      <h1>奔向月球的<br>另<span class="outlined">一面。</span></h1>
-      <p class="hero-copy">这片寂静，等你打破。<br>驾驶悬浮艇穿越月面，把最后的能量带回家。</p>
-      <div class="mission-specs"><div><strong><b id="spec-time">90</b><span>秒</span></strong><small>任务时限</small></div><div><strong>6<span>座</span></strong><small>导航检查点</small></div><div><strong><b id="spec-length">1.8</b><span>公里</span></strong><small>月面环线</small></div></div>
+      <h1>奔向星海的<br>另<span class="outlined">一面。</span></h1>
+      <p class="hero-copy">这片寂静，等你打破。<br>驾驶超高速悬浮艇，穿越十颗星球的盘山公路。</p>
+      <div class="mission-specs"><div><strong><b id="spec-time">${MISSIONS[0].duration}</b><span>秒</span></strong><small>任务时限</small></div><div><strong>6<span>座</span></strong><small>导航检查点</small></div><div><strong><b id="spec-length">${(MISSIONS[0].length / 1000).toFixed(1)}</b><span>公里</span></strong><small>星球山路</small></div></div>
       <button id="start" class="primary-button" disabled><span>正在建立月面连接…<small>PREPARING YOUR FLIGHT</small></span>${icon('arrow')}</button>
       <div class="start-note"><span class="status-dot"></span> 无需下载 · 即刻出发 <span class="enter-note">按 <kbd>Enter</kbd> 开始</span></div>
     </div>
-    <aside class="flight-loadout"><div class="loadout-label"><span class="status-dot"></span> 当前飞行配置 <span>03 / 03</span></div><strong id="loadout-mission">宁静海速递</strong><p id="loadout-craft">LC–07 游隼 · 均衡型</p><div id="session-best" class="session-best">新的航程，等你留下纪录。</div><button id="open-hangar" class="hangar-button"><span>任务机库<small>选择航线与悬浮艇</small></span>${icon('arrow')}</button></aside>
-    <div class="scene-label"><span class="crosshair">+</span><div><span id="scene-craft">LC–07 · 游隼</span><small>为低重力而生。为速度而来。</small></div></div>
-    <div class="coordinates"><span id="region-label">宁静海 · 第七运输区</span><small>00° 40′ 26.7″ N &nbsp; 23° 28′ 22.7″ E</small><div class="coordinate-line"></div><small>EARTH DISTANCE <b>384,400 KM</b></small></div>
-    <footer class="menu-footer"><div class="key-guide"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 驾驶</span><span><kbd>SPACE</kbd> 冲刺</span><span><kbd>F</kbd> 跃升</span><span><kbd>ESC</kbd> 暂停</span></div><span class="footer-note">三条航线。三种选择。一颗遥远的蓝色星球。<span>✦</span></span></footer>
+    <aside class="flight-loadout"><div class="loadout-label"><span class="status-dot"></span> 当前飞行配置 <span>10 星 / 03 艇</span></div><strong id="loadout-mission">${MISSIONS[0].name}</strong><p id="loadout-craft">LC–07 游隼 · 均衡型</p><div id="session-best" class="session-best">新的航程，等你留下纪录。</div><button id="open-hangar" class="hangar-button"><span>任务机库<small>选择航线与悬浮艇</small></span>${icon('arrow')}</button></aside>
+    <div class="scene-label"><span class="crosshair">+</span><div><span id="scene-craft">LC–07 · 游隼</span><small>为连环山弯而生。为极限速度而来。</small></div></div>
+    <div class="coordinates"><span id="region-label">${MISSIONS[0].region}</span><small id="planet-profile">MOUNTAIN RUN / 01</small><div class="coordinate-line"></div><small>OPEN WORLDS <b>10 / 10</b></small></div>
+    <footer class="menu-footer"><div class="key-guide"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 驾驶</span><span><kbd>SPACE</kbd> 冲刺</span><span><kbd>F</kbd> 跃升</span><span><kbd>ESC</kbd> 暂停</span></div><span class="footer-note">十颗星球。十条山路。一次极限远征。<span>✦</span></span></footer>
   </main>
 
   <section id="hud" class="hud" aria-label="飞行仪表" hidden>
@@ -62,7 +65,7 @@ document.querySelector('#app').innerHTML = `
     <div class="flight-direction"><span id="next-distance">270 M</span><span class="direction-symbol">⌄</span><small id="next-label">下一座导航门</small><div id="flight-cue" class="flight-cue"><strong id="cue-action">◎ 中央对准</strong><small id="cue-detail">保持航向</small></div></div>
     <div id="combo-panel" class="combo-panel"><span>连续收集</span><strong id="combo-value">0</strong><small id="combo-multiplier">×1.0</small></div>
     <div id="rival-panel" class="rival-panel"><div class="rival-heading"><span class="ghost-dot"></span><span id="rival-title">个人幽灵 / 首航记录</span></div><strong id="rival-delta">建立纪录</strong><span id="rival-split">成功返航后解锁追逐</span><div id="rival-live" class="rival-live">每一次出发，都有进步。</div><div id="split-flash" class="split-flash" role="status" aria-live="polite"></div></div>
-    <div class="hud-bottom"><div class="speed-panel"><div class="eyebrow">GROUND SPEED</div><div><strong id="speed">000</strong><span>KM/H</span></div><div class="speed-ticks">${'<i></i>'.repeat(24)}</div><span id="throttle-hint">按住 W / ↑ 加速</span></div><div class="resource-panel"><div class="resource-label">${icon('bolt')}<span>冲刺能量</span><strong id="energy-value">100%</strong><kbd>SPACE</kbd></div><div class="resource-track"><i id="energy-fill"></i></div><div class="hull-row">${icon('shield')}<span>艇体状态</span><div class="hull-track"><i id="hull-fill"></i></div><strong id="hull-value">100%</strong></div><div class="flight-help"><span>A / D 左右避障</span><span>S 制动</span><span>Esc 暂停</span></div></div><div class="map-panel"><div class="map-heading"><span>航线雷达</span><span id="progress">0%</span></div><canvas id="minimap" width="360" height="200" aria-label="航线进度雷达"></canvas><div class="map-footer"><span class="status-dot"></span><span>宁静海环线</span><strong id="score">00000</strong></div></div></div>
+    <div class="hud-bottom"><div class="speed-panel"><div class="eyebrow">GROUND SPEED</div><div><strong id="speed">000</strong><span>KM/H</span></div><div class="speed-ticks">${'<i></i>'.repeat(24)}</div><span id="throttle-hint">按住 W / ↑ 加速</span></div><div class="resource-panel"><div class="resource-label">${icon('bolt')}<span>冲刺能量</span><strong id="energy-value">100%</strong><kbd>SPACE</kbd></div><div class="resource-track"><i id="energy-fill"></i></div><div class="hull-row">${icon('shield')}<span>艇体状态</span><div class="hull-track"><i id="hull-fill"></i></div><strong id="hull-value">100%</strong></div><div class="flight-help"><span>A / D 左右避障</span><span>S 制动</span><span>Esc 暂停</span></div></div><div class="map-panel"><div class="map-heading"><span>航线雷达</span><span id="progress">0%</span></div><canvas id="minimap" width="360" height="200" aria-label="航线进度雷达"></canvas><div class="map-footer"><span class="status-dot"></span><span>${MISSIONS[0].name}</span><strong id="score">00000</strong></div></div></div>
     <div class="jump-indicator"><kbd>F</kbd>${icon('jump')}<span id="jump-status">跃升就绪</span><small>18 能量</small></div>
     <div id="touch-controls" class="touch-controls"><div><button data-control="left" aria-label="向左">←</button><button data-control="right" aria-label="向右">→</button><button data-control="jump" class="touch-jump" aria-label="跃升">${icon('jump')}</button></div><div><button data-control="brake" aria-label="制动">制动</button><button data-control="boost" class="touch-boost" aria-label="冲刺">${icon('bolt')}</button><button data-control="accelerate" class="touch-go" aria-label="加速">加速 ↑</button></div></div>
   </section>
@@ -70,9 +73,9 @@ document.querySelector('#app').innerHTML = `
   <div id="countdown" class="countdown" hidden><span>准备离港</span><strong id="countdown-number">3</strong><small>按住 W 或 ↑ 加速 · 航向自动跟随环线</small></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="impact-flash" class="impact-flash"></div>
-  <section id="pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><div class="modal-card"><span class="eyebrow">FLIGHT ON HOLD</span><h2 id="pause-title">月球可以等一会。</h2><p>任务已暂停。准备好后，继续你的航程。</p><button id="resume" class="primary-button"><span>继续飞行</span>${icon('arrow')}</button><button id="restart-pause" class="secondary-button">重新挑战</button><button id="back-pause" class="text-button">返回基地</button></div></section>
+  <section id="pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><div class="modal-card"><span class="eyebrow">FLIGHT ON HOLD</span><h2 id="pause-title">星海可以等一会。</h2><p>任务已暂停。准备好后，继续你的航程。</p><button id="resume" class="primary-button"><span>继续飞行</span>${icon('arrow')}</button><button id="restart-pause" class="secondary-button">重新挑战</button><button id="back-pause" class="text-button">返回基地</button></div></section>
   <section id="result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden><div class="modal-card result-card"><span id="result-eyebrow" class="eyebrow">MISSION COMPLETE</span><div id="result-symbol" class="result-symbol">✦</div><h2 id="result-title">能量送达，欢迎回家。</h2><p id="result-copy"></p><div class="result-stats"><div><strong id="result-score">0</strong><span>任务得分</span></div><div><strong id="result-time">0</strong><span>飞行用时</span></div><div><strong id="result-cargo">0</strong><span>收集核心</span></div></div><div id="result-details" class="result-details"></div><div id="result-medals" class="result-medals"></div><div id="result-rating" class="result-rating"></div><button id="retry" class="primary-button"><span>再飞一次</span>${icon('arrow')}</button><button id="next-mission" class="secondary-button" hidden>下一条航线 →</button><button id="back-result" class="text-button">返回基地</button></div></section>
-  <dialog id="guide"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次月面飞行。</h2><p>在 90 秒内完成环线，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
+  <dialog id="guide"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p>在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
   <div id="error" class="overlay" hidden><div class="modal-card"><span class="eyebrow">CONNECTION INTERRUPTED</span><h2>月面连接未能建立。</h2><p id="error-copy">请启用浏览器硬件加速，或换用支持 WebGL 2 的现代浏览器。</p><button id="reload" class="primary-button"><span>重新连接</span>${icon('arrow')}</button></div></div>
   <dialog id="hangar" aria-labelledby="hangar-title"><button id="close-hangar" class="icon-button dialog-close" aria-label="关闭任务机库">${icon('close')}</button><span class="eyebrow">FLIGHT DECK / 自由选择，立即出发</span><h2 id="hangar-title">每一次出发，都有新选择。</h2><div class="hangar-columns"><section><div class="hangar-section-title"><span>01</span> 选择航线</div><div id="mission-options" class="selection-list"></div></section><section><div class="hangar-section-title"><span>02</span> 选择悬浮艇</div><div id="craft-options" class="selection-list"></div></section></div><div id="hangar-summary" class="hangar-summary"></div><button id="confirm-hangar" class="primary-button"><span>确认飞行配置</span>${icon('arrow')}</button></dialog>
 `;
@@ -94,7 +97,7 @@ const ghostSetting = suffix => `<div class="quality-setting ghost-setting"><span
 $('hangar-summary').insertAdjacentHTML('afterend', `${ghostSetting('')}<p id="ghost-availability" class="ghost-availability"></p>`);
 $('guide-ready').insertAdjacentHTML('beforebegin', ghostSetting('-guide'));
 $('result-rating').insertAdjacentHTML('beforebegin', '<div id="result-challenge" class="result-challenge"></div><details id="split-review" class="split-review"><summary>分段飞行报告 <span>展开查看 ↓</span></summary><table><thead><tr><th scope="col">航标</th><th scope="col">累计用时</th><th scope="col">累计差距</th><th scope="col">本段差距</th></tr></thead><tbody id="result-splits"></tbody></table><p>对比本次起飞前的个人最快航程；负值表示更快。</p></details>');
-$('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="mode-options" aria-label="飞行模式"><button data-mode="delivery" aria-pressed="true"><span>自由速递<small>自由选择航线 · 挑战个人幽灵</small></span><b>↗</b></button><button data-mode="cup" aria-pressed="false"><span>月环大奖赛<small>三站连赛 · 四艇竞速 · 争夺月环杯</small></span>${icon('trophy')}</button></div><div id="cup-brief" class="cup-brief" hidden><strong>一款飞船，三站征途。</strong><p>宁静海 → 永夜峡谷 → 曙光前线。每站须完成交付，四艇按用时排名，依次获得 12 / 9 / 6 / 3 积分。失败可重试本站，晋级后恢复装甲与能量。</p><div class="cup-entrants">${RACERS.map(racer => `<span style="--racer:${racer.color}"><i></i>${racer.name}<small>${racer.style}</small></span>`).join('')}</div><small>电脑对手使用相同飞船与规则；投影互不碰撞。中途返回基地或刷新会结束赛事。</small></div>`);
+$('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="mode-options" aria-label="飞行模式"><button data-mode="delivery" aria-pressed="true"><span>自由速递<small>自由选择航线 · 挑战个人幽灵</small></span><b>↗</b></button><button data-mode="cup" aria-pressed="false"><span>月环大奖赛<small>十站连赛 · 四艇竞速 · 争夺月环杯</small></span>${icon('trophy')}</button></div><div id="cup-brief" class="cup-brief" hidden><strong>一款飞船，十站征途。</strong><p>从霁蓝星到永夜星，依次挑战十颗星球。每站须完成交付，四艇按用时排名，依次获得 12 / 9 / 6 / 3 积分。失败可重试本站，晋级后恢复装甲与能量。</p><div class="cup-entrants">${RACERS.map(racer => `<span style="--racer:${racer.color}"><i></i>${racer.name}<small>${racer.style}</small></span>`).join('')}</div><small>电脑对手使用相同飞船与规则；投影互不碰撞。中途返回基地或刷新会结束赛事。</small></div>`);
 $('result-details').insertAdjacentHTML('beforebegin', '<section id="cup-result" class="cup-result" aria-label="赛事积分榜" hidden><div id="cup-stage-strip" class="cup-stage-strip"></div><div class="cup-table-title"><strong id="cup-board-title">赛事总积分</strong><span>四艇计时赛</span></div><table><thead><tr><th scope="col">名次</th><th scope="col">领航员</th><th scope="col">积分</th><th scope="col">累计用时</th></tr></thead><tbody id="cup-standings"></tbody></table><p id="cup-standing-note"></p></section>');
 $('retry').insertAdjacentHTML('beforebegin', `<button id="continue-cup" class="primary-button" hidden><span>前往下一站</span>${icon('arrow')}</button>`);
 mountExpeditionUI();
@@ -136,43 +139,48 @@ function updateLoadout() {
   document.body.dataset.mode = mode;
   document.documentElement.style.setProperty('--mission', mission.color);
   $('mission-caption').textContent = mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mission.name;
-  $('mission-number').textContent = `0${mission.number}`;
+  $('mission-number').textContent = mission.number;
   $('spec-time').textContent = mission.duration;
   $('spec-length').textContent = (mission.length / 1000).toFixed(1);
-  $('loadout-mission').textContent = mode === 'cup' ? '月环大奖赛 · 三站征途' : mission.name;
+  $('loadout-mission').textContent = mode === 'cup' ? '月环大奖赛 · 十站征途' : mission.name;
   $('loadout-craft').textContent = `${craft.model} ${craft.name} · ${craft.role}`;
   $('scene-craft').textContent = `${craft.model} · ${craft.name}`;
   $('region-label').textContent = mission.region;
+  $('planet-profile').textContent = `${mission.planet} / ${(mission.length / 1000).toFixed(1)} KM 山路`;
   const best = records.get(`${mission.id}/${craft.id}`);
   $('session-best').textContent = best ? `会话最佳 ${best.score} 分 · 最快 ${best.time.toFixed(1)}s` : '新的航程，等你留下纪录。';
   $('ghost-availability').textContent = best ? `幽灵已就绪 · ${best.time.toFixed(2)}s · 再次出发，挑战自己的最快航程。` : '此配置尚无幽灵。成功返航一次即可建立；纪录随页面刷新清空。';
   if (mode === 'cup') {
-    $('session-best').textContent = '三站积分决胜 · 每站交付后晋级';
+    $('session-best').textContent = '十站积分决胜 · 每站交付后晋级';
     $('ghost-availability').textContent = `同级竞速 · 迎光、钴蓝、余烬均驾驶${craft.name}。计时不含倒计时与暂停。`;
   }
   if (mode === 'expedition') {
     $('mission-caption').textContent = '远征补给 · 让每一程都有收获';
-    $('loadout-mission').textContent = '远征补给 · 三站改装之旅';
-    $('session-best').textContent = '沿途接委托 · 补给换升级 · 深入月背';
+    $('loadout-mission').textContent = '远征补给 · 十站改装之旅';
+    $('session-best').textContent = '沿途接委托 · 补给换升级 · 穿越星海';
     $('ghost-availability').textContent = '远征独立计分，升级不影响普通航线纪录。进度仅保留到本次远征结束。';
   }
   $('cup-brief').hidden = mode !== 'cup';
   $('expedition-brief').hidden = mode !== 'expedition';
   $('mode-options').querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
-  document.querySelector('.hangar-columns .hangar-section-title').innerHTML = `<span>01</span> ${mode !== 'delivery' ? '三站航程 / 依次挑战' : '选择航线'}`;
+  document.querySelector('.hangar-columns .hangar-section-title').innerHTML = `<span>01</span> ${mode !== 'delivery' ? '十站航程 / 依次挑战' : '选择航线'}`;
   document.querySelector('#open-hangar small').textContent = '选择模式、航线与悬浮艇';
-  if (world) $('start').innerHTML = `<span>${mode === 'cup' ? '出战月环大奖赛' : '开始飞行'}<small>${mode === 'cup' ? 'THREE STAGES. ONE CHAMPION.' : 'LET’S MAKE A DELIVERY'}</small></span>${icon('arrow')}`;
+  if (world) $('start').innerHTML = `<span>${mode === 'cup' ? '出战月环大奖赛' : '开始飞行'}<small>${mode === 'cup' ? 'TEN WORLDS. ONE CHAMPION.' : 'LET’S MAKE A DELIVERY'}</small></span>${icon('arrow')}`;
   if (world && mode === 'expedition') $('start').innerHTML = `<span>开启远征补给<small>DELIVER. UPGRADE. EXPLORE.</small></span>${icon('arrow')}`;
   $('guide').querySelector('p').textContent = `在 ${mission.duration} 秒内完成 ${mission.name}，穿过 6 座导航门，带回至少 ${mission.cargo} 枚蓝色能量核心。`;
   $('mission-options').innerHTML = MISSIONS.map(option => {
-    const points = [...option.points, option.points[0]].map(([x, , z]) => `${(x + 260) / 5.8},${(z + 250) / 10}`).join(' ');
-    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
+    const preview = routePreviews.get(option.id);
+    const xs = preview.map(point => point.x), zs = preview.map(point => point.z);
+    const minX = Math.min(...xs), minZ = Math.min(...zs);
+    const scale = Math.min(85 / (Math.max(...xs) - minX), 45 / (Math.max(...zs) - minZ));
+    const points = preview.map(({ x, z }) => `${5 + (x - minX) * scale},${5 + (z - minZ) * scale}`).join(' ');
+    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
-  $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}"><svg viewBox="0 0 60 80" aria-hidden="true"><path d="m30 5 15 35-2 25-13-5-13 5-2-25z" fill="currentColor" opacity=".7"/><path d="m30 20 5 23-5 8-5-8z" fill="#152431"/><path d="M9 36h7v35H9zM44 36h7v35h-7z" fill="currentColor"/><path d="M10 74h5m30 0h5" stroke="#9df0fa" stroke-width="3"/></svg><div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / 69 * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / 140 * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / 16 * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
+  $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}"><svg viewBox="0 0 60 80" aria-hidden="true"><path d="m30 5 15 35-2 25-13-5-13 5-2-25z" fill="currentColor" opacity=".7"/><path d="m30 20 5 23-5 8-5-8z" fill="#152431"/><path d="M9 36h7v35H9zM44 36h7v35h-7z" fill="currentColor"/><path d="M10 74h5m30 0h5" stroke="#9df0fa" stroke-width="3"/></svg><div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / 240 * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / 140 * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / 32 * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
   $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · 建议用时 ${mission.par}s</small>`;
-  if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>6.2 公里 · 18 座导航门 · 同款飞船完成三站</small>`;
-  if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>9 项沿途委托 · 2 次中途改装 · 每项升级最多两级</small>`;
+  if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成十站</small>`;
+  if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
 }
 
 function showError(message) {
@@ -332,11 +340,11 @@ function syncPanels() {
   $('rival-panel').hidden = !!expedition;
   $('restart-pause').textContent = cup ? '重飞本站' : '重新挑战';
   $('back-pause').textContent = cup ? '结束赛事，返回基地' : '返回基地';
-  $('pause').querySelector('p').textContent = cup ? `第 ${cup.stage + 1} / 3 站已暂停，已完成的 ${cup.legs.length} 站积分保留。重飞仅重置本站；返回基地会结束本场赛事。` : '任务已暂停。准备好后，继续你的航程。';
+  $('pause').querySelector('p').textContent = cup ? `第 ${cup.stage + 1} / ${MISSIONS.length} 站已暂停，已完成的 ${cup.legs.length} 站积分保留。重飞仅重置本站；返回基地会结束本场赛事。` : '任务已暂停。准备好后，继续你的航程。';
   if (expedition) {
     $('restart-pause').textContent = '重飞本站';
     $('back-pause').textContent = '结束远征，返回基地';
-    $('pause').querySelector('p').textContent = `第 ${expedition.stage + 1} / 3 站已暂停。重飞保留已购升级与 ${expedition.supply} 点补给，本站委托重新开始；返回基地会结束远征。`;
+    $('pause').querySelector('p').textContent = `第 ${expedition.stage + 1} / ${MISSIONS.length} 站已暂停。重飞保留已购升级与 ${expedition.supply} 点补给，本站委托重新开始；返回基地会结束远征。`;
   }
   if (status === 'paused') $('resume').focus({ preventScroll: true });
   if (status === 'won' || status === 'lost') {
@@ -360,7 +368,7 @@ function syncPanels() {
     document.querySelectorAll('.result-stats > div > span').forEach((label, index) => { label.textContent = (cup || expedition ? ['本站得分', '本站用时', '本站核心'] : ['任务得分', '飞行用时', '收集核心'])[index]; });
     $('result-details').innerHTML = `<span>最高连收 <b>${game.maxCombo}</b></span><span>精准过门 <b>${game.perfectGates} / 6</b></span><span>空中避障 <b>${game.airDodges}</b></span>`;
     $('result-medals').innerHTML = debrief.medals.map(medal => `<span><b>${medal.symbol}</b>${medal.name}</span>`).join('');
-    $('result-rating').textContent = won ? `${debrief.rank}  /  ${{ S: '月面传奇', A: '王牌速递员', B: '可靠领航员' }[debrief.rank]}${record.newScore ? ' · 本次会话得分新纪录' : ''}` : `已完成 ${Math.floor(game.distance / game.mission.length * 100)}% 航程 · 每一次出发都更接近终点`;
+    $('result-rating').textContent = won ? `${debrief.rank}  /  ${{ S: '星际传奇', A: '王牌速递员', B: '可靠领航员' }[debrief.rank]}${record.newScore ? ' · 本次会话得分新纪录' : ''}` : `已完成 ${Math.floor(game.distance / game.mission.length * 100)}% 航程 · 每一次出发都更接近终点`;
     $('result-challenge').textContent = !won ? (rival ? '个人幽灵已保留 · 下次继续追逐' : '成功返航后建立你的第一道幽灵') : record.previousTime === null ? '首航纪录已建立 · 再飞一次，与自己的幽灵同场' : record.newBest ? `刷新最快航程！快了 ${(record.previousTime - game.elapsed).toFixed(2)} 秒` : `距个人最快 ${deltaText(game.elapsed - record.previousTime)} · 再找一条更快的路线`;
     $('result-challenge').dataset.tone = record.newBest ? 'ahead' : 'neutral';
     $('result-splits').innerHTML = Array.from({ length: game.course.gates.length + 1 }, (_, index) => {
@@ -399,7 +407,7 @@ function renderCupResult(won) {
     $('result-symbol').innerHTML = icon('trophy', 'cup-trophy');
     $('result-symbol').style.color = trophy.color;
     $('result-title').textContent = `${trophy.name}，欢迎归航。`;
-    $('result-copy').textContent = `${game.craft.name}完成三站征途，累计 ${player.points} 积分，总榜第 ${player.place} 名。`;
+    $('result-copy').textContent = `${game.craft.name}完成十站征途，累计 ${player.points} 积分，总榜第 ${player.place} 名。`;
   } else if (won) {
     $('result-title').textContent = '一站告捷，征途继续。';
     $('result-copy').textContent = `${game.mission.name}交付完成。下一站：${MISSIONS[cup.stage + 1].name}，装甲与能量已准备补满。`;
@@ -445,7 +453,9 @@ function drawMap() {
   map.clearRect(0, 0, 360, 200);
   const project = (distance) => {
     const { point } = world.frame(distance);
-    return [180 + point.x * 0.58, 99 + point.z * 0.32];
+    const { min, max } = world.routeBounds;
+    const scale = Math.min(320 / (max.x - min.x), 165 / (max.z - min.z));
+    return [180 + (point.x - (min.x + max.x) / 2) * scale, 99 + (point.z - (min.z + max.z) / 2) * scale];
   };
   map.strokeStyle = '#ffffff0b'; map.lineWidth = 1;
   for (let x = 0; x < 360; x += 30) { map.beginPath(); map.moveTo(x, 0); map.lineTo(x, 200); map.stroke(); }
@@ -496,8 +506,8 @@ function updateHUD() {
   refs['hull-fill'].classList.toggle('danger', hullPercent < 35);
   refs.progress.textContent = `${Math.floor(game.distance / game.mission.length * 100)}%`;
   refs.score.textContent = String(game.score).padStart(5, '0');
-  document.querySelector('.mission-heading .eyebrow').textContent = cup ? `CUP / ${cup.stage + 1} OF 3 · ${game.craft.model}` : `OPERATION / 0${game.mission.number} · ${game.craft.model}`;
-  if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF 3 · ${game.craft.model}`;
+  document.querySelector('.mission-heading .eyebrow').textContent = cup ? `CUP / ${cup.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : `OPERATION / ${game.mission.number} · ${game.craft.model}`;
+  if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}`;
   document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
   refs.sector.textContent = game.gates === 6 ? '最后一程 · 返回基地' : `${game.mission.name} · 第 ${String(game.gates + 1).padStart(2, '0')} 区段`;
   refs.objective.textContent = game.collected.size >= game.mission.cargo ? '能量已装载 · 沿航线返回基地' : `还需 ${game.mission.cargo - game.collected.size} 枚能量核心 · 留意蓝色晶体`;
@@ -651,9 +661,9 @@ $('next-mission').addEventListener('click', () => {
   launch();
 });
 $('guide').querySelector('.guide-keys').insertAdjacentHTML('beforeend', '<div><span><kbd>F</kbd></span><span>跃升避障 · 消耗 18 能量</span></div>');
-$('guide').querySelector('.guide-tip').textContent = '航向自动跟随环线。绿色加速带免费超频，F 跃升避障，高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
-$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<p class="cup-guide-note">在任务机库选择「月环大奖赛」，与三名电脑领航员连赛三站。须收集核心并穿过全部导航门才能晋级；每站重新计时并补满艇体，失败可重试。对手投影互不碰撞，结束赛事或刷新会清空赛事积分。</p>');
-$('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', '<p class="cup-guide-note">「远征补给」沿三站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。两次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>');
+$('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向避障；速度越快，镜头视野越宽。绿色加速带免费超频，F 跃升避障，高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
+$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<p class="cup-guide-note">在任务机库选择「月环大奖赛」，与三名电脑领航员连赛十站。须收集核心并穿过全部导航门才能晋级；每站重新计时并补满艇体，失败可重试。对手投影互不碰撞，结束赛事或刷新会清空赛事积分。</p>');
+$('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', '<p class="cup-guide-note">「远征补给」沿十站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。九次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>');
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<div class="environment-guide"><strong>☄ 陨石预警 &nbsp; / &nbsp; ⌁ 低重力航段</strong><p>红圈提前 2.6 秒预警，撞击后 1 秒内低空艇体会受到 22 点伤害；横向避开红圈，或按 F 腾空越过冲击波可获 180 分。紫色边线标出低重力区，跃升滞空更久；腾空离开区域可获 200 分。每处技巧奖励只计一次，高空仍会错过核心。</p><small>环境按飞行用时循环，暂停时冻结；重飞从头开始。灰色落点和退去的余辉没有伤害，雷达同步标出落点与低重力航段。</small></div>');
 document.querySelector('.flight-help').innerHTML = '<span>A / D 避障</span><span>F 跃升</span><span>S 制动</span><span>Esc 暂停</span>';
 document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); if (game.status === 'menu') return; if (['running', 'countdown'].includes(game.status)) pause(); else home(); });

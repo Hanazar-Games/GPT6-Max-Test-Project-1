@@ -20,14 +20,14 @@ test('upgrades change a private craft without mutating catalogs or caller config
   const levels = { engine: 1, reactor: 2, armor: 1, magnet: 2 };
   const game = createGame('eclipse', 'scout', levels);
   levels.engine = 2;
-  assert.equal(game.craft.speed, 40);
-  assert.equal(game.craft.boostSpeed, 63);
+  assert.equal(game.craft.speed, CRAFTS[0].speed + 4);
+  assert.equal(game.craft.boostSpeed, CRAFTS[0].boostSpeed + 6);
   assert.equal(game.craft.recharge, 21);
   assert.equal(game.craft.hull, 130);
   assert.equal(game.craft.pickupRange, 6.1);
   assert.equal(game.upgrades.engine, 1);
   assert.deepEqual(CRAFTS, original);
-  assert.equal(createGame().craft.speed, 36);
+  assert.equal(createGame().craft.speed, CRAFTS[0].speed);
 });
 
 test('invalid upgrade configurations are rejected', () => {
@@ -42,7 +42,7 @@ test('retry restores the upgraded build and resets flight objectives', () => {
   game.activatedPads.add(1);
   game.collected.add(1);
   startGame(game);
-  assert.equal(game.craft.speed, 40);
+  assert.equal(game.craft.speed, CRAFTS[2].speed + 8);
   assert.equal(game.hull, 200);
   assert.equal(game.energy, 100);
   assert.equal(game.perfectGates, 0);
@@ -73,7 +73,7 @@ test('engine and reactor upgrades affect actual fixed-step driving', () => {
   assert.ok(upgraded.energy > base.energy + 19);
 });
 
-test('contracts reflect real run stats and vary across the three stages', () => {
+test('contracts reflect real run stats and vary across planet difficulties', () => {
   const signatures = new Set();
   for (const mission of MISSIONS) {
     const game = createGame(mission.id);
@@ -154,18 +154,18 @@ test('purchases require resupply, enforce funds and caps, and do not advance aut
   assert.equal(run.supply, 2);
 });
 
-test('three stages complete once, preserve earnings, and new expeditions start empty', () => {
+test('all ten stages complete once, preserve earnings, and new expeditions start empty', () => {
   const run = createExpedition('interceptor');
-  for (let stage = 0; stage < 3; stage++) {
+  for (let stage = 0; stage < MISSIONS.length; stage++) {
     assert.equal(run.stage, stage);
     const game = finished(run);
     assert.ok(settleExpedition(run, game));
     assert.equal(settleExpedition(run, game), null);
-    assert.equal(advanceExpedition(run), stage < 2);
+    assert.equal(advanceExpedition(run), stage < MISSIONS.length - 1);
   }
   assert.equal(run.status, 'complete');
-  assert.equal(run.supply, 6);
-  assert.equal(run.legs.reduce((sum, leg) => sum + leg.earned, 0), 6);
+  assert.equal(run.supply, MISSIONS.length * 2);
+  assert.equal(run.legs.reduce((sum, leg) => sum + leg.earned, 0), MISSIONS.length * 2);
   assert.equal(buyUpgrade(run, 'reactor'), false);
   const fresh = createExpedition('interceptor');
   assert.equal(fresh.supply, 0);

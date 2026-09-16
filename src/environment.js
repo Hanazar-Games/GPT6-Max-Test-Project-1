@@ -5,7 +5,7 @@ export function makeEnvironment(mission) {
   const gravityZones = [[520, 675], [1200, 1350]].slice(0, mission.difficulty ? 2 : 1)
     .map(([start, end], id) => ({ id, start: start * scale, end: end * scale }));
   const meteors = [[430, -6], [980, 6], [1390, 0], [670, -7]].slice(0, 2 + mission.difficulty)
-    .map(([distance, lane], id) => ({ id, distance: distance * scale, lane, radius: 5, first: distance * scale / 38 + id * 0.3, period: 10 - mission.difficulty * 0.8 }))
+    .map(([distance, lane], id) => ({ id, distance: distance * scale, lane, radius: 5, first: distance * scale / 112 + id * 0.3, period: 10 - mission.difficulty * 0.8 }))
     .sort((a, b) => a.distance - b.distance);
   return { gravityZones, meteors };
 }
@@ -54,7 +54,7 @@ export function meteorContact(meteor, before, after) {
 export function getMeteorCue(game) {
   for (const meteor of game.course.meteors) {
     const distance = meteor.distance - game.distance;
-    if (distance < -meteor.radius - ENVIRONMENT.craftRadius || distance > 140) continue;
+    if (distance < -meteor.radius - ENVIRONMENT.craftRadius || distance > Math.max(140, game.speed * 2.6)) continue;
     const state = meteorState(meteor, game.elapsed);
     const arrival = Math.max(0, distance) / Math.max(1, game.speed);
     if (!['warning', 'impact'].includes(state.phase) && (arrival > 6 || meteorState(meteor, game.elapsed + arrival).phase !== 'impact')) continue;

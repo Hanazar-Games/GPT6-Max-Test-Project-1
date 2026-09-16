@@ -64,23 +64,23 @@ test('failure or the wrong mission, craft, or opponent field never advances the 
   assert.ok(completeStage(cup, finish(cup), field));
 });
 
-test('three stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
+test('all ten stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
   const cup = createCup('interceptor');
-  for (let stage = 0; stage < 3; stage++) {
+  for (let stage = 0; stage < MISSIONS.length; stage++) {
     const game = finish(cup, 40 + stage);
     completeStage(cup, game, fieldFor(cup));
     game.elapsed = 0;
     assert.equal(cup.legs[stage].results.find(row => row.id === 'player').time, 40 + stage);
-    assert.equal(advanceStage(cup), stage < 2);
+    assert.equal(advanceStage(cup), stage < MISSIONS.length - 1);
   }
   assert.equal(cup.status, 'complete');
-  assert.equal(cup.legs.length, 3);
+  assert.equal(cup.legs.length, MISSIONS.length);
   assert.equal(getStandings(cup)[0].id, 'player');
-  assert.equal(getStandings(cup)[0].points, 36);
+  assert.equal(getStandings(cup)[0].points, MISSIONS.length * 12);
   assert.equal(getTrophy(cup).tier, 'gold');
   const next = createCup(cup.craftId);
   assert.equal(next.legs.length, 0);
-  assert.equal(cup.legs.length, 3);
+  assert.equal(cup.legs.length, MISSIONS.length);
 });
 
 test('equal finish times share their placing and points; equal championship scores use total time', () => {
@@ -126,7 +126,7 @@ test('live classification keeps finished opponents ahead and freezes with simula
   assert.ok(view.ghosts.every(ghost => ghost.pose.distance < game.mission.length));
 });
 
-test('computer competitors fly valid, deterministic, bounded runs for all nine configurations', () => {
+test('computer competitors fly valid, deterministic, bounded runs for every planet and craft', () => {
   for (const mission of MISSIONS) for (const craft of CRAFTS) {
     const field = buildField(mission.id, craft.id);
     assert.equal(field.length, 3);

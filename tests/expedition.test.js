@@ -12,8 +12,8 @@ function running(missionId = 'tranquility', craftId = 'scout') {
   return game;
 }
 
-test('three distinct missions provide deterministic, reachable route objects', () => {
-  assert.equal(MISSIONS.length, 3);
+test('ten distinct missions provide deterministic, reachable route objects', () => {
+  assert.equal(MISSIONS.length, 10);
   const layouts = new Set();
   for (const mission of MISSIONS) {
     const course = makeCourse(mission);
@@ -26,7 +26,7 @@ test('three distinct missions provide deterministic, reachable route objects', (
     }
     layouts.add(JSON.stringify(course));
   }
-  assert.equal(layouts.size, 3);
+  assert.equal(layouts.size, MISSIONS.length);
 });
 
 test('retry preserves selected mission and craft while resetting run resources', () => {
@@ -209,5 +209,5 @@ test('every mission and craft combination can complete and record a continuous r
     assert.equal(ghost.samples.at(-1).time, game.elapsed);
     assert.ok(ghost.samples.length < MAX_GHOST_SAMPLES);
   }
-  assert.equal(records.size, 9);
+  assert.equal(records.size, MISSIONS.length * CRAFTS.length);
 });

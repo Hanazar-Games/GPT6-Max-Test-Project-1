@@ -5,10 +5,11 @@ import { World } from '../src/world.js';
 import { MISSIONS, makeCourse } from '../src/missions.js';
 import { meteorFootprint } from '../src/environment-view.js';
 import { ENVIRONMENT } from '../src/environment.js';
+import { createRoute } from '../src/route.js';
 
 test('meteor footprint follows the collision coordinates on every curved and sloped route', () => {
   for (const mission of MISSIONS) {
-    const world = { mission, curve: new THREE.CatmullRomCurve3(mission.points.map(point => new THREE.Vector3(...point)), true, 'catmullrom', 0.35), frame: World.prototype.frame };
+    const world = { mission, curve: createRoute(mission), frame: World.prototype.frame };
     for (const meteor of makeCourse(mission).meteors) {
       const geometry = meteorFootprint(world, meteor, 0.978);
       const radius = meteor.radius + ENVIRONMENT.craftRadius;

@@ -7,12 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 网页访问适配</h2>
+      <h2 id="release-title">v${version} · 十星山路</h2>
+      <p>把速度交给引擎，把星海留在身后。</p>
+      <ul class="release-list">
+        <li><strong>十颗星球，十条盘山公路</strong>冰峰、晶谷、赤岭、熔岩与海崖全部开放；连续爬升、回头弯与下坡贯穿 5.0–7.2 公里的独立航线。</li>
+        <li><strong>飞船升级，极速出发</strong>重制装甲机身、玻璃座舱、双涡轮、翼面和艇型细节；基础冲刺极速提升至 666–864 km/h。</li>
+        <li><strong>越快，视野越宽</strong>镜头随实际速度平滑扩大视野，减速时逐渐收回；速度线、尾焰和山路跟随镜头增强疾驰感。</li>
+        <li><strong>星球专属动态配乐</strong>新的和声、低音、琶音与飞行鼓组；不同星球切换调性，高速时增加音乐层次。</li>
+        <li><strong>十站完整征途</strong>大奖赛与远征同步扩展到十站，新增航线雷达适配；修复高速横移时核心和加速带漏判的问题。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>7 个版本</span></summary>
+        <article><h3>v1.1.5 · 网页访问适配</h3>
       <p>从项目页面进入，也能顺利启航。</p>
       <ul class="release-list">
         <li><strong>修复页面加载</strong>解决从 GitHub Pages 项目页面打开时，游戏画面、界面和图标无法加载的问题。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>6 个版本</span></summary>
+        </article>
         <article><h3>v1.1.4 · 驾驶操作修复</h3>
       <p>操作有回应，暂停不再被长按打断。</p>
       <ul class="release-list">
