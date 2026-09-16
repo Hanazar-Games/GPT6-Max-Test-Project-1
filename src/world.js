@@ -8,6 +8,9 @@ import { EnvironmentView } from './environment-view.js';
 import { createRoute, routeFrame, speedFov } from './route.js';
 import { makeCraftModel, configureCraftModel } from './craft-view.js';
 import { makeMountainRoad, makePlanetScenery } from './planet-view.js';
+import { makeReflectionMap, makeSurfaceTexture, terrainElevation } from './surface-view.js';
+import { makeSpaceport } from './base-view.js';
+import { batchMeshes } from './model-utils.js';
 
 let seed = 4517;
 function random() {
@@ -44,6 +47,9 @@ export class World {
 
   clearScene() {
     const resources = new Set();
+    if (this.scene.environment) resources.add(this.scene.environment);
+    this.scene.environment = null;
+    this.terrainGeometry = null;
     this.scene.traverse(object => {
       if (object.geometry) resources.add(object.geometry);
       for (const material of Array.isArray(object.material) ? object.material : object.material ? [object.material] : []) {
@@ -73,9 +79,9 @@ export class World {
     this.curve = createRoute(this.mission);
     this.samples = this.curve.getSpacedPoints(600);
     this.materials = {
-      metal: new THREE.MeshStandardMaterial({ color: '#b5bec5', metalness: 0.55, roughness: 0.42, flatShading: true }),
+      metal: new THREE.MeshStandardMaterial({ color: '#b5bec5', metalness: 0.65, roughness: 0.32 }),
       dark: new THREE.MeshStandardMaterial({ color: '#182936', metalness: 0.6, roughness: 0.5 }),
-      orange: new THREE.MeshStandardMaterial({ color: '#ed703a', metalness: 0.3, roughness: 0.42 }),
+      orange: new THREE.MeshPhysicalMaterial({ color: '#ed703a', metalness: 0.35, roughness: 0.32, clearcoat: 0.65 }),
       glow: new THREE.MeshStandardMaterial({ color: '#ff985c', emissive: '#ff672d', emissiveIntensity: 3 }),
       cyan: new THREE.MeshStandardMaterial({ color: '#a1e9f0', emissive: '#67d7ef', emissiveIntensity: 2 }),
     };
@@ -126,6 +132,8 @@ export class World {
   }
 
   makeLights() {
+    this.scene.environment = makeReflectionMap(this.mission.color);
+    this.scene.environmentIntensity = 0.7;
     this.scene.add(new THREE.HemisphereLight(new THREE.Color(this.mission.color).lerp(new THREE.Color('#e3f0ff'), 0.65), this.mission.fog, 2.6));
     const sun = new THREE.DirectionalLight(this.mission.difficulty === 2 ? '#ffd8a4' : '#fff0d8', 3.4);
     sun.position.set(-100, 220, 140);
@@ -206,33 +214,40 @@ export class World {
     const blend = THREE.MathUtils.smoothstep(distance, 36, 145);
     const wave = Math.sin(x * 0.01 + Math.cos(z * 0.013) * 2) * Math.cos(z * 0.016) * 35;
     const peaks = Math.max(0, Math.sin(x * 0.009 - z * 0.007)) ** 3 * 160;
-    return { y: Math.min(y, low) - 7 + blend * (wave + peaks - 24), distance };
+    const surface = this.terrainGeometry ? terrainElevation(this.terrainGeometry, x, z) : null;
+    return { y: surface ?? Math.min(y, low) - 7 + blend * (wave + peaks - 24), distance };
   }
 
   makeTerrain() {
     this.routeBounds = new THREE.Box3().setFromPoints(this.samples);
     const bounds = this.routeBounds.clone().expandByScalar(400);
     const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
-    let geometry = new THREE.PlaneGeometry(size.x, size.z, 200, 200);
+    const geometry = new THREE.PlaneGeometry(size.x, size.z, 200, 200);
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(center.x, 0, center.z);
     const positions = geometry.attributes.position;
     for (let i = 0; i < positions.count; i++) {
       positions.setY(i, this.groundInfo(positions.getX(i), positions.getZ(i)).y);
     }
-    const indexed = geometry;
-    geometry = indexed.toNonIndexed();
-    indexed.dispose();
     geometry.computeVertexNormals();
     const colors = new Float32Array(geometry.attributes.position.count * 3);
     const color = new THREE.Color();
-    for (let i = 0; i < colors.length; i += 9) {
-      color.setHSL(this.mission.ground + random() * 0.025, this.mission.saturation, (['ice', 'salt', 'aurora'].includes(this.mission.biome) ? 0.53 : this.mission.biome === 'dunes' ? 0.4 : 0.23) + random() * 0.1);
-      for (let j = 0; j < 3; j++) color.toArray(colors, i + j * 3);
+    const pale = ['ice', 'salt', 'aurora'].includes(this.mission.biome);
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
+      const strata = Math.sin(y * 0.12 + Math.sin(x * 0.009) + Math.cos(z * 0.012)) * 0.025;
+      const slope = 1 - Math.abs(geometry.attributes.normal.getY(i));
+      color.setHSL(this.mission.ground + strata * 0.3, this.mission.saturation * (1 - slope * 0.35), (pale ? 0.56 : this.mission.biome === 'dunes' ? 0.4 : 0.25) + strata - slope * 0.07);
+      color.toArray(colors, i * 3);
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const terrain = this.mesh(geometry, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), this.scene);
+    const texture = makeSurfaceTexture();
+    texture.repeat.set(size.x / 30, size.z / 30);
+    const terrain = this.mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, map: texture, roughness: pale ? 0.65 : 0.95, metalness: 0.02 }), this.scene);
+    terrain.name = 'planet-terrain';
     terrain.receiveShadow = true;
+    geometry.computeBoundingBox();
+    this.terrainGeometry = geometry;
   }
 
   makeTrack() {
@@ -313,6 +328,7 @@ export class World {
       const sign = this.mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), side: THREE.DoubleSide }), group, [0, 13, -1.3]);
       sign.rotation.y = Math.PI;
       group.scale.x = (gate.width + 1.5) / 12;
+      batchMeshes(group);
       this.place(group, gate.distance, gate.lane);
       this.gates.push({ group, light });
     }
@@ -349,24 +365,7 @@ export class World {
   }
 
   makeBase() {
-    const base = new THREE.Group();
-    this.box([40, 0.8, 32], this.materials.dark, base, [0, -0.6, 0]);
-    for (const x of [-19, 19]) this.box([0.4, 0.12, 30], this.materials.glow, base, [x, 0, 0]);
-    this.place(base, 0);
-    for (let i = 0; i < 3; i++) {
-      const building = new THREE.Group();
-      this.box([10, 5, 13], this.materials.metal, building, [0, 2, 0]);
-      this.box([10.2, 0.4, 13.2], this.materials.dark, building, [0, 4.7, 0]);
-      this.box([8, 0.6, 0.1], this.materials.cyan, building, [0, 3.2, -6.6]);
-      this.place(building, 7 + i * 18, -37);
-    }
-    const tower = new THREE.Group();
-    this.box([1, 27, 1], this.materials.metal, tower, [0, 12, 0]);
-    this.box([4, 1, 4], this.materials.dark, tower, [0, 24, 0]);
-    this.mesh(new THREE.SphereGeometry(0.55, 12, 8), this.materials.glow, tower, [0, 26, 0]);
-    const dish = this.mesh(new THREE.SphereGeometry(4, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.45), this.materials.metal, tower, [0, 22, 0]);
-    dish.rotation.z = 0.8;
-    this.place(tower, 45, -40);
+    makeSpaceport(this);
   }
 
   makeCraft() {
@@ -524,7 +523,6 @@ export class World {
     for (const flame of this.flames) {
       const power = 0.35 + game.speed * 0.009 + (game.boosting ? 0.6 : 0);
       flame.scale.set(1, power * (0.9 + Math.sin(this.clock * 47) * 0.1), 1);
-      flame.position.z = -3 - 1.2 * power;
     }
     this.engineLight.intensity = game.boosting ? 35 : 12;
     for (const drone of this.drones) {

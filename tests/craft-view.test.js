@@ -9,6 +9,10 @@ test('detailed craft variants and ghost clones retain independent visible equipm
   const { body, flames } = makeCraftModel(materials);
   const ghost = body.clone();
   assert.equal(flames.length, 2);
+  for (const flame of flames) {
+    flame.geometry.computeBoundingBox();
+    assert.ok(Math.abs(flame.geometry.boundingBox.min.y) < 1e-6, 'exhaust must scale from its nozzle, without separating under boost');
+  }
   assert.ok(body.getObjectByName('cockpit').material.isMeshPhysicalMaterial);
   const hull = body.getObjectByName('armored-hull');
   hull.geometry.computeBoundingBox();
@@ -23,6 +27,9 @@ test('detailed craft variants and ghost clones retain independent visible equipm
     body.traverse(mesh => {
       if (mesh.isMesh) assert.ok(mesh.matrixWorld.elements.every(Number.isFinite));
     });
+    let visibleMeshes = 0;
+    body.traverseVisible(mesh => { if (mesh.isMesh) visibleMeshes++; });
+    assert.ok(visibleMeshes <= 22, `${craft.id}: craft details exceed the draw budget`);
   }
   const resources = new Set(Object.values(materials));
   body.traverse(mesh => { if (mesh.isMesh) { resources.add(mesh.geometry); resources.add(mesh.material); } });

@@ -7,7 +7,17 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 星图超速</h2>
+      <h2 id="release-title">v${version} · 星境精工</h2>
+      <p>二十种星球景观，近看也有新的细节。</p>
+      <ul class="release-list">
+        <li><strong>20 星专属地标</strong>补齐山脊层岩、六棱晶簇、风蚀石柱、冰刃、玄武岩、砂岩拱、潮汐灯塔、风暴线圈与暗夜尖塔；菌伞、珊瑚、古迹和星门同步细化。</li>
+        <li><strong>飞船精细建模</strong>曲面机身、分层翼甲、座舱骨架、进气涡轮和双层喷口；三种艇型保留独立装备，尾焰从喷口连续延伸。</li>
+        <li><strong>从路面到星港</strong>连续地形明暗、岩层色带、地表与沥青纹理、反光路肩和桥墩；起降基地新增停机标线、拱顶机库、塔台和雷达。</li>
+        <li><strong>细节与性能一起改善</strong>增加金属与座舱环境反射，合并重复部件；修正地表高度偏差导致的悬空物件，检查道路净空与换图资源释放。</li>
+        <li><strong>机库入口不再被遮挡</strong>修复较矮桌面窗口中星球信息卡与飞行配置卡重叠的问题。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>9 个版本</span></summary>
+        <article><h3>v1.3.0 · 星图超速</h3>
       <p>二十颗星球，一张更辽阔的极速星图。</p>
       <ul class="release-list">
         <li><strong>20 张地图，五种山路</strong>连环山脊、环形天坑、双峰回旋、海岸长弯与高原阶梯；单程延长至 7.0–14.4 公里，全部开放。</li>
@@ -16,7 +26,7 @@ export function mountReleases() {
         <li><strong>星图搜索与完整远征</strong>机库可搜索星球、航线和路线类型；大奖赛与远征扩展为 20 站，共 194.1 公里、60 项远征委托。</li>
         <li><strong>高速飞行更可靠</strong>验证高速穿越判定，修复电脑领航员避让门后障碍时反复漏门的问题。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>8 个版本</span></summary>
+        </article>
         <article><h3>v1.2.0 · 十星山路</h3>
       <p>把速度交给引擎，把星海留在身后。</p>
       <ul class="release-list">

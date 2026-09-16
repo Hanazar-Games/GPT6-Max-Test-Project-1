@@ -76,6 +76,7 @@
 .result-rating { margin: 17px 0 23px; }
 .result-symbol { font-size: 40px; margin-top: 15px; }
 
+@media (max-height: 820px) and (min-width: 801px) { .coordinates { display: none; } }
 @media (max-width: 1100px) { .flight-loadout { width: 220px; padding: 17px; } .flight-loadout > strong { font-size: 16px; } .footer-note { max-width: 270px; } }
 @media (max-width: 800px) { #hangar { padding: 29px; } .hangar-columns { gap: 14px; } .mission-option, .craft-option { padding: 12px; gap: 8px; min-height: 140px; } .mission-option p { padding-right: 8px; } .craft-option > svg { width: 35px; } .craft-stats { gap: 5px; } .option-index { display: none; } .flight-loadout { width: 205px; padding: 16px; top: 20%; } .jump-indicator { bottom: 225px; font-size: 9px; } }
 @media (pointer: coarse) { .jump-indicator { bottom: 280px; } }
