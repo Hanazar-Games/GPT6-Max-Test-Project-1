@@ -21,6 +21,15 @@
 .hangar-section-title > span { color: #718da1; font: 10px var(--mono); letter-spacing: 1px; }
 .selection-list { display: grid; gap: 10px; }
 #mission-options { max-height: 438px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #526b7c #0b1825; padding: 2px 6px 2px 2px; }
+.mission-search { display: block; color: #a8bfcc; font-size: 10px; }
+.mission-search input { display: block; width: 100%; margin-top: 8px; padding: 11px; color: #e2edf2; background: #0b1825; border: 1px solid #aac7db44; border-radius: 0; font: inherit; }
+.mission-search input:focus { outline: 1px solid var(--mission); outline-offset: 2px; }
+.mission-search input:disabled { opacity: 0.45; }
+.mission-count { color: #90abba; font-size: 9px; margin: 10px 0 14px; line-height: 1.6; }
+@media (max-width: 600px) {
+  #mission-options .mission-option { padding-bottom: 56px; }
+  #mission-options .mission-option > svg { width: 76px; height: 38px; opacity: 0.55; }
+}
 .mission-option, .craft-option { position: relative; border: 1px solid #aac7db22; background: #0b1825; color: #e2edf2; padding: 15px; text-align: left; display: flex; gap: 12px; min-height: 133px; width: 100%; transition: border-color 0.2s, background 0.2s; }
 .mission-option:hover, .craft-option:hover { background: #132738; border-color: #d6e9f364; }
 .mission-option[aria-pressed="true"], .craft-option[aria-pressed="true"] { border-color: var(--choice); background: linear-gradient(115deg, #c2d1e20c, transparent), #0e1e2d; }

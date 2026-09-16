@@ -162,7 +162,7 @@ export class AudioEngine {
     }
     if (!this.engine || this.context.state !== 'running' || this.background) return;
     const now = this.context.currentTime;
-    const intensity = Math.max(0, Math.min(1, game.speed / 240));
+    const intensity = Math.max(0, Math.min(1, game.speed / 420));
     this.target(this.engine.frequency, 35 + intensity * 190, 0.08);
     this.target(this.filter.frequency, 180 + intensity * 700, 0.1);
     this.target(this.engineGain.gain, game.status === 'running' ? 0.035 + intensity * 0.08 : 0, game.status === 'running' ? 0.1 : 0.01);

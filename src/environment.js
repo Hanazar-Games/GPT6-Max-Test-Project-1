@@ -5,7 +5,7 @@ export function makeEnvironment(mission) {
   const gravityZones = [[520, 675], [1200, 1350]].slice(0, mission.difficulty ? 2 : 1)
     .map(([start, end], id) => ({ id, start: start * scale, end: end * scale }));
   const meteors = [[430, -6], [980, 6], [1390, 0], [670, -7]].slice(0, 2 + mission.difficulty)
-    .map(([distance, lane], id) => ({ id, distance: distance * scale, lane, radius: 5, first: distance * scale / 112 + id * 0.3, period: 10 - mission.difficulty * 0.8 }))
+    .map(([distance, lane], id) => ({ id, distance: distance * scale, lane, radius: 5, first: distance * scale / 175 + id * 0.3, period: 10 - mission.difficulty * 0.8 }))
     .sort((a, b) => a.distance - b.distance);
   return { gravityZones, meteors };
 }

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS } from '../src/missions.js';
-import { createGame } from '../src/game.js';
+import { createGame, updateGame } from '../src/game.js';
 import { createCup, completeStage, advanceStage, getStandings, getTrophy, getRaceView, RACE_POINTS } from '../src/cup.js';
-import { RACERS, buildField } from '../src/pilots.js';
+import { RACERS, buildField, pilotInput } from '../src/pilots.js';
 import { MAX_GHOST_SAMPLES, sampleGhost } from '../src/ghost.js';
 
 function finish(cup, elapsed = 50) {
@@ -64,11 +64,11 @@ test('failure or the wrong mission, craft, or opponent field never advances the 
   assert.ok(completeStage(cup, finish(cup), field));
 });
 
-test('all ten stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
+test('all twenty stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
   const cup = createCup('interceptor');
   for (let stage = 0; stage < MISSIONS.length; stage++) {
     const game = finish(cup, 40 + stage);
-    completeStage(cup, game, fieldFor(cup));
+    completeStage(cup, game, fieldFor(cup, [60 + stage, 65 + stage, 70 + stage]));
     game.elapsed = 0;
     assert.equal(cup.legs[stage].results.find(row => row.id === 'player').time, 40 + stage);
     assert.equal(advanceStage(cup), stage < MISSIONS.length - 1);
@@ -81,6 +81,14 @@ test('all ten stages finish the cup and award a trophy; a new cup resets only it
   const next = createCup(cup.craftId);
   assert.equal(next.legs.length, 0);
   assert.equal(cup.legs.length, MISSIONS.length);
+});
+
+test('pilots recover from a missed gate without veering toward hazards beyond it', () => {
+  const game = createGame('eclipse');
+  const gate = game.course.gates[4];
+  Object.assign(game, { status: 'running', gates: 4, distance: gate.distance - 35, lane: gate.lane, elapsed: 29 });
+  for (let step = 0; step < 120 && game.gates === 4; step++) updateGame(game, pilotInput(game, RACERS[0]), 1 / 60);
+  assert.equal(game.gates, 5);
 });
 
 test('equal finish times share their placing and points; equal championship scores use total time', () => {

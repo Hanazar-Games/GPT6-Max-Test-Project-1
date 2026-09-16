@@ -13,9 +13,12 @@ export function pilotInput(game, racer) {
   for (const object of [...game.course.pickups, ...game.course.gates]) {
     if (object.distance >= game.distance - 2 && (!upcoming || object.distance < upcoming.distance)) upcoming = object;
   }
-  const desired = (upcoming?.lane ?? 0) + racer.offset;
   const speed = Math.max(game.speed, game.craft.speed * 0.5);
-  const nearby = item => item.distance > game.distance - 4 && item.distance < game.distance + speed * 1.5;
+  const gate = game.course.gates[game.gates];
+  const gateApproach = gate && gate.distance - game.distance < speed * 1.1;
+  if (gateApproach) upcoming = gate;
+  const desired = (upcoming?.lane ?? 0) + racer.offset;
+  const nearby = item => item.distance > game.distance - 4 && item.distance < game.distance + speed * 1.5 && (!gateApproach || item.distance < gate.distance - 6);
   const threats = game.course.obstacles.filter(nearby).map(item => {
     const arrival = Math.max(0, item.distance - game.distance) / speed;
     return { lane: obstacleLane(item, game.elapsed + arrival), radius: item.radius + 1.7, arrival };
@@ -28,7 +31,7 @@ export function pilotInput(game, racer) {
     }
   }
   const futureLane = (target, time) => game.lane + Math.max(-game.craft.handling * Math.max(0, time - 0.12), Math.min(game.craft.handling * Math.max(0, time - 0.12), target - game.lane));
-  const cost = target => Math.abs(target - desired) + Math.abs(target - game.lane) * 0.25 + threats.reduce((sum, threat) => sum + (Math.abs(target - threat.lane) < threat.radius ? 100 / Math.max(0.3, threat.arrival) : 0), 0);
+  const cost = target => Math.abs(target - desired) + Math.abs(target - game.lane) * 0.25 + (gateApproach && Math.abs(target - gate.lane) > gate.width - 1 ? 2500 : 0) + threats.reduce((sum, threat) => sum + (Math.abs(target - threat.lane) < threat.radius ? 100 / Math.max(0.3, threat.arrival) : 0), 0);
   let target = desired;
   for (const lane of [-11, -7, 0, 7, 11]) if (cost(lane) < cost(target)) target = lane;
   const jump = game.height === 0 && threats.some(threat => threat.arrival > 0.35 && threat.arrival < 0.65 && Math.abs(futureLane(target, threat.arrival) - threat.lane) < threat.radius);

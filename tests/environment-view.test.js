@@ -17,7 +17,7 @@ test('meteor footprint follows the collision coordinates on every curved and slo
         const angle = (index - 49) / 48 * Math.PI * 2;
         const expected = world.frame(meteor.distance + Math.sin(angle) * radius, meteor.lane + Math.cos(angle) * radius, 0.14).point;
         const actual = new THREE.Vector3().fromBufferAttribute(geometry.attributes.position, index);
-        assert.ok(actual.distanceTo(expected) < 0.0001);
+        assert.ok(actual.distanceTo(expected) < Math.max(0.0001, expected.length() * 1e-7));
       }
       geometry.dispose();
     }

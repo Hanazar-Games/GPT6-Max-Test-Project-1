@@ -120,7 +120,7 @@ test('high-speed percussion is stopped by pause and music mute without silencing
   const audio = await setup();
   audio.beat = 15;
   audio.themeRoot = 45;
-  audio.update({ ...running, speed: 240 });
+  audio.update({ ...running, speed: 420 });
   assert.ok([...audio.voices].some(voice => voice.oscillator.buffer));
   audio.setVolume('music', 0);
   assert.equal(audio.voices.size, 0);

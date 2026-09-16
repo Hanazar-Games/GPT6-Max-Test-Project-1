@@ -227,7 +227,7 @@ export class World {
     const colors = new Float32Array(geometry.attributes.position.count * 3);
     const color = new THREE.Color();
     for (let i = 0; i < colors.length; i += 9) {
-      color.setHSL(this.mission.ground + random() * 0.025, this.mission.saturation, (this.mission.biome === 'ice' ? 0.53 : 0.23) + random() * 0.1);
+      color.setHSL(this.mission.ground + random() * 0.025, this.mission.saturation, (['ice', 'salt', 'aurora'].includes(this.mission.biome) ? 0.53 : this.mission.biome === 'dunes' ? 0.4 : 0.23) + random() * 0.1);
       for (let j = 0; j < 3; j++) color.toArray(colors, i + j * 3);
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -570,7 +570,7 @@ export class World {
       desired.copy(this.frame(game.distance - 19 - game.speed * 0.018, game.lane, 2 + game.height).point);
       desired.addScaledVector(right, -game.lateralSpeed * 0.07);
       desired.y += 7;
-      look.copy(this.frame(game.distance + 32 + game.speed * 0.12, game.lane * 0.6, 3).point);
+      look.copy(this.frame(game.distance + 32 + game.speed * 0.065, game.lane * 0.6, 3).point);
     }
     if (this.lastStatus === 'menu' && !menu) this.cameraReady = false;
     this.lastStatus = game.status;
@@ -583,7 +583,7 @@ export class World {
     this.camera.lookAt(look);
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, fov, animated ? 1 - Math.exp(-dt * 4) : 0);
     this.camera.updateProjectionMatrix();
-    const intensity = THREE.MathUtils.clamp((game.speed - 70) / 170, 0, 1);
+    const intensity = THREE.MathUtils.clamp((game.speed - 100) / 320, 0, 1);
     this.speedLines.visible = game.status === 'running' && intensity > 0;
     this.speedLines.position.copy(this.camera.position);
     this.speedLines.quaternion.copy(this.camera.quaternion);

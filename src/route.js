@@ -30,5 +30,5 @@ export function routeFrame(curve, length, distance, lane = 0, height = 0) {
 }
 
 export function speedFov(speed) {
-  return 62 + 38 * MathUtils.clamp(speed / 280, 0, 1) ** 0.75;
+  return 62 + 42 * MathUtils.clamp(speed / 460, 0, 1) ** 0.75;
 }

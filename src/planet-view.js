@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeLandmarks } from './landmarks.js';
 
 function ribbon(world, left, right, material, height = -0.38, depth = 0) {
   const positions = [], indices = [];
@@ -62,20 +63,24 @@ export function makeMountainRoad(world) {
 export function makePlanetScenery(world, random) {
   const { biome, color, ground } = world.mission;
   let geometry;
-  if (['crystal', 'ice', 'spires', 'storm'].includes(biome)) geometry = new THREE.ConeGeometry(1, 1, biome === 'ice' ? 4 : 6);
+  if (['crystal', 'ice', 'spires', 'storm', 'aurora', 'prism'].includes(biome)) geometry = new THREE.ConeGeometry(1, 1, biome === 'ice' ? 4 : 6);
   else if (['mesa', 'sandstone', 'volcanic'].includes(biome)) geometry = new THREE.CylinderGeometry(0.7, 1, 1, biome === 'mesa' ? 6 : 8);
+  else if (['salt', 'industrial', 'ruins'].includes(biome)) geometry = new THREE.BoxGeometry(1, 1, 1);
+  else if (biome === 'dunes') geometry = new THREE.SphereGeometry(1, 12, 6);
   else geometry = new THREE.IcosahedronGeometry(1, biome === 'forest' ? 1 : 0);
-  const material = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(ground, 0.42, biome === 'ice' ? 0.72 : 0.34), roughness: biome === 'ice' ? 0.2 : 0.85, metalness: biome === 'crystal' ? 0.45 : 0.1, flatShading: true,
+  const material = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(ground, world.mission.saturation, ['ice', 'salt', 'aurora'].includes(biome) ? 0.72 : 0.34), roughness: biome === 'ice' ? 0.2 : 0.85, metalness: biome === 'crystal' ? 0.45 : 0.1, flatShading: true,
     emissive: color, emissiveIntensity: ['crystal', 'storm', 'volcanic'].includes(biome) ? 0.12 : 0 });
-  const props = new THREE.InstancedMesh(geometry, material, 180);
+  const hasLandmarks = world.mission.variant >= 10;
+  const count = hasLandmarks ? 90 : 180;
+  const props = new THREE.InstancedMesh(geometry, material, count);
   const dummy = new THREE.Object3D();
-  for (let i = 0; i < 180; i++) {
-    const position = world.frame(random() * world.mission.length, (random() < 0.5 ? -1 : 1) * (65 + random() * 220)).point;
+  for (let i = 0; i < count; i++) {
+    const position = world.frame(random() * world.mission.length, (random() < 0.5 ? -1 : 1) * ((hasLandmarks ? 130 : 65) + random() * 220)).point;
     const info = world.groundInfo(position.x, position.z);
-    const height = 12 + random() * (biome === 'forest' ? 48 : 80);
+    const height = 12 + random() * (hasLandmarks ? 40 : biome === 'forest' ? 48 : 80);
     const radius = 4 + random() * (['mesa', 'sandstone', 'ridge'].includes(biome) ? 28 : 10);
-    dummy.position.set(position.x, info.y + height * 0.42, position.z);
-    dummy.scale.set(radius, height, radius);
+    dummy.position.set(position.x, info.y + height * (biome === 'dunes' ? 0.06 : 0.42), position.z);
+    dummy.scale.set(radius, biome === 'dunes' ? height * 0.2 : height, radius);
     if (info.distance < radius + 32) dummy.scale.setScalar(0);
     dummy.rotation.set(0, random() * Math.PI * 2, (random() - 0.5) * 0.15);
     dummy.updateMatrix();
@@ -83,8 +88,11 @@ export function makePlanetScenery(world, random) {
   }
   props.castShadow = true;
   world.scene.add(props);
-  if (['ocean', 'volcanic'].includes(biome)) {
-    const sea = world.mesh(new THREE.PlaneGeometry(3200, 3200), new THREE.MeshStandardMaterial({ color: biome === 'ocean' ? '#126e89' : '#c4370d', metalness: 0.55, roughness: 0.3, emissive: biome === 'ocean' ? '#052d48' : '#ff470d', emissiveIntensity: biome === 'ocean' ? 0.25 : 1.5 }), world.scene, [0, 5, 0]);
+  makeLandmarks(world, random);
+  if (['ocean', 'coral', 'volcanic'].includes(biome)) {
+    const bounds = world.routeBounds.getSize(new THREE.Vector3());
+    const center = world.routeBounds.getCenter(new THREE.Vector3());
+    const sea = world.mesh(new THREE.PlaneGeometry(bounds.x + 1000, bounds.z + 1000), new THREE.MeshStandardMaterial({ color: biome === 'volcanic' ? '#c4370d' : '#126e89', metalness: 0.55, roughness: 0.3, emissive: biome === 'volcanic' ? '#ff470d' : '#052d48', emissiveIntensity: biome === 'volcanic' ? 1.5 : 0.25 }), world.scene, [center.x, 5, center.z]);
     sea.rotation.x = -Math.PI / 2;
   }
 }

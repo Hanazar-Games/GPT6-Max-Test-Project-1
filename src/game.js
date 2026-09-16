@@ -159,7 +159,7 @@ export function updateGame(game, input, delta) {
   const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.padBoost === 0 && game.energy > 1;
   game.boosting = !input.brake && (manualBoost || game.padBoost > 0);
   const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
-  const acceleration = input.brake ? 160 : targetSpeed > game.speed ? (game.boosting ? 110 : 75) : 30;
+  const acceleration = input.brake ? 260 : targetSpeed > game.speed ? (game.boosting ? 210 : 130) : 48;
   game.speed += Math.sign(targetSpeed - game.speed) * Math.min(Math.abs(targetSpeed - game.speed), acceleration * dt);
   game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
 

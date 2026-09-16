@@ -7,7 +7,17 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 十星山路</h2>
+      <h2 id="release-title">v${version} · 星图超速</h2>
+      <p>二十颗星球，一张更辽阔的极速星图。</p>
+      <ul class="release-list">
+        <li><strong>20 张地图，五种山路</strong>连环山脊、环形天坑、双峰回旋、海岸长弯与高原阶梯；单程延长至 7.0–14.4 公里，全部开放。</li>
+        <li><strong>十颗新星球，新的风景</strong>极光幕、沙丘石拱、荧光菌林、珊瑚树、白盐阶柱、古迹巨环、磁悬岩、铜色工区、虹晶与星门。</li>
+        <li><strong>冲刺突破 1,500 km/h</strong>三款基础飞船冲刺达到 1,188–1,512 km/h，强化加速和制动；视野随实际速度继续扩大，镜头与配乐同步适配。</li>
+        <li><strong>星图搜索与完整远征</strong>机库可搜索星球、航线和路线类型；大奖赛与远征扩展为 20 站，共 194.1 公里、60 项远征委托。</li>
+        <li><strong>高速飞行更可靠</strong>验证高速穿越判定，修复电脑领航员避让门后障碍时反复漏门的问题。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>8 个版本</span></summary>
+        <article><h3>v1.2.0 · 十星山路</h3>
       <p>把速度交给引擎，把星海留在身后。</p>
       <ul class="release-list">
         <li><strong>十颗星球，十条盘山公路</strong>冰峰、晶谷、赤岭、熔岩与海崖全部开放；连续爬升、回头弯与下坡贯穿 5.0–7.2 公里的独立航线。</li>
@@ -16,7 +26,7 @@ export function mountReleases() {
         <li><strong>星球专属动态配乐</strong>新的和声、低音、琶音与飞行鼓组；不同星球切换调性，高速时增加音乐层次。</li>
         <li><strong>十站完整征途</strong>大奖赛与远征同步扩展到十站，新增航线雷达适配；修复高速横移时核心和加速带漏判的问题。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>7 个版本</span></summary>
+        </article>
         <article><h3>v1.1.5 · 网页访问适配</h3>
       <p>从项目页面进入，也能顺利启航。</p>
       <ul class="release-list">
