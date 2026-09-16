@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 视听与小屏修复</h2>
+      <h2 id="release-title">v${version} · 屏幕适配修复</h2>
+      <p>换个屏幕方向，也能看清航路、顺手操作。</p>
+      <ul class="release-list">
+        <li><strong>横屏布局衔接更稳</strong>修复调整窗口或旋转屏幕后，开始按钮、倒计时、导航提示和能量仪表相互遮挡的问题。</li>
+        <li><strong>短竖屏也能顺利启航</strong>补齐小屏首页与驾驶布局，让大赛长标题、机库入口、远征委托和跃升提示各就其位。</li>
+        <li><strong>警告不再盖住驾驶按钮</strong>调整横屏长提示的宽度与按钮间距，转向、跃升、制动、冲刺和加速操作保持清晰可见。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>11 个版本</span></summary>
+        <article><h3>v1.4.1 · 视听与小屏修复</h3>
       <p>完整看见飞船，顺手驾驶，随操作听见星海。</p>
       <ul class="release-list">
         <li><strong>首次操作就有配乐</strong>修复打开机库、指南等菜单时背景音乐没有启用的问题；已选择静音时，切换地图或操作菜单不会自动解除静音。</li>
         <li><strong>飞船完整入镜</strong>修复竖屏和平板下菜单飞船被裁切的问题；镜头随屏幕比例调整，切换横竖屏后立即重新取景，适配全部星球与三款飞船。</li>
         <li><strong>小屏横屏更好驾驶</strong>重新安排首页和飞行仪表，修复任务标题、导航提示与触控区重叠；扩大窄屏驾驶按钮，避免底部按钮覆盖速度和能量仪表。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>10 个版本</span></summary>
+        </article>
         <article><h3>v1.4.0 · 星境精工</h3>
       <p>二十种星球景观，近看也有新的细节。</p>
       <ul class="release-list">
