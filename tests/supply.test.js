@@ -73,7 +73,7 @@ test('engine and reactor upgrades affect actual fixed-step driving', () => {
   assert.ok(upgraded.energy > base.energy + 19);
 });
 
-test('contracts reflect real run stats and vary across planet difficulties', () => {
+test('contracts reflect real run stats and vary across difficulties and route lengths', () => {
   const signatures = new Set();
   for (const mission of MISSIONS) {
     const game = createGame(mission.id);
@@ -89,7 +89,7 @@ test('contracts reflect real run stats and vary across planet difficulties', () 
     game.activatedPads = new Set(game.course.pads.map(item => item.id));
     assert.ok(getContracts(game).every(item => item.done));
   }
-  assert.equal(signatures.size, 3);
+  assert.equal(signatures.size, new Set(MISSIONS.map(mission => `${mission.difficulty}/${mission.endurance}`)).size);
 });
 
 test('successful delivery guarantees supply even without optional contracts', () => {
@@ -181,7 +181,7 @@ test('every craft can finish all stages with each fully upgraded subsystem', () 
       const game = createGame(mission.id, craft.id, levels);
       assert.equal(game.craft.hull, upgradeCraft(craft, levels).hull);
       startGame(game);
-      for (let step = 0; step < 9000 && ['countdown', 'running'].includes(game.status); step++) {
+      for (let step = 0; step < (game.mission.duration + 4) * 60 && ['countdown', 'running'].includes(game.status); step++) {
         updateGame(game, pilotInput(game, { coast: 0, offset: 0 }), 1 / 60);
       }
       assert.equal(game.status, 'won', `${craft.id}/${upgrade.id}/${mission.id}: ${game.reason}`);
@@ -193,7 +193,7 @@ test('upgraded successful flights cannot set standard ghosts or championship poi
   const game = createGame('tranquility', 'scout', { engine: 1 });
   startGame(game);
   const recorder = new FlightRecorder(game);
-  for (let step = 0; step < 9000 && ['countdown', 'running'].includes(game.status); step++) {
+  for (let step = 0; step < (game.mission.duration + 4) * 60 && ['countdown', 'running'].includes(game.status); step++) {
     updateGame(game, pilotInput(game, { coast: 0, offset: 0 }), 1 / 60);
     recorder.capture(game);
   }

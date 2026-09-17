@@ -58,6 +58,7 @@ export function obstacleLane(obstacle, elapsed) {
 }
 
 function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.radius + 1.1) {
+  if (obstacle.distance < Math.min(before.distance, after.distance) - forward || obstacle.distance > Math.max(before.distance, after.distance) + forward) return null;
   let entry = 0;
   let exit = 1;
   const intervals = [
@@ -218,6 +219,8 @@ export function updateGame(game, input, delta) {
   }
 
   for (const meteor of game.course.meteors) {
+    const reach = Math.max(140, game.speed * 2.6, meteor.radius + ENVIRONMENT.craftRadius);
+    if (!game.pendingMeteorDodges.has(meteor.id) && (meteor.distance < Math.min(previous.distance, game.distance) - reach || meteor.distance > Math.max(previous.distance, game.distance) + reach)) continue;
     const state = meteorState(meteor, game.elapsed);
     const warningKey = `${meteor.id}/${state.impactAt}`;
     if (state.phase === 'warning' && meteor.distance >= game.distance - 8 && meteor.distance < game.distance + Math.max(140, game.speed * 2.6) && !game.meteorWarnings.has(warningKey)) {

@@ -8,9 +8,15 @@ export function createRoute(mission) {
     points = points.flatMap((point, index) => [0.25, 0.75].map(weight => point.clone().lerp(points[(index + 1) % points.length], weight)));
   }
   const curve = new CatmullRomCurve3(points, true, 'centripetal');
-  curve.arcLengthDivisions = 2400;
+  curve.arcLengthDivisions = Math.max(2400, Math.ceil(mission.length / 5));
   const scale = mission.length / curve.getLength();
   curve.points.forEach(point => point.multiplyScalar(scale));
+  if (mission.endurance) {
+    curve.points.forEach(point => { point.y *= 2 / scale; });
+    curve.updateArcLengths();
+    const correction = mission.length / curve.getLength();
+    curve.points.forEach(point => point.multiplyScalar(correction));
+  }
   curve.updateArcLengths();
   return curve;
 }

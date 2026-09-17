@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ENVIRONMENT, meteorState } from './environment.js';
+import { batchMeshes } from './model-utils.js';
 
 const glow = (color, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
 
@@ -25,6 +26,7 @@ function fitFootprint(geometry, world, meteor, scale = 1) {
 export class EnvironmentView {
   constructor(world) {
     this.world = world;
+    this.ribbons = new THREE.Group();
     const zoneSurface = glow('#bda6ff', 0.08);
     const zoneEdge = glow('#ceb8ff', 0.8);
     this.zoneSurface = zoneSurface;
@@ -45,6 +47,7 @@ export class EnvironmentView {
         for (const side of [-1, 1]) this.ribbon(distance, distance + 1.2, side * 11 - 0.8, side * 11 + 0.8, zoneEdge);
       }
     }
+    world.scene.add(batchMeshes(this.ribbons));
     const meteorGeometry = new THREE.IcosahedronGeometry(1.4, 0);
     const tailGeometry = new THREE.ConeGeometry(0.8, 9, 6);
     this.meteors = world.course.meteors.map(meteor => {
@@ -77,7 +80,7 @@ export class EnvironmentView {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setIndex(indices);
-    world.mesh(geometry, material, world.scene);
+    world.mesh(geometry, material, this.ribbons);
   }
 
   render(elapsed) {

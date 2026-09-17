@@ -1,6 +1,6 @@
 import { makeEnvironment } from './environment.js';
 
-const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰'];
+const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾'];
 
 function mountainRoad(index, family) {
   const count = 6 + index % 3;
@@ -18,8 +18,9 @@ function mountainRoad(index, family) {
       points.push([-220 - (i % 2 ? -70 : 130) + Math.cos(i + index) * 30, 25 + peak * (1 - t), -400 + t * 800]);
     }
   } else {
-    for (let i = 0; i < 40; i++) {
-      const a = i / 40 * Math.PI * 2;
+    const samples = family >= 7 ? 180 : 40;
+    for (let i = 0; i < samples; i++) {
+      const a = i / samples * Math.PI * 2;
       const phase = index * 0.19;
       let radius, x, z;
       if (family === 1) radius = 420 + 125 * Math.cos(4 * a + phase);
@@ -27,6 +28,8 @@ function mountainRoad(index, family) {
       if (family === 3) radius = 410 + 135 * Math.sin(3 * a + phase) + 60 * Math.sin(a);
       if (family === 5) radius = 430 + 115 * Math.cos(5 * a + phase);
       if (family === 6) radius = 440 + 95 * Math.cos(7 * a + phase) + 50 * Math.sin(2 * a);
+      if (family === 7) radius = 1300 + 260 * Math.cos(18 * a + phase) + 110 * Math.sin(3 * a);
+      if (family === 8) radius = 1350 + 340 * Math.sin(12 * a + phase) + 140 * Math.cos(4 * a);
       if (family === 4) {
         radius = 1 + 0.17 * Math.cos(6 * a + phase);
         x = Math.sign(Math.cos(a)) * Math.abs(Math.cos(a)) ** 0.65 * 450 * radius;
@@ -35,7 +38,7 @@ function mountainRoad(index, family) {
         x = Math.cos(a) * radius * (family === 3 ? 0.75 : 1);
         z = Math.sin(a) * radius * (family === 3 ? 1.4 : 1);
       }
-      const y = 30 + peak * (0.42 * (1 - Math.cos(a * (family === 2 || family === 6 ? 2 : 1))) + 0.12 * (1 - Math.cos(a * 3)));
+      const y = 30 + peak * (0.42 * (1 - Math.cos(a * (family >= 7 ? 4 : family === 2 || family === 6 ? 2 : 1))) + 0.12 * (1 - Math.cos(a * 3)));
       points.push([x, y, z]);
     }
   }
@@ -71,13 +74,25 @@ const planets = [
   ['helios', '日冕星', '逐日环岭', '金色聚光镜追逐双日，穿越太阳能阵列旁的连续峰弯。', 'solar', '#ffe58a', '#362238', '#82614e', 0.085, 0.48, 13800, 2, 57, 6],
   ['vapor', '蒸汽星', '雾泉天脊', '青色热泉从阶状岩盆涌起，沿花瓣山脊交替爬升俯冲。', 'geyser', '#a2f0ec', '#16333f', '#507780', 0.5, 0.21, 12200, 1, 58, 5],
   ['zephyr', '长风星', '风翼群峰', '巨型三叶风塔沿峰顶列阵，在曲折长坡上释放全部推力。', 'wind', '#c4e9ff', '#203952', '#638494', 0.57, 0.2, 14200, 2, 59, 6],
-  ['chronos', '时序星', '天文环山', '星象仪与天文穹顶守候山湾，绕过观星台完成新的终站。', 'observatory', '#ffd1a2', '#181832', '#514861', 0.7, 0.22, 14800, 2, 60, 5],
+  ['chronos', '时序星', '天文环山', '星象仪与天文穹顶守候山湾，绕过观星台继续远航。', 'observatory', '#ffd1a2', '#181832', '#514861', 0.7, 0.22, 14800, 2, 60, 5],
+  ['bamboo', '青篁星', '万节云山', '穿越青玉竹塔与十八重山脊，沿洲际公路展开长途交付。', 'bamboo', '#b7f5b1', '#122e29', '#456b5a', 0.36, 0.36, 96000, 1, 34, 7],
+  ['hive', '蜂巢星', '金巢群湾', '金色六边形巢柱沿山湾排列，在蜂巢群落之间高速巡航。', 'honeycomb', '#ffd27f', '#34202a', '#80604b', 0.09, 0.44, 99000, 1, 35, 8],
+  ['orchard', '绯果星', '红冠远岭', '红冠异星果树点亮连绵高地，跨越漫长的起伏果林。', 'orchard', '#ff96ac', '#2d172e', '#715065', 0.88, 0.3, 102000, 1, 61, 7],
+  ['signal', '回声星', '天线长岸', '抛物面天线向深空倾听，沿蓝色群湾追逐遥远的回声。', 'radar', '#8cd7ff', '#10283c', '#416581', 0.59, 0.32, 105000, 2, 62, 8],
+  ['archive', '书卷星', '石页天梯', '层叠巨石书页横跨山脊，在古老星际档案之间连峰飞行。', 'archive', '#f1d4a4', '#292937', '#72716b', 0.12, 0.16, 108000, 1, 63, 7],
+  ['reactor', '蓝核星', '聚变环陆', '蓝色反应堆与环形冷却架照亮长岸，穿越星球能源走廊。', 'reactor', '#8ff3ed', '#0b2832', '#365965', 0.52, 0.35, 111000, 2, 64, 8],
+  ['fossil', '龙骨星', '巨骸山脊', '远古巨兽的弧形肋骨守望荒岭，在化石群间翻越长坡。', 'fossil', '#edc6ac', '#352630', '#7b675e', 0.065, 0.22, 114000, 2, 65, 7],
+  ['sapphire', '蓝宝星', '宝冠千湾', '蓝宝石冠与金属基座沿千重山湾铺开，冷光引向远方。', 'sapphire', '#91b8ff', '#121a3d', '#3d507c', 0.64, 0.42, 117000, 2, 66, 8],
+  ['terrace', '梯田星', '千阶天路', '青绿色梯台与水晶灌溉塔沿山展开，攀上大陆最高处。', 'terrace', '#c4ef8c', '#24352a', '#647852', 0.25, 0.32, 120000, 2, 67, 7],
+  ['odyssey', '远航星', '航标天涯', '航海仪与高耸帆架标记群湾，完成跨越整片大陆的终站。', 'sails', '#e5b6ff', '#21142f', '#655273', 0.77, 0.25, 123000, 2, 68, 8],
 ];
 
 export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family], index) => Object.freeze({
   id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty,
   number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ['入门', '进阶', '极限'][difficulty], variant: index,
-  duration: 95 + difficulty * 10 + Math.floor(index / 3) * 5, cargo: 6 + difficulty * 2,
+  endurance: length >= 90000,
+  duration: length >= 90000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
+  cargo: length >= 90000 ? 24 + difficulty * 6 : 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
   music: { root, bpm: 124 + index % 4 * 6 }, points: mountainRoad(index, family ?? index % 5),
 })));
@@ -93,9 +108,36 @@ export const CRAFTS = Object.freeze([
   { id: 'bulwark', model: 'LC–24', name: '玄甲', role: '堡垒型', description: '双层侧盾与装甲背壳，1224 km/h 携重甲远征。', speed: 160, boostSpeed: 340, handling: 35, hull: 170, recharge: 14, color: '#d9b584', scale: [1.08, 1.05, 1] },
   { id: 'pulse', model: 'LC–27', name: '流萤', role: '续航型', description: '发光储能环与电容翼舱，1368 km/h 快速补充能量。', speed: 180, boostSpeed: 380, handling: 43, hull: 95, recharge: 19, color: '#7de9da', scale: [0.96, 1, 1.02] },
   { id: 'comet', model: 'LC–30', name: '彗星', role: '极速型', description: '双长矛翼与垂直稳定尾，1620 km/h 冲向速度极限。', speed: 215, boostSpeed: 450, handling: 37, hull: 75, recharge: 8, color: '#ffc46d', scale: [0.83, 0.9, 1.18] },
+  { id: 'owl', model: 'LC–32', name: '雪鸮', role: '巡游型', description: '层叠羽翼与双肩整流片，1386 km/h 平稳穿越长路。', speed: 185, boostSpeed: 385, handling: 44, hull: 110, recharge: 16, color: '#c5e8f4', scale: [0.98, 0.95, 1.02] },
+  { id: 'trident', model: 'LC–35', name: '三叉戟', role: '突进型', description: '三叉长鼻与外侧稳定架，1656 km/h 刺破山谷晨雾。', speed: 220, boostSpeed: 460, handling: 39, hull: 85, recharge: 10, color: '#ff9e79', scale: [0.86, 0.93, 1.12] },
+  { id: 'dragonfly', model: 'LC–38', name: '蜻蜓', role: '灵巧型', description: '四片椭圆翼与翼尖灯，1393 km/h 灵敏横移避障。', speed: 182, boostSpeed: 387, handling: 54, hull: 85, recharge: 14, color: '#bce58c', scale: [0.92, 0.86, 0.97] },
+  { id: 'nautilus', model: 'LC–40', name: '鹦鹉螺', role: '回充型', description: '同心电容背环与舱侧护板，1440 km/h 持久续航。', speed: 188, boostSpeed: 400, handling: 41, hull: 115, recharge: 21, color: '#8eebd8', scale: [1, 0.96, 1] },
+  { id: 'blade', model: 'LC–43', name: '霜刃', role: '穿风型', description: '刀锋双翼与立式尾片，1602 km/h 高速切入长弯。', speed: 210, boostSpeed: 445, handling: 46, hull: 80, recharge: 9, color: '#95beff', scale: [0.88, 0.9, 1.1] },
+  { id: 'whale', model: 'LC–46', name: '远鲸', role: '远行型', description: '双侧长舱与环抱支架，1332 km/h 兼顾装甲与充能。', speed: 175, boostSpeed: 370, handling: 37, hull: 155, recharge: 18, color: '#a8b5ed', scale: [1.06, 1, 1.03] },
+  { id: 'paladin', model: 'LC–49', name: '圣盾', role: '护卫型', description: '楔形盾翼与背部装甲脊，1296 km/h 守护长途交付。', speed: 165, boostSpeed: 360, handling: 36, hull: 190, recharge: 15, color: '#ebce9a', scale: [1.08, 1.04, 0.98] },
+  { id: 'specter', model: 'LC–52', name: '幽影', role: '掠袭型', description: '菱形折翼与双叉尾，1638 km/h 掠过夜色群峰。', speed: 218, boostSpeed: 455, handling: 42, hull: 90, recharge: 9, color: '#c29aeb', scale: [0.91, 0.88, 1.08] },
+  { id: 'sunbird', model: 'LC–56', name: '金乌', role: '蓄能型', description: '分段太阳翼与尾部能量扇，1512 km/h 均衡长航。', speed: 200, boostSpeed: 420, handling: 43, hull: 100, recharge: 20, color: '#ffd06f', scale: [0.96, 0.93, 1] },
+  { id: 'nova', model: 'LC–60', name: '新星', role: '超速型', description: '箭形侧翼与三棱背鳍，1728 km/h 驶向遥远新世界。', speed: 230, boostSpeed: 480, handling: 38, hull: 75, recharge: 8, color: '#ff99cb', scale: [0.86, 0.9, 1.16] },
 ]);
 
 export function makeCourse(mission) {
+  if (mission.endurance) {
+    const blocks = Math.ceil(mission.length / 12000);
+    const blockLength = mission.length / blocks;
+    const course = makeCourse({ ...mission, endurance: false });
+    for (const key of ['pickups', 'obstacles', 'pads', 'meteors', 'gravityZones']) course[key] = [];
+    for (let block = 0; block < blocks; block++) {
+      const segment = makeCourse({ ...mission, endurance: false, length: blockLength, variant: mission.variant + block });
+      const offset = block * blockLength;
+      for (const key of ['pickups', 'obstacles', 'pads', 'meteors', 'gravityZones']) {
+        for (const item of segment[key]) course[key].push(key === 'gravityZones'
+          ? { ...item, id: course[key].length, start: item.start + offset, end: item.end + offset }
+          : { ...item, id: course[key].length, distance: item.distance + offset, ...(key === 'meteors' ? { first: item.first + offset / 175 } : {}) });
+      }
+      course.obstacles.push({ id: course.obstacles.length, distance: offset + blockLength * 0.98, lane: block % 2 ? 9 : -9, radius: 2.8, kind: 'rock' });
+    }
+    return course;
+  }
   const scale = mission.length / 1800;
   const phase = mission.variant;
   const gates = [270, 560, 850, 1140, 1430, 1720].map((distance, id) => ({ id, distance: distance * scale, lane: mission.difficulty ? ((id + phase) % 3 - 1) * (mission.difficulty + 3) : 0, width: mission.gateWidth }));

@@ -11,7 +11,7 @@ test('all planetary landmarks stay outside the road within a bounded draw budget
   const silhouettes = new Set();
   for (const mission of MISSIONS) {
     const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), materials: { dark: new THREE.MeshStandardMaterial() }, renderer: { renderLists: { dispose() {} } } });
-    world.samples = world.curve.getSpacedPoints(600);
+    world.samples = world.curve.getSpacedPoints(Math.max(600, Math.ceil(mission.length / 20)));
     let seed = mission.seed;
     makeLandmarks(world, () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296));
     const instances = world.scene.children.filter(mesh => mesh.isInstancedMesh);

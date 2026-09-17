@@ -5,11 +5,12 @@ import { batchMeshes } from './model-utils.js';
 
 function ribbon(world, left, right, material, height = -0.38, depth = 0) {
   const positions = [], indices = [], uvs = [];
-  for (let i = 0; i <= 1000; i++) {
-    positions.push(...world.frame(i / 1000 * world.mission.length, left, height).point.toArray());
-    positions.push(...world.frame(i / 1000 * world.mission.length, right, height + depth).point.toArray());
-    uvs.push(0, i / 1000 * world.mission.length / 8, Math.max(1, Math.abs(right - left) / 8), i / 1000 * world.mission.length / 8);
-    if (i < 1000) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  const steps = Math.max(1000, Math.ceil(world.mission.length / 8));
+  for (let i = 0; i <= steps; i++) {
+    positions.push(...world.frame(i / steps * world.mission.length, left, height).point.toArray());
+    positions.push(...world.frame(i / steps * world.mission.length, right, height + depth).point.toArray());
+    uvs.push(0, i / steps * world.mission.length / 8, Math.max(1, Math.abs(right - left) / 8), i / steps * world.mission.length / 8);
+    if (i < steps) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -72,8 +73,9 @@ export function makeMountainRoad(world) {
   world.scene.add(piers);
   const signMaterial = new THREE.MeshBasicMaterial({ color: world.mission.color });
   const signs = new THREE.Group();
-  for (let i = 0; i < 50; i++) {
-    const distance = (i + 0.3) / 50 * world.mission.length;
+  const signCount = Math.max(50, Math.ceil(world.mission.length / 180));
+  for (let i = 0; i < signCount; i++) {
+    const distance = (i + 0.3) / signCount * world.mission.length;
     const frame = world.frame(distance);
     if (Math.abs(frame.bank) < 0.07) continue;
     const sign = new THREE.Group();
@@ -106,7 +108,7 @@ export function makePlanetScenery(world, random) {
   else geometry = new THREE.IcosahedronGeometry(1, biome === 'forest' ? 1 : 0);
   const material = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(ground, world.mission.saturation, ['ice', 'salt', 'aurora'].includes(biome) ? 0.72 : 0.34), roughness: biome === 'ice' ? 0.2 : 0.85, metalness: biome === 'crystal' ? 0.45 : 0.1, flatShading: true,
     emissive: color, emissiveIntensity: ['crystal', 'storm', 'volcanic'].includes(biome) ? 0.12 : 0 });
-  const count = 90;
+  const count = Math.max(90, Math.ceil(world.mission.length / 100));
   const props = new THREE.InstancedMesh(geometry, material, count);
   const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {

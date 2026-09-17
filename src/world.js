@@ -11,6 +11,7 @@ import { makeMountainRoad, makePlanetScenery } from './planet-view.js';
 import { makeReflectionMap, makeSurfaceTexture, terrainElevation } from './surface-view.js';
 import { makeSpaceport } from './base-view.js';
 import { batchMeshes } from './model-utils.js';
+import { createGroundSampler } from './terrain-sampler.js';
 
 let seed = 4517;
 function random() {
@@ -77,7 +78,8 @@ export class World {
     this.scene.background = new THREE.Color(this.mission.sky);
     this.scene.fog = new THREE.FogExp2(this.mission.fog, 0.0008);
     this.curve = createRoute(this.mission);
-    this.samples = this.curve.getSpacedPoints(600);
+    this.samples = this.curve.getSpacedPoints(Math.max(600, Math.ceil(this.mission.length / 20)));
+    this.groundSampler = createGroundSampler(this.samples);
     this.materials = {
       metal: new THREE.MeshStandardMaterial({ color: '#b5bec5', metalness: 0.65, roughness: 0.32 }),
       dark: new THREE.MeshStandardMaterial({ color: '#182936', metalness: 0.6, roughness: 0.5 }),
@@ -147,6 +149,8 @@ export class World {
   }
 
   makeSky() {
+    this.sky = new THREE.Group();
+    this.scene.add(this.sky);
     const stars = new Float32Array(1800 * 3);
     for (let i = 0; i < stars.length; i += 3) {
       const angle = random() * Math.PI * 2;
@@ -158,7 +162,7 @@ export class World {
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(stars, 3));
-    this.scene.add(new THREE.Points(geometry, new THREE.PointsMaterial({ color: '#d5edff', size: 1.2, sizeAttenuation: true, fog: false })));
+    this.sky.add(new THREE.Points(geometry, new THREE.PointsMaterial({ color: '#d5edff', size: 1.2, sizeAttenuation: true, fog: false })));
 
     const planet = this.mesh(new THREE.SphereGeometry(95, 48, 32), new THREE.ShaderMaterial({
       uniforms: { sea: { value: new THREE.Color(this.mission.fog) }, landColor: { value: new THREE.Color().setHSL(this.mission.ground, this.mission.saturation + 0.15, 0.38) }, cloudColor: { value: new THREE.Color(this.mission.color).lerp(new THREE.Color('#ffffff'), 0.8) } },
@@ -179,50 +183,40 @@ export class World {
           float light = max(dot(normalize(vNormal), normalize(vec3(-0.7, 0.5, 0.7))), 0.04);
           float rim = pow(1.0 - max(vNormal.z, 0.0), 3.0);
           gl_FragColor = vec4(color * light + vec3(0.12, 0.46, 0.65) * rim * 0.55, 1.0); }`,
-    }), this.scene);
+    }), this.sky);
     const origin = this.frame(0);
-    planet.position.copy(origin.point).addScaledVector(origin.tangent, 850).addScaledVector(origin.right, 330);
+    this.sky.position.copy(origin.point);
+    planet.position.copy(origin.tangent).multiplyScalar(850).addScaledVector(origin.right, 330);
     planet.position.y += 340;
     planet.rotation.z = 0.25;
     const atmosphere = this.mesh(new THREE.SphereGeometry(99, 40, 24), new THREE.ShaderMaterial({
       transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: 'varying vec3 n; void main() { n = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: 'varying vec3 n; void main() { float a = pow(1.0 - abs(n.z), 3.0); gl_FragColor = vec4(0.2, 0.6, 0.9, a * 0.4); }',
-    }), this.scene);
+    }), this.sky);
     atmosphere.position.copy(planet.position);
     if (['sandstone', 'spires', 'storm'].includes(this.mission.biome)) {
-      const rings = this.mesh(new THREE.RingGeometry(125, 186, 96), new THREE.MeshBasicMaterial({ color: this.mission.color, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false, fog: false }), this.scene);
+      const rings = this.mesh(new THREE.RingGeometry(125, 186, 96), new THREE.MeshBasicMaterial({ color: this.mission.color, side: THREE.DoubleSide, transparent: true, opacity: 0.4, depthWrite: false, fog: false }), this.sky);
       rings.position.copy(planet.position);
       rings.rotation.set(1.2, 0.3, 0.4);
     }
   }
 
   groundInfo(x, z) {
-    let nearest = Infinity;
-    let y = 0;
-    let low = Infinity;
-    for (let i = 0; i < this.samples.length - 1; i++) {
-      const p = this.samples[i], q = this.samples[i + 1];
-      const dx = q.x - p.x, dz = q.z - p.z;
-      const t = Math.max(0, Math.min(1, ((x - p.x) * dx + (z - p.z) * dz) / (dx * dx + dz * dz)));
-      const d = (p.x + dx * t - x) ** 2 + (p.z + dz * t - z) ** 2;
-      const level = p.y + (q.y - p.y) * t;
-      if (d < nearest) { nearest = d; y = level; }
-      if (d < 42 * 42) low = Math.min(low, level);
-    }
-    const distance = Math.sqrt(nearest);
-    const blend = THREE.MathUtils.smoothstep(distance, 36, 145);
+    this.groundSampler ??= createGroundSampler(this.samples);
+    const { y, distance } = this.groundSampler(x, z);
+    const blend = THREE.MathUtils.smoothstep(distance, this.mission.endurance ? 80 : 36, this.mission.endurance ? 220 : 145);
     const wave = Math.sin(x * 0.01 + Math.cos(z * 0.013) * 2) * Math.cos(z * 0.016) * 35;
     const peaks = Math.max(0, Math.sin(x * 0.009 - z * 0.007)) ** 3 * 160;
     const surface = this.terrainGeometry ? terrainElevation(this.terrainGeometry, x, z) : null;
-    return { y: surface ?? Math.min(y, low) - 7 + blend * (wave + peaks - 24), distance };
+    return { y: surface ?? y - 7 + blend * (wave + peaks - 24), distance };
   }
 
   makeTerrain() {
     this.routeBounds = new THREE.Box3().setFromPoints(this.samples);
     const bounds = this.routeBounds.clone().expandByScalar(400);
     const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
-    const geometry = new THREE.PlaneGeometry(size.x, size.z, 200, 200);
+    const geometry = new THREE.PlaneGeometry(size.x, size.z, Math.max(200, Math.ceil(size.x / 36)), Math.max(200, Math.ceil(size.z / 36)));
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(center.x, 0, center.z);
     const positions = geometry.attributes.position;
@@ -257,11 +251,12 @@ export class World {
   makeRocks() {
     const geometry = new THREE.IcosahedronGeometry(1, 0);
     const material = new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(this.mission.ground, this.mission.saturation * 0.6, 0.34), flatShading: true });
-    const rocks = new THREE.InstancedMesh(geometry, material, 390);
+    const count = Math.max(390, Math.ceil(this.mission.length / 32));
+    const rocks = new THREE.InstancedMesh(geometry, material, count);
     rocks.castShadow = true;
     rocks.receiveShadow = true;
     const dummy = new THREE.Object3D();
-    for (let i = 0; i < 390; i++) {
+    for (let i = 0; i < count; i++) {
       const size = 0.6 + random() ** 2 * 13;
       let p;
       let ground;
@@ -488,6 +483,7 @@ export class World {
     this.environment.render(game.status === 'menu' ? 0 : game.elapsed);
     const menu = game.status === 'menu';
     const frame = this.frame(game.distance, game.lane, 1.9 + game.height);
+    this.sky.position.copy(frame.point);
     const { point, right } = frame;
     this.craft.position.copy(point);
     this.orient(this.craft, frame);

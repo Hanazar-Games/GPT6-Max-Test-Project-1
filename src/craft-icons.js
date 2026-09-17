@@ -9,6 +9,16 @@ const wings = {
   bulwark: 'M24 30 5 34 3 63 9 71 24 66Z',
   pulse: 'M24 35 5 43 5 64 24 62ZM4 46H17V49H4ZM4 55H17V58H4Z',
   comet: 'M24 44 10 3 7 7 9 70 23 63Z',
+  owl: 'M24 22 3 34 5 40 24 31ZM24 35 4 48 6 53 24 44ZM24 49 7 62 10 67 24 58Z',
+  trident: 'M24 36 15 2 11 6 11 68 24 59ZM7 21H10V64H7Z',
+  dragonfly: 'M24 23C-3 14-3 43 24 35ZM24 48C-4 40-4 70 24 61Z',
+  nautilus: 'M24 33 5 40 7 67 24 65ZM25 46A12 12 0 0 0 25 69Z',
+  blade: 'M24 19 2 70 7 70 24 39Z',
+  whale: 'M20 29C5 16 3 35 5 65Q12 79 20 65Z',
+  paladin: 'M24 25 3 36 3 60 15 74 24 63Z',
+  specter: 'M24 20 2 42 17 73 24 59 14 43Z',
+  sunbird: 'M22 31H16V61H22ZM14 35H8V65H14ZM6 39H1V69H6Z',
+  nova: 'M24 41 7 6 11 63 23 72Z',
 };
 
 export function craftIcon(id) {

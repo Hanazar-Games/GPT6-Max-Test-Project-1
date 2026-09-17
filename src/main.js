@@ -52,7 +52,7 @@ document.querySelector('#app').innerHTML = `
       <div class="eyebrow"><span class="orange-line"></span> <span id="mission-caption">一场远离地球的极速任务</span> <span id="mission-number" class="mission-number">001</span></div>
       <h1>奔向星海的<br>另<span class="outlined">一面。</span></h1>
       <p class="hero-copy">这片寂静，等你打破。<br>驾驶超高速悬浮艇，穿越 ${MISSIONS.length} 颗星球的盘山公路。</p>
-      <div class="mission-specs"><div><strong><b id="spec-time">${MISSIONS[0].duration}</b><span>秒</span></strong><small>任务时限</small></div><div><strong>6<span>座</span></strong><small>导航检查点</small></div><div><strong><b id="spec-length">${(MISSIONS[0].length / 1000).toFixed(1)}</b><span>公里</span></strong><small>星球山路</small></div></div>
+      <div class="mission-specs"><div><strong><b id="spec-time">${MISSIONS[0].duration}</b><span id="spec-time-unit">秒</span></strong><small>任务时限</small></div><div><strong>6<span>座</span></strong><small>导航检查点</small></div><div><strong><b id="spec-length">${(MISSIONS[0].length / 1000).toFixed(1)}</b><span>公里</span></strong><small>星球山路</small></div></div>
       <button id="start" class="primary-button" disabled><span>正在建立月面连接…<small>PREPARING YOUR FLIGHT</small></span>${icon('arrow')}</button>
       <div class="start-note"><span class="status-dot"></span> 无需下载 · 即刻出发 <span class="enter-note">按 <kbd>Enter</kbd> 开始</span></div>
     </div>
@@ -103,7 +103,7 @@ $('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="
 $('result-details').insertAdjacentHTML('beforebegin', '<section id="cup-result" class="cup-result" aria-label="赛事积分榜" hidden><div id="cup-stage-strip" class="cup-stage-strip"></div><div class="cup-table-title"><strong id="cup-board-title">赛事总积分</strong><span>四艇计时赛</span></div><table><thead><tr><th scope="col">名次</th><th scope="col">领航员</th><th scope="col">积分</th><th scope="col">累计用时</th></tr></thead><tbody id="cup-standings"></tbody></table><p id="cup-standing-note"></p></section>');
 $('retry').insertAdjacentHTML('beforebegin', `<button id="continue-cup" class="primary-button" hidden><span>前往下一站</span>${icon('arrow')}</button>`);
 mountExpeditionUI();
-$('mission-options').insertAdjacentHTML('beforebegin', '<label class="mission-search">探索星图<input id="mission-search" type="search" placeholder="搜索星球、航线或路线类型" autocomplete="off" maxlength="40"></label><p id="mission-count" class="mission-count" role="status"></p>');
+$('mission-options').insertAdjacentHTML('beforebegin', '<label class="mission-search">探索星图<input id="mission-search" type="search" placeholder="搜索星球、航线、路线类型或长途" autocomplete="off" maxlength="40"></label><p id="mission-count" class="mission-count" role="status"></p>');
 $('result-details').insertAdjacentHTML('beforebegin', '<div id="environment-result" class="environment-result"></div>');
 const game = createGame();
 const records = new Map();
@@ -144,7 +144,8 @@ function updateLoadout() {
   document.documentElement.style.setProperty('--mission', mission.color);
   $('mission-caption').textContent = mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mission.name;
   $('mission-number').textContent = mission.number;
-  $('spec-time').textContent = mission.duration;
+  $('spec-time').textContent = mission.endurance ? `${Math.floor(mission.duration / 60)}:${String(mission.duration % 60).padStart(2, '0')}` : mission.duration;
+  $('spec-time-unit').textContent = mission.endurance ? '分:秒' : '秒';
   $('spec-length').textContent = (mission.length / 1000).toFixed(1);
   $('loadout-mission').textContent = mode === 'cup' ? `月环大奖赛 · ${MISSIONS.length} 站征途` : mission.name;
   $('loadout-craft').textContent = `${craft.model} ${craft.name} · ${craft.role}`;
@@ -178,12 +179,12 @@ function updateLoadout() {
     const minX = Math.min(...xs), minZ = Math.min(...zs);
     const scale = Math.min(85 / (Math.max(...xs) - minX), 45 / (Math.max(...zs) - minZ));
     const points = preview.map(({ x, z }) => `${5 + (x - minX) * scale},${5 + (z - minZ) * scale}`).join(' ');
-    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
+    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ' <i>·</i> ≥3 分钟' : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
   $('craft-count').textContent = `${CRAFTS.length} 款全部开放 · 已选 ${craft.name}`;
   $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
-  $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · 建议用时 ${mission.par}s</small>`;
+  $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${mission.endurance ? `预计 ${Math.ceil(mission.length / craft.boostSpeed / 60)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`}</small>`;
   if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
   if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
   filterMissions();
@@ -196,7 +197,7 @@ function filterMissions() {
   const query = search.disabled ? '' : search.value.trim().toLocaleLowerCase();
   let visible = 0;
   for (const mission of MISSIONS) {
-    const match = `${mission.planet} ${mission.name} ${mission.layout} ${mission.description}`.toLocaleLowerCase().includes(query);
+    const match = `${mission.planet} ${mission.name} ${mission.layout} ${mission.description} ${mission.endurance ? '长途 3分钟' : '短途'}`.toLocaleLowerCase().includes(query);
     document.querySelector(`[data-mission="${mission.id}"]`).hidden = !match;
     visible += Number(match);
   }

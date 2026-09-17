@@ -254,6 +254,97 @@ export function makeLandmarks(world, random) {
     }
     add(new THREE.OctahedronGeometry(4), light, 0, 48);
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; box([1.2, 4, 1.2], light, Math.sin(a) * 16, 8, Math.cos(a) * 16); }
+  } else if (biome === 'bamboo') {
+    foundation(19);
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2.4, x = Math.sin(a) * 12, z = Math.cos(a) * 12;
+      for (let j = 0; j < 6 - i % 2; j++) {
+        pillar(2.2, 7, stone, x, 7 + j * 7.5, z, 2);
+        pillar(2.6, 0.7, light, x, 10.5 + j * 7.5, z);
+      }
+      branch([[x, 29, z], [x + 7, 34, z + 2], [x + 12, 36, z + 5]], 0.45, dark);
+      rock([8, 1.2, 3], stone, x + 8, 35, z + 3).rotation.z = 0.3;
+    }
+  } else if (biome === 'honeycomb') {
+    foundation(23);
+    for (let i = 0; i < 7; i++) {
+      const a = i * Math.PI / 3, x = i === 6 ? 0 : Math.cos(a) * 14, z = i === 6 ? 0 : Math.sin(a) * 14;
+      const height = i === 6 ? 45 : 24 + i % 3 * 6;
+      pillar(7.5, height, stone, x, height / 2 + 3, z, 7.5, 6);
+      pillar(6.2, 1, light, x, height + 3.5, z, 6.2, 6);
+      for (let j = 0; j < 3; j++) pillar(7.7, 0.8, dark, x, 8 + j * 7, z, 7.7, 6);
+    }
+  } else if (biome === 'orchard') {
+    foundation(17);
+    pillar(3, 24, dark, 0, 14, 0, 1.8);
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2.4, x = Math.sin(a) * 12, z = Math.cos(a) * 12, y = 26 + i * 2;
+      branch([[0, 14, 0], [x / 2, y - 4, z / 2], [x, y, z]], 1.1, dark);
+      rock([10, 6, 9], stone, x, y + 4, z);
+      for (let j = -1; j <= 1; j++) add(new THREE.SphereGeometry(1.8, 10, 8), light, x + j * 4, y - 2, z - 3);
+    }
+  } else if (biome === 'radar') {
+    foundation(19);
+    pillar(4, 28, dark, 0, 16, 0, 2);
+    const dish = add(new THREE.SphereGeometry(18, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), stone, 0, 30);
+    dish.scale.y = 0.3;
+    const rim = ring(18, 0.6, dark, 30); rim.rotation.x = Math.PI / 2;
+    for (const side of [-1, 1]) branch([[side * 16, 30, 0], [side * 8, 40, 0], [0, 47, 0]], 0.4, light);
+    add(new THREE.SphereGeometry(2, 12, 8), light, 0, 47);
+    box([14, 7, 9], stone, 14, 6, 7);
+  } else if (biome === 'archive') {
+    foundation(20);
+    for (let i = 0; i < 8; i++) {
+      const slab = box([28 - i, 3, 21], stone, 0, 6 + i * 4.2); slab.rotation.y = (i - 3) * 0.11;
+      box([20 - i, 0.45, 0.5], light, 0, 6 + i * 4.2, -11);
+    }
+    for (const x of [-18, 18]) pillar(2, 42, dark, x, 23, 0, 1.4, 8);
+  } else if (biome === 'reactor') {
+    foundation(22);
+    pillar(7, 35, light, 0, 22, 0, 7, 20);
+    for (let i = 0; i < 5; i++) {
+      const collar = ring(11, 1.6, stone, 8 + i * 8); collar.rotation.x = Math.PI / 2;
+      for (const x of [-13, 13]) box([2, 7, 2], dark, x, 8 + i * 8);
+    }
+    for (const side of [-1, 1]) branch([[side * 13, 6, 0], [side * 20, 6, 8], [side * 20, 24, 8]], 1.3, stone);
+  } else if (biome === 'fossil') {
+    foundation(23);
+    branch([[-18, 5, -10], [0, 8, 0], [18, 9, 10]], 2.2, dark);
+    for (let i = 0; i < 5; i++) for (const side of [-1, 1]) {
+      const z = (i - 2) * 7, h = 40 - Math.abs(i - 2) * 5;
+      branch([[0, 5, z], [side * 17, 15, z], [side * 18, h, z], [side * 5, h + 8, z]], 1.5, stone);
+      add(new THREE.OctahedronGeometry(1.5), light, side * 5, h + 8, z);
+    }
+  } else if (biome === 'sapphire') {
+    foundation(21);
+    pillar(11, 15, dark, 0, 10, 0, 9, 8);
+    const jewel = add(new THREE.OctahedronGeometry(1), stone, 0, 35); jewel.scale.set(13, 23, 13);
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      pillar(1.6, 33, light, Math.sin(a) * 15, 20, Math.cos(a) * 15, 0.5, 6);
+    }
+    const crown = ring(16, 1, dark, 20); crown.rotation.x = Math.PI / 2;
+  } else if (biome === 'terrace') {
+    foundation(24);
+    for (let i = 0; i < 5; i++) {
+      const r = 24 - i * 4;
+      pillar(r, 5, stone, 0, 5 + i * 6, 0, r, 16);
+      const pool = ring(r - 1, 0.55, light, 7.6 + i * 6); pool.rotation.x = Math.PI / 2;
+    }
+    pillar(2, 22, dark, 0, 41, 0, 1);
+    add(new THREE.OctahedronGeometry(4), light, 0, 53);
+  } else if (biome === 'sails') {
+    foundation(21);
+    for (const side of [-1, 1]) {
+      pillar(1.6, 57, dark, side * 14, 30);
+      for (let i = 0; i < 3; i++) {
+        const sail = add(new THREE.ConeGeometry(11 - i, 16, 3), stone, side * 9, 14 + i * 16);
+        sail.scale.z = 0.17; sail.rotation.z = side * 0.2;
+        box([0.4, 13, 0.5], light, side * 14, 14 + i * 16, -1);
+      }
+    }
+    ring(9, 0.7, light, 28);
+    ring(12, 0.9, stone, 28).rotation.y = 0.65;
   }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;
@@ -268,10 +359,11 @@ export function makeLandmarks(world, random) {
   batchMeshes(model);
   const bounds = new THREE.Box3().setFromObject(model);
   const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
-  const clearance = (Math.hypot(size.x, size.z) / 2 + Math.hypot(center.x, center.z)) * 1.1 + 27;
+  const clearance = ((size.x + size.z) / 2 + Math.hypot(center.x, center.z)) * 1.1 + 27;
   const placements = [], transform = new THREE.Object3D();
-  for (let i = 0; i < 48; i++) {
-    const position = world.frame((i + 0.3) / 48 * world.mission.length, (i % 2 ? -1 : 1) * (Math.max(76, clearance + 12) + random() * 55)).point;
+  const count = Math.max(48, Math.ceil(world.mission.length / 350));
+  for (let i = 0; i < count; i++) {
+    const position = world.frame((i + 0.3) / count * world.mission.length, (i % 2 ? -1 : 1) * (Math.max(76, clearance + 12) + random() * 55)).point;
     const ground = world.groundInfo(position.x, position.z);
     if (ground.distance < clearance) continue;
     transform.position.set(position.x, ground.y - 1, position.z);

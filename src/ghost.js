@@ -5,6 +5,7 @@ const poseFor = game => ({ time: game.elapsed, distance: game.distance, lane: ga
 export class FlightRecorder {
   constructor(game) {
     this.key = keyFor(game);
+    this.interval = Math.max(0.1, game.mission.duration / (MAX_GHOST_SAMPLES - 128));
     this.previous = poseFor(game);
     this.samples = [this.previous];
     this.splits = [];
@@ -27,7 +28,7 @@ export class FlightRecorder {
     if (cut) {
       this.append(this.previous);
       this.append({ ...sample, cut: true });
-    } else if (sample.time - this.samples.at(-1).time >= 0.1 - 1e-6 || gate || this.finished) this.append(sample);
+    } else if (sample.time - this.samples.at(-1).time >= this.interval - 1e-6 || gate || this.finished) this.append(sample);
     if (gate) this.splits.push(game.elapsed);
     if (game.status === 'won') this.splits.push(game.elapsed);
     this.previous = sample;

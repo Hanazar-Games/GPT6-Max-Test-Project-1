@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS } from '../src/missions.js';
 import { createRoute, routeFrame, speedFov } from '../src/route.js';
 import { createGame, updateGame } from '../src/game.js';
+import { upgradeCraft } from '../src/upgrades.js';
 
-test('at least twenty-five different planets have closed mountain roads at their actual advertised lengths', () => {
-  assert.ok(MISSIONS.length >= 25);
+test('at least thirty-five different planets have closed mountain roads at their actual advertised lengths', () => {
+  assert.ok(MISSIONS.length >= 35);
   assert.equal(new Set(MISSIONS.map(mission => mission.id)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => mission.planet)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => JSON.stringify(mission.points))).size, MISSIONS.length);
@@ -59,7 +60,7 @@ test('hairpin road edges and guardrails never fold back across the driving surfa
 });
 
 test('all ships exceed 1100 km/h under boost and can brake from the new top speeds', () => {
-  assert.ok(CRAFTS.length >= 10);
+  assert.ok(CRAFTS.length >= 20);
   assert.equal(new Set(CRAFTS.map(craft => craft.id)).size, CRAFTS.length);
   assert.equal(new Set(CRAFTS.map(craft => [craft.speed, craft.boostSpeed, craft.handling, craft.hull, craft.recharge].join('/'))).size, CRAFTS.length);
   for (const craft of CRAFTS) {
@@ -82,11 +83,28 @@ test('the expanded atlas has seven route families and distinct driving layouts',
   assert.equal(new Set(MISSIONS.map(mission => mission.biome)).size, MISSIONS.length);
   const shapes = new Set();
   for (const mission of MISSIONS) {
-    assert.ok(mission.length >= 7000 && mission.length <= 15000);
+    assert.ok(mission.length >= 7000 && mission.length <= 125000);
     const points = createRoute(mission).getSpacedPoints(120);
     shapes.add(points.slice(0, 120).map((point, i) => (point.distanceTo(points[(i + 30) % 120]) / mission.length).toFixed(3)).join(','));
   }
   assert.equal(shapes.size, MISSIONS.length);
+});
+
+test('ten endurance routes require three minutes even at uninterrupted fully upgraded boost', () => {
+  const missions = MISSIONS.filter(mission => mission.endurance);
+  assert.equal(missions.length, 10);
+  const fastest = Math.max(...CRAFTS.map(craft => upgradeCraft(craft, { engine: 2 }).boostSpeed));
+  for (const mission of missions) {
+    assert.ok(mission.length / fastest >= 180, `${mission.id}: shorter than three minutes`);
+    assert.ok(mission.duration > mission.length / Math.min(...CRAFTS.map(craft => craft.speed)) + 60);
+    const game = createGame(mission.id);
+    assert.ok(game.course.pickups.length >= 150);
+    for (const objects of [game.course.pickups, game.course.obstacles, game.course.pads]) {
+      const distances = [0, ...objects.map(item => item.distance).sort((a, b) => a - b), mission.length];
+      const maxGap = Math.max(...distances.slice(1).map((distance, i) => distance - distances[i]));
+      assert.ok(maxGap < (objects === game.course.pads ? 5000 : 2000), `${mission.id}: empty stretch ${maxGap}`);
+    }
+  }
 });
 
 test('the fastest upgraded ship cannot tunnel through a gate, rock, core or boost strip', () => {

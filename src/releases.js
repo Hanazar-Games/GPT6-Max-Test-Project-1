@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 舰队与新星域</h2>
+      <h2 id="release-title">v${version} · 洲际长航</h2>
+      <p>二十款飞船，三十五颗星球，向大陆另一端飞行。</p>
+      <ul class="release-list">
+        <li><strong>再添 10 款独立飞船</strong>雪鸮、三叉戟、蜻蜓、鹦鹉螺、霜刃、远鲸、圣盾、幽影、金乌与新星加入机库；羽翼、四叶翼、螺环、长舱与太阳翼各有轮廓，新星基础冲刺达到 1728 km/h。</li>
+        <li><strong>10 张真正的长途地图</strong>新增青篁、蜂巢、绯果、回声、书卷、蓝核、龙骨、蓝宝、梯田与远航星，单程 96–123 公里；最快满级飞船持续冲刺也至少需要 3 分钟，不含倒计时和暂停。</li>
+        <li><strong>一路都有新的目标</strong>洲际连峰与环陆群湾穿过竹塔、巢柱、果林、天线、石页、反应堆、巨骸、宝冠、梯台和帆架；核心、障碍、加速带与环境航段沿途分布，长途核心目标为 30–36 枚。</li>
+        <li><strong>长航程完整支持</strong>机库可搜索「长途」并查看预计用时；幽灵记录覆盖完整长航，地形与道路提高采样精度。大奖赛和远征扩展至 35 站，共 1355.3 公里、105 项委托与 34 次补给。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>13 个版本</span></summary>
+      <article><h3>v1.5.0 · 舰队与新星域</h3>
       <p>十款飞船集结，再向五颗新星球出发。</p>
       <ul class="release-list">
         <li><strong>10 款飞船全部开放</strong>新增赤隼、雨燕、云鳐、夜莺、玄甲、流萤与彗星；分叉前翼、三角翼、重装侧盾和储能环带来不同轮廓，极速、机动、装甲与充能各有取舍。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>彗星冲刺达到 1620 km/h</strong>延续随实际速度扩大的视野与动态配乐，全部新艇支持幽灵挑战、大奖赛与远征改装。</li>
         <li><strong>机库与长途赛事同步扩充</strong>独立飞船缩略图、巡航与充能信息、保留位置的滚动列表；大奖赛扩展至 25 站，远征包含 75 项委托和 24 次补给。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>12 个版本</span></summary>
+        </article>
       <article><h3>v1.4.2 · 屏幕适配修复</h3>
       <p>换个屏幕方向，也能看清航路、顺手操作。</p>
       <ul class="release-list">

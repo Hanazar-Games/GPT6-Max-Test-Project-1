@@ -109,6 +109,41 @@ export function makeCraftModel(materials) {
     }
     plate([[s(1.1), 0.6], [s(3.2), 5.1], [s(3.5), 4.7], [s(3.2), -3.4], [s(1.2), -2.4]], 0.12, materials.orange, 0.17, variants.comet);
     tube([[s(3.22), 0.42, 4.45], [s(3.13), 0.42, 1], [s(3), 0.42, -2.5]], 0.05, materials.cyan, variants.comet);
+    for (let i = 0; i < 3; i++) {
+      const z = 1.8 - i * 1.25;
+      plate([[s(1.1), z], [s(4.25 - i * 0.25), z - 1.35], [s(3.95 - i * 0.25), z - 1.9], [s(1.1), z - 0.8]], 0.12, i === 1 ? materials.metal : materials.orange, 0.25 + i * 0.13, variants.owl);
+    }
+    plate([[s(0.9), 3.1], [s(2.3), 5.2], [s(2.7), 4.9], [s(2.8), -2.6], [s(1.1), -2]], 0.15, materials.orange, 0.3, variants.trident);
+    tube([[s(3.6), 0.2, 3.1], [s(3.9), 0.2, -0.4], [s(3.2), 0.2, -2.9]], 0.12, materials.metal, variants.trident);
+    for (const z of [1.8, -1.4]) {
+      const wing = add(new THREE.SphereGeometry(1, 16, 8), materials.orange, [s(2.7), 0.45, z], variants.dragonfly);
+      wing.scale.set(1.65, 0.1, 0.8); wing.rotation.y = side * 0.3;
+      box([0.15, 0.12, 0.7], capacitor, [s(4.1), 0.55, z], variants.dragonfly);
+    }
+    plate([[s(1.05), 1.3], [s(3.7), 0.3], [s(3.55), -2.75], [s(1.2), -2.8]], 0.28, materials.orange, 0.55, variants.nautilus);
+    box([0.14, 0.15, 2.3], materials.metal, [s(3.4), 0.98, -1.1], variants.nautilus);
+    plate([[s(1.05), 2.7], [s(4.35), -3.2], [s(3.8), -3.4], [s(1.2), -0.8]], 0.1, materials.metal, 0.4, variants.blade);
+    plate([[s(1.45), 1.1], [s(3.95), -3], [s(3.55), -2.8]], 0.07, materials.orange, 0.59, variants.blade);
+    const cargo = add(new THREE.CapsuleGeometry(0.58, 3.6, 6, 12), materials.orange, [s(3.35), 0.45, -0.2], variants.whale);
+    cargo.rotation.x = Math.PI / 2;
+    for (const z of [-1.7, 1.3]) {
+      const hoop = add(new THREE.TorusGeometry(0.64, 0.09, 6, 16), materials.metal, [s(3.35), 0.45, z], variants.whale);
+      hoop.scale.y = 1.05;
+    }
+    box([0.14, 0.15, 2.5], capacitor, [s(3.35), 1.1, -0.2], variants.whale);
+    plate([[s(1.2), 2], [s(3.75), 0.9], [s(3.75), -2.1], [s(2.5), -3.6], [s(1.1), -2.4]], 0.72, materials.dark, 0.55, variants.paladin);
+    plate([[s(1.6), 1.2], [s(3.35), 0.6], [s(3.35), -1.8], [s(2.5), -2.9], [s(1.6), -2.1]], 0.2, materials.orange, 1.4, variants.paladin);
+    box([0.18, 0.08, 2.9], materials.metal, [s(2.45), 1.7, -0.9], variants.paladin);
+    plate([[s(1.05), 2.5], [s(4.3), -0.5], [s(2.4), -3.9], [s(0.9), -1.9]], 0.13, materials.dark, 0.38, variants.specter);
+    plate([[s(1.3), 2], [s(4), -0.5], [s(3.65), -0.8], [s(1.3), 1.2]], 0.05, materials.orange, 0.61, variants.specter);
+    tube([[s(1.25), 0.6, -1.2], [s(2), 1.4, -2.4], [s(2.4), 0.7, -3.7]], 0.12, materials.metal, variants.specter);
+    for (let i = 0; i < 3; i++) {
+      const x = s(2 + i * 0.75), z = 0.1 - i * 0.4;
+      box([0.68, 0.14, 3.2], materials.orange, [x, 0.5, z], variants.sunbird);
+      for (let row = 0; row < 5; row++) box([0.5, 0.035, 0.43], materials.dark, [x, 0.6, z + 1.15 - row * 0.55], variants.sunbird);
+    }
+    plate([[s(0.95), 1.7], [s(3.6), 4.75], [s(3.15), -2.3], [s(1.4), -3.4]], 0.1, materials.orange, 0.22, variants.nova);
+    tube([[s(3.48), 0.43, 4.1], [s(3.1), 0.43, 0], [s(2.5), 0.43, -2.5]], 0.055, materials.cyan, variants.nova);
     box([0.12, 0.07, 0.7], materials.cyan, [s(0.75), 0.55, 2.4]);
   }
   const pulseRing = add(new THREE.TorusGeometry(1.18, 0.17, 10, 40), materials.metal, [0, 0.9, -1.8], variants.pulse);
@@ -120,6 +155,18 @@ export function makeCraftModel(materials) {
   const tailGeometry = new THREE.ExtrudeGeometry(tail, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2 });
   tailGeometry.rotateY(Math.PI / 2);
   add(tailGeometry, materials.metal, [-0.07, 0.55, -0.3], variants.comet);
+  for (let i = 0; i < 3; i++) {
+    const shell = add(new THREE.TorusGeometry(1.1 - i * 0.24, 0.12, 8, 32), i === 1 ? capacitor : materials.metal, [0, 0.85 + i * 0.23, -1.7], variants.nautilus);
+    shell.rotation.x = Math.PI / 2;
+  }
+  for (const [id, height, width] of [['blade', 1.9, 0.13], ['nova', 2.2, 0.28], ['paladin', 1.3, 0.55]]) {
+    const spine = add(new THREE.ConeGeometry(width, height, 3), materials.orange, [0, 0.6 + height / 2, -2], variants[id]);
+    spine.scale.z = 4;
+  }
+  for (let i = -2; i <= 2; i++) {
+    const vane = box([0.18, 0.15, 1.6], materials.metal, [i * 0.27, 0.82, -2.9], variants.sunbird);
+    vane.rotation.y = i * 0.16;
+  }
   for (let i = 0; i < 7; i++) box([1.1 - i * 0.055, 0.065, 0.07], materials.dark, [0, 0.76 - i * 0.023, -1.4 - i * 0.21]);
   const reactor = add(new THREE.TorusGeometry(0.32, 0.045, 8, 24), materials.cyan, [0, 0.64, -2.8]);
   reactor.rotation.x = -Math.PI / 2;

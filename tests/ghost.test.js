@@ -152,3 +152,23 @@ test('recording memory is bounded and an overflow cannot become a partial ghost'
   saveRecord(records, game, recorder);
   assert.equal(records.size, 0);
 });
+
+test('long flights retain their full trace with bounded sampling and exact gate times', () => {
+  const { game } = flight();
+  game.mission = { ...game.mission, duration: 1100 };
+  Object.assign(game, { elapsed: 0, distance: 0, gates: 0 });
+  const recorder = new FlightRecorder(game);
+  for (let step = 1; step <= 1100 * 60; step++) {
+    game.elapsed = step / 60;
+    game.distance = Math.min(game.mission.length, game.mission.length * game.elapsed / 1100);
+    game.gates = game.course.gates.filter(gate => gate.distance <= game.distance).length;
+    if (step === 1100 * 60) game.status = 'won';
+    recorder.capture(game);
+  }
+  const trace = recorder.finish(game);
+  assert.ok(trace, 'long flight must not overflow before returning home');
+  assert.equal(trace.samples.at(-1).time, 1100);
+  assert.equal(trace.splits.length, 7);
+  assert.ok(trace.samples.length < MAX_GHOST_SAMPLES);
+  assert.ok(trace.samples.slice(1).every((sample, i) => sample.time - trace.samples[i].time < 0.65));
+});

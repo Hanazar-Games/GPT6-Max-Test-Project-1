@@ -195,7 +195,7 @@ test('every mission and craft combination can complete and record a continuous r
     const game = createGame(mission.id, craft.id);
     startGame(game);
     const recorder = new FlightRecorder(game);
-    for (let i = 0; i < 9000 && ['countdown', 'running'].includes(game.status); i++) {
+    for (let i = 0; i < (game.mission.duration + 4) * 60 && ['countdown', 'running'].includes(game.status); i++) {
       updateGame(game, pilotInput(game, { coast: 0, offset: 0 }), 1 / 60);
       recorder.capture(game);
     }

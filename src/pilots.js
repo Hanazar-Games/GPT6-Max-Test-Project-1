@@ -10,8 +10,15 @@ export const RACERS = Object.freeze([
 
 export function pilotInput(game, racer) {
   let upcoming;
-  for (const object of [...game.course.pickups, ...game.course.gates]) {
-    if (object.distance >= game.distance - 2 && (!upcoming || object.distance < upcoming.distance)) upcoming = object;
+  for (const objects of [game.course.pickups, game.course.gates]) {
+    let low = 0, high = objects.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (objects[middle].distance < game.distance - 2) low = middle + 1;
+      else high = middle;
+    }
+    const object = objects[low];
+    if (object && (!upcoming || object.distance < upcoming.distance)) upcoming = object;
   }
   const speed = Math.max(game.speed, game.craft.speed * 0.5);
   const gate = game.course.gates[game.gates];
@@ -33,7 +40,7 @@ export function pilotInput(game, racer) {
   const futureLane = (target, time) => game.lane + Math.max(-game.craft.handling * Math.max(0, time - 0.12), Math.min(game.craft.handling * Math.max(0, time - 0.12), target - game.lane));
   const cost = target => Math.abs(target - desired) + Math.abs(target - game.lane) * 0.25 + (gateApproach && Math.abs(target - gate.lane) > gate.width - 1 ? 2500 : 0) + threats.reduce((sum, threat) => sum + (Math.abs(target - threat.lane) < threat.radius ? 100 / Math.max(0.3, threat.arrival) : 0), 0);
   let target = desired;
-  for (const lane of [-11, -7, 0, 7, 11]) if (cost(lane) < cost(target)) target = lane;
+  if (threats.length) for (const lane of [-11, -7, 0, 7, 11]) if (cost(lane) < cost(target)) target = lane;
   const jump = game.height === 0 && threats.some(threat => threat.arrival > 0.35 && threat.arrival < 0.65 && Math.abs(futureLane(target, threat.arrival) - threat.lane) < threat.radius);
   return { accelerate: game.elapsed % 8 < 8 - racer.coast, steer: Math.max(-1, Math.min(1, (target - game.lane) * 0.6)), jump };
 }
