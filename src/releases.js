@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 三境试航</h2>
+      <h2 id="release-title">v${version} · 航线体验修复</h2>
+      <p>看清当前航线的规则，让下一次出发更从容。</p>
+      <ul class="release-list">
+        <li><strong>每条航线都有合适的建议</strong>末日图超时后不再建议寻找加速带；无障碍地图会提示避开航道边缘、沿中央收集核心。普通航线、大奖赛和远征均按当前地图提供建议。</li>
+        <li><strong>指南和结算对应实际地图</strong>三张特殊地图增加专属驾驶说明；只显示当前地图具备的陨石、低重力和避障项目，避免不存在的技巧项目造成困惑。</li>
+        <li><strong>加速与制动提示更准确</strong>超频星按所选飞船的持续冲刺速度估算用时，新星约 3.3 分钟；制动时不再误显示「免费超频中」。</li>
+        <li><strong>小屏区段标题更清楚</strong>任务名称与区段编号分行显示，减少窄屏下的断字，保留清晰的任务信息。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>15 个版本</span></summary>
+      <article><h3>v1.7.0 · 三境试航</h3>
       <p>无限加速、末日求生，还有绿意盎然的地球。</p>
       <ul class="release-list">
         <li><strong>超频星 · 无限加速环</strong>96 公里无障碍航线，400 条全路宽加速带连续接力，无需消耗冲刺能量；按住油门即可进入极速，S 仍可随时制动。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>地球 · 绿野归航</strong>102 公里无障碍观光路，蓝天白云、树林草坡和野花替代异星荒原，配以明亮的大调音乐；没有岩石、无人机或陨石威胁。</li>
         <li><strong>更顺畅的特殊航程</strong>机库可搜索「特殊」「无障碍」「加速」或「末日」；加速带和岩障采用批量绘制，连续加速不再反复提示。远征委托按地图配置调整，38 站共 1652.3 公里、114 项委托。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>14 个版本</span></summary>
+      </article>
       <article><h3>v1.6.0 · 洲际长航</h3>
       <p>二十款飞船，三十五颗星球，向大陆另一端飞行。</p>
       <ul class="release-list">

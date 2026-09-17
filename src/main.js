@@ -174,6 +174,15 @@ function updateLoadout() {
   if (world) $('start').innerHTML = `<span>${mode === 'cup' ? '出战月环大奖赛' : '开始飞行'}<small>${mode === 'cup' ? 'MANY WORLDS. ONE CHAMPION.' : 'LET’S MAKE A DELIVERY'}</small></span>${icon('arrow')}`;
   if (world && mode === 'expedition') $('start').innerHTML = `<span>开启远征补给<small>DELIVER. UPGRADE. EXPLORE.</small></span>${icon('arrow')}`;
   $('guide').querySelector('p').textContent = `在 ${mission.duration} 秒内完成 ${mission.name}，穿过 6 座导航门，带回至少 ${mission.cargo} 枚蓝色能量核心。`;
+  $('route-guide').textContent = {
+    boost: '本航线无障碍与陨石。全路宽加速带连续提供免费超频，保持低空接力；S 可制动。核心与导航门在中央，航道边缘仍会损伤艇体。',
+    hazard: '本航线没有加速带，密集岩障之间留有交替缺口，跟随蓝色核心横移避让；F 可跃过障碍，注意陨石红圈并为跃升保留能量。',
+    garden: '本航线无障碍与陨石。沿中央收集核心、通过导航门，绿色加速带提供短时免费冲刺；航道边缘仍会损伤艇体。',
+  }[mission.special] ?? '绿色加速带提供免费超频，F 可跃过障碍；留意岩石、巡逻机和陨石预警。';
+  const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
+  $('guide').querySelector('.environment-guide').hidden = !meteors && !gravity;
+  $('meteor-help').hidden = !meteors;
+  $('gravity-help').hidden = !gravity;
   $('mission-options').innerHTML = MISSIONS.map(option => {
     const preview = routePreviews.get(option.id);
     const xs = preview.map(point => point.x), zs = preview.map(point => point.z);
@@ -185,7 +194,8 @@ function updateLoadout() {
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
   $('craft-count').textContent = `${CRAFTS.length} 款全部开放 · 已选 ${craft.name}`;
   $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
-  $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${mission.endurance ? `预计 ${Math.ceil(mission.length / craft.boostSpeed / 60)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`}</small>`;
+  const estimate = mission.special === 'boost' ? `持续加速约 ${(mission.length / craft.boostSpeed / 60).toFixed(1)} 分钟` : mission.endurance ? `预计 ${Math.ceil(mission.length / craft.boostSpeed / 60)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`;
+  $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${estimate}</small>`;
   if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
   if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
   filterMissions();
@@ -344,6 +354,17 @@ function pause() {
   syncPanels();
 }
 
+function failureAdvice() {
+  const { course, mission, reason } = game;
+  if (reason === 'time') {
+    if (mission.special === 'boost') return '保持低空，让全路宽加速带连续接力；避免长时间制动，提前对准中央导航门。';
+    return course.pads.length ? '绿色加速带提供免费加速，收集蓝色核心可补充冲刺能量；减少碰撞和漏门，保持前进。' : '交替使用巡航与冲刺，为跃升保留能量；跟随核心穿过安全缺口，减少碰撞和漏门造成的时间损失。';
+  }
+  if (reason === 'hull') return course.obstacles.length || course.meteors.length ? '横移避让或按 F 跃过障碍，留意陨石红圈；蓝色核心可以修复艇体。' : '远离航道边缘，提前松开转向并用 S 制动；沿中央收集蓝色核心可以修复艇体。';
+  if (reason === 'cargo') return `需要至少 ${mission.cargo} 枚蓝色核心才能完成交付，${mission.special && mission.special !== 'hazard' ? '保持低空，沿航道中央收集' : '保持低空，留意航道两侧'}。`;
+  return '请依次穿过全部 6 座导航门，按航向提示提前对准门中央。';
+}
+
 function syncPanels() {
   const status = game.status;
   if (lastStatus === status) return;
@@ -381,14 +402,14 @@ function syncPanels() {
     $('result-symbol').textContent = won ? '✦' : '↺';
     $('result-symbol').style.color = '';
     $('result-title').textContent = won ? '能量送达，欢迎回家。' : { time: '时间到了，下一次更快。', hull: '艇体受损，救援已出发。', cargo: '带回的能量还不够。', gates: '还有未点亮的航标。' }[game.reason];
-    $('result-copy').textContent = won ? `${game.mission.name} · ${game.craft.model} ${game.craft.name}，交付完成。` : { time: '绿色加速带提供免费加速，冲刺与跃升需要合理分配能量。', hull: '按 F 跃过障碍，蓝色核心可以修复艇体；也可换用磐石重装艇。', cargo: `需要至少 ${game.mission.cargo} 枚蓝色核心才能完成交付，留意航道两侧。`, gates: '请依次穿过环线上的全部 6 座导航门，留意左右错位。' }[game.reason];
-    if (!won && game.reason === 'hull' && (cup || expedition)) $('result-copy').textContent = '按 F 跃过障碍，避开陨石红圈；蓝色核心可修复艇体。本站继续使用当前飞船。';
+    $('result-copy').textContent = won ? `${game.mission.name} · ${game.craft.model} ${game.craft.name}，交付完成。` : failureAdvice();
     $('result-score').textContent = String(game.score).padStart(5, '0');
     $('result-time').textContent = `${game.elapsed.toFixed(1)}s`;
     $('result-cargo').textContent = `${game.collected.size} / ${game.course.pickups.length}`;
-    $('environment-result').innerHTML = `<span>☄ 跃过冲击波 <b>${game.meteorDodges}</b></span><span>⌁ 低重力滑翔 <b>${game.glides}</b></span>`;
+    $('environment-result').innerHTML = `${game.course.meteors.length ? `<span>☄ 跃过冲击波 <b>${game.meteorDodges}</b></span>` : ''}${game.course.gravityZones.length ? `<span>⌁ 低重力滑翔 <b>${game.glides}</b></span>` : ''}`;
+    $('environment-result').hidden = !game.course.meteors.length && !game.course.gravityZones.length;
     document.querySelectorAll('.result-stats > div > span').forEach((label, index) => { label.textContent = (cup || expedition ? ['本站得分', '本站用时', '本站核心'] : ['任务得分', '飞行用时', '收集核心'])[index]; });
-    $('result-details').innerHTML = `<span>最高连收 <b>${game.maxCombo}</b></span><span>精准过门 <b>${game.perfectGates} / 6</b></span><span>空中避障 <b>${game.airDodges}</b></span>`;
+    $('result-details').innerHTML = `<span>最高连收 <b>${game.maxCombo}</b></span><span>精准过门 <b>${game.perfectGates} / 6</b></span>${game.course.obstacles.length ? `<span>空中避障 <b>${game.airDodges}</b></span>` : ''}`;
     $('result-medals').innerHTML = debrief.medals.map(medal => `<span><b>${medal.symbol}</b>${medal.name}</span>`).join('');
     $('result-rating').textContent = won ? `${debrief.rank}  /  ${{ S: '星际传奇', A: '王牌速递员', B: '可靠领航员' }[debrief.rank]}${record.newScore ? ' · 本次会话得分新纪录' : ''}` : `已完成 ${Math.floor(game.distance / game.mission.length * 100)}% 航程 · 每一次出发都更接近终点`;
     $('result-challenge').textContent = !won ? (rival ? '个人幽灵已保留 · 下次继续追逐' : '成功返航后建立你的第一道幽灵') : record.previousTime === null ? '首航纪录已建立 · 再飞一次，与自己的幽灵同场' : record.newBest ? `刷新最快航程！快了 ${(record.previousTime - game.elapsed).toFixed(2)} 秒` : `距个人最快 ${deltaText(game.elapsed - record.previousTime)} · 再找一条更快的路线`;
@@ -531,7 +552,7 @@ function updateHUD() {
   document.querySelector('.mission-heading .eyebrow').textContent = cup ? `CUP / ${cup.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : `OPERATION / ${game.mission.number} · ${game.craft.model}`;
   if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}`;
   document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
-  refs.sector.textContent = game.gates === 6 ? '最后一程 · 返回基地' : `${game.mission.name} · 第 ${String(game.gates + 1).padStart(2, '0')} 区段`;
+  refs.sector.innerHTML = game.gates === 6 ? '最后一程<span class="sector-stage">返回基地</span>' : `${game.mission.name}<span class="sector-stage">第 ${String(game.gates + 1).padStart(2, '0')} 区段</span>`;
   refs.objective.textContent = game.collected.size >= game.mission.cargo ? '能量已装载 · 沿航线返回基地' : `还需 ${game.mission.cargo - game.collected.size} 枚能量核心 · 留意蓝色晶体`;
   refs['next-distance'].textContent = `${Math.max(0, Math.ceil((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance))} M`;
   refs['next-label'].textContent = game.gates < 6 ? '下一座导航门' : '返航基地';
@@ -547,7 +568,7 @@ function updateHUD() {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : cue.kind === 'finish' ? '◇ 返回基地' : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' }[cue.direction];
     $('cue-detail').textContent = cue.kind === 'hazard' ? (isJumpReady(game) ? '跃升或左右避让' : '左右避让 · 注意航道边缘') : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   }
-  refs['throttle-hint'].textContent = game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
+  refs['throttle-hint'].textContent = controls.held('brake') ? '制动中 · 松开后恢复驾驶' : game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
   if (lowGravity) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
   document.body.classList.toggle('boosting', game.boosting);
   $('combo-value').textContent = game.combo;
@@ -684,10 +705,11 @@ $('next-mission').addEventListener('click', () => {
   launch();
 });
 $('guide').querySelector('.guide-keys').insertAdjacentHTML('beforeend', '<div><span><kbd>F</kbd></span><span>跃升避障 · 消耗 18 能量</span></div>');
-$('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向避障；速度越快，镜头视野越宽。绿色加速带免费超频，F 跃升避障，高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
+$('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向驾驶；速度越快，镜头视野越宽。跃升高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', `<p class="cup-guide-note">在任务机库选择「月环大奖赛」，与三名电脑领航员连赛 ${MISSIONS.length} 站。须收集核心并穿过全部导航门才能晋级；每站重新计时并补满艇体，失败可重试。对手投影互不碰撞，结束赛事或刷新会清空赛事积分。</p>`);
 $('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', `<p class="cup-guide-note">「远征补给」沿 ${MISSIONS.length} 站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。${MISSIONS.length - 1} 次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>`);
-$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<div class="environment-guide"><strong>☄ 陨石预警 &nbsp; / &nbsp; ⌁ 低重力航段</strong><p>红圈提前 2.6 秒预警，撞击后 1 秒内低空艇体会受到 22 点伤害；横向避开红圈，或按 F 腾空越过冲击波可获 180 分。紫色边线标出低重力区，跃升滞空更久；腾空离开区域可获 200 分。每处技巧奖励只计一次，高空仍会错过核心。</p><small>环境按飞行用时循环，暂停时冻结；重飞从头开始。灰色落点和退去的余辉没有伤害，雷达同步标出落点与低重力航段。</small></div>');
+$('guide').querySelector('.guide-tip').insertAdjacentHTML('beforebegin', '<p id="route-guide" class="cup-guide-note"></p>');
+$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<div class="environment-guide"><div id="meteor-help"><strong>☄ 陨石预警</strong><p>红圈提前 2.6 秒预警，撞击后 1 秒内低空艇体会受到 22 点伤害；横向避开红圈，或按 F 腾空越过冲击波可获 180 分。灰色落点和退去的余辉没有伤害。</p></div><div id="gravity-help"><strong>⌁ 低重力航段</strong><p>紫色边线标出低重力区，跃升滞空更久；腾空离开区域可获 200 分，高空仍会错过核心。</p></div><small>每处技巧奖励只计一次。环境按飞行用时循环，暂停时冻结；重飞从头开始，雷达同步标出环境航段。</small></div>');
 document.querySelector('.flight-help').innerHTML = '<span>A / D 避障</span><span>F 跃升</span><span>S 制动</span><span>Esc 暂停</span>';
 document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); if (game.status === 'menu') return; if (['running', 'countdown'].includes(game.status)) pause(); else home(); });
 async function unlockAudio() {
