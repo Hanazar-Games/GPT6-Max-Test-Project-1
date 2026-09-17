@@ -25,3 +25,11 @@ test('menu has no percussion; racing layers respond to actual speed', () => {
   assert.ok(fast.length > slow.length);
   assert.ok(fast.some(note => note.kind === 'kick'));
 });
+
+test('Earth uses a major harmony and a calmer tempo than the accelerator route', () => {
+  const earth = MISSIONS.find(mission => mission.id === 'earth').music;
+  const boost = MISSIONS.find(mission => mission.id === 'overdrive').music;
+  assert.ok(earth.bpm < boost.bpm);
+  const pads = composeBeat(0, earth, 0, true).filter(note => note.kind === 'pad');
+  assert.ok(Math.abs(pads[1].frequency / pads[0].frequency - 2 ** (4 / 12)) < 1e-8);
+});

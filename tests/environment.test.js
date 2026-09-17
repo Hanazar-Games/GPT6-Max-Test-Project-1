@@ -25,7 +25,7 @@ test('all missions provide deterministic, bounded environmental layouts of incre
   for (const mission of MISSIONS) {
     const course = makeCourse(mission);
     assert.deepEqual(course, makeCourse(mission));
-    assert.ok(course.gravityZones.length >= 1);
+    assert.ok(mission.special ? course.gravityZones.length === 0 : course.gravityZones.length >= 1);
     assert.equal(new Set(course.meteors.map(item => item.id)).size, course.meteors.length);
     assert.ok(course.gravityZones.every(zone => zone.start > 0 && zone.end > zone.start && zone.end < mission.length));
     assert.ok(course.meteors.every(item => item.distance > 200 && item.distance < mission.length - 100 && Math.abs(item.lane) + item.radius < 15 && item.first >= ENVIRONMENT.warning));

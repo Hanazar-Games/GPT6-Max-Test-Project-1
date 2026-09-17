@@ -90,9 +90,9 @@ test('the expanded atlas has seven route families and distinct driving layouts',
   assert.equal(shapes.size, MISSIONS.length);
 });
 
-test('ten endurance routes require three minutes even at uninterrupted fully upgraded boost', () => {
+test('all endurance routes require three minutes even at uninterrupted fully upgraded boost', () => {
   const missions = MISSIONS.filter(mission => mission.endurance);
-  assert.equal(missions.length, 10);
+  assert.equal(missions.length, 13);
   const fastest = Math.max(...CRAFTS.map(craft => upgradeCraft(craft, { engine: 2 }).boostSpeed));
   for (const mission of missions) {
     assert.ok(mission.length / fastest >= 180, `${mission.id}: shorter than three minutes`);
@@ -100,6 +100,7 @@ test('ten endurance routes require three minutes even at uninterrupted fully upg
     const game = createGame(mission.id);
     assert.ok(game.course.pickups.length >= 150);
     for (const objects of [game.course.pickups, game.course.obstacles, game.course.pads]) {
+      if (!objects.length && mission.special) continue;
       const distances = [0, ...objects.map(item => item.distance).sort((a, b) => a - b), mission.length];
       const maxGap = Math.max(...distances.slice(1).map((distance, i) => distance - distances[i]));
       assert.ok(maxGap < (objects === game.course.pads ? 5000 : 2000), `${mission.id}: empty stretch ${maxGap}`);

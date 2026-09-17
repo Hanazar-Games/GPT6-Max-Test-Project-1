@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 洲际长航</h2>
+      <h2 id="release-title">v${version} · 三境试航</h2>
+      <p>无限加速、末日求生，还有绿意盎然的地球。</p>
+      <ul class="release-list">
+        <li><strong>超频星 · 无限加速环</strong>96 公里无障碍航线，400 条全路宽加速带连续接力，无需消耗冲刺能量；按住油门即可进入极速，S 仍可随时制动。</li>
+        <li><strong>末日星 · 余烬生还线</strong>99 公里废土遍布交替岩障与陨石，破损楼群和熔岩映照归途；沿核心指引穿过安全缺口，导航门前保留调整空间。</li>
+        <li><strong>地球 · 绿野归航</strong>102 公里无障碍观光路，蓝天白云、树林草坡和野花替代异星荒原，配以明亮的大调音乐；没有岩石、无人机或陨石威胁。</li>
+        <li><strong>更顺畅的特殊航程</strong>机库可搜索「特殊」「无障碍」「加速」或「末日」；加速带和岩障采用批量绘制，连续加速不再反复提示。远征委托按地图配置调整，38 站共 1652.3 公里、114 项委托。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>14 个版本</span></summary>
+      <article><h3>v1.6.0 · 洲际长航</h3>
       <p>二十款飞船，三十五颗星球，向大陆另一端飞行。</p>
       <ul class="release-list">
         <li><strong>再添 10 款独立飞船</strong>雪鸮、三叉戟、蜻蜓、鹦鹉螺、霜刃、远鲸、圣盾、幽影、金乌与新星加入机库；羽翼、四叶翼、螺环、长舱与太阳翼各有轮廓，新星基础冲刺达到 1728 km/h。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>一路都有新的目标</strong>洲际连峰与环陆群湾穿过竹塔、巢柱、果林、天线、石页、反应堆、巨骸、宝冠、梯台和帆架；核心、障碍、加速带与环境航段沿途分布，长途核心目标为 30–36 枚。</li>
         <li><strong>长航程完整支持</strong>机库可搜索「长途」并查看预计用时；幽灵记录覆盖完整长航，地形与道路提高采样精度。大奖赛和远征扩展至 35 站，共 1355.3 公里、105 项委托与 34 次补给。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>13 个版本</span></summary>
+      </article>
       <article><h3>v1.5.0 · 舰队与新星域</h3>
       <p>十款飞船集结，再向五颗新星球出发。</p>
       <ul class="release-list">

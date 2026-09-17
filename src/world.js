@@ -151,6 +151,24 @@ export class World {
   makeSky() {
     this.sky = new THREE.Group();
     this.scene.add(this.sky);
+    if (this.mission.biome === 'earth') {
+      this.sky.name = 'daylight-sky';
+      const sun = this.mesh(new THREE.SphereGeometry(48, 24, 16), new THREE.MeshBasicMaterial({ color: '#fff6cf', fog: false }), this.sky, [-700, 580, 1100]);
+      sun.name = 'earth-sun';
+      const clouds = new THREE.Group();
+      const puff = new THREE.SphereGeometry(1, 12, 8);
+      const white = new THREE.MeshBasicMaterial({ color: '#f5fbff', fog: false });
+      for (let i = 0; i < 24; i++) {
+        const angle = i / 24 * Math.PI * 2, radius = 1100 + random() * 800;
+        for (let j = 0; j < 4; j++) {
+          const cloud = this.mesh(puff, white, clouds, [Math.cos(angle) * radius + j * 55, 360 + i % 4 * 90 + Math.sin(j) * 15, Math.sin(angle) * radius]);
+          cloud.scale.set(85, 22 + random() * 18, 48);
+        }
+      }
+      clouds.name = 'earth-clouds';
+      this.sky.add(batchMeshes(clouds));
+      return;
+    }
     const stars = new Float32Array(1800 * 3);
     for (let i = 0; i < stars.length; i += 3) {
       const angle = random() * Math.PI * 2;
@@ -231,7 +249,7 @@ export class World {
       const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
       const strata = Math.sin(y * 0.12 + Math.sin(x * 0.009) + Math.cos(z * 0.012)) * 0.025;
       const slope = 1 - Math.abs(geometry.attributes.normal.getY(i));
-      color.setHSL(this.mission.ground + strata * 0.3, this.mission.saturation * (1 - slope * 0.35), (pale ? 0.56 : this.mission.biome === 'dunes' ? 0.4 : 0.25) + strata - slope * 0.07);
+      color.setHSL(this.mission.ground + strata * 0.3, this.mission.saturation * (1 - slope * 0.35), (pale ? 0.56 : this.mission.biome === 'wasteland' ? 0.12 : this.mission.biome === 'dunes' ? 0.4 : 0.25) + strata - slope * 0.07);
       color.toArray(colors, i * 3);
     }
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -278,28 +296,34 @@ export class World {
       rocks.setMatrixAt(i, dummy.matrix);
     }
     this.scene.add(rocks);
-    for (const obstacle of this.course.obstacles) {
-      if (obstacle.kind === 'drone') {
-        const drone = new THREE.Group();
-        this.box([3.6, 1.2, 2.5], this.materials.dark, drone, [0, 2, 0]).castShadow = true;
-        this.box([3.1, 0.3, 0.15], this.materials.glow, drone, [0, 2.1, -1.3]);
-        for (const side of [-1, 1]) {
-          const fan = this.mesh(new THREE.TorusGeometry(1.1, 0.16, 6, 16), this.materials.metal, drone, [side * 2.4, 2, 0]);
-          fan.rotation.x = Math.PI / 2;
-          this.box([1.5, 0.1, 0.12], this.materials.cyan, drone, [side * 2.4, 2, 0]);
-        }
-        this.place(drone, obstacle.distance, obstacleLane(obstacle, 0));
-        this.drones.push({ group: drone, obstacle });
-        continue;
+    const obstacles = this.course.obstacles.filter(obstacle => obstacle.kind === 'rock');
+    if (obstacles.length) {
+      const bodies = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), material, obstacles.length);
+      const rings = new THREE.InstancedMesh(new THREE.TorusGeometry(3.6, 0.07, 4, 28).rotateX(Math.PI / 2), this.materials.glow, obstacles.length);
+      bodies.name = 'obstacle-rocks'; rings.name = 'obstacle-warnings';
+      bodies.castShadow = bodies.receiveShadow = true;
+      const body = new THREE.Object3D(), transform = new THREE.Object3D();
+      obstacles.forEach((obstacle, index) => {
+        const frame = this.frame(obstacle.distance, obstacle.lane);
+        transform.position.copy(frame.point); this.orient(transform, frame); transform.updateMatrix();
+        rings.setMatrixAt(index, transform.matrix);
+        body.position.set(0, 1.3, 0); body.rotation.set(0.2, obstacle.id, 0.3);
+        body.scale.set(obstacle.radius, obstacle.radius * 0.9, obstacle.radius * 1.05); body.updateMatrix();
+        bodies.setMatrixAt(index, transform.matrix.clone().multiply(body.matrix));
+      });
+      for (const mesh of [bodies, rings]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); this.scene.add(mesh); }
+    }
+    for (const obstacle of this.course.obstacles.filter(item => item.kind === 'drone')) {
+      const drone = new THREE.Group();
+      this.box([3.6, 1.2, 2.5], this.materials.dark, drone, [0, 2, 0]).castShadow = true;
+      this.box([3.1, 0.3, 0.15], this.materials.glow, drone, [0, 2.1, -1.3]);
+      for (const side of [-1, 1]) {
+        const fan = this.mesh(new THREE.TorusGeometry(1.1, 0.16, 6, 16), this.materials.metal, drone, [side * 2.4, 2, 0]);
+        fan.rotation.x = Math.PI / 2;
+        this.box([1.5, 0.1, 0.12], this.materials.cyan, drone, [side * 2.4, 2, 0]);
       }
-      const rock = new THREE.Group();
-      const body = this.mesh(new THREE.IcosahedronGeometry(obstacle.radius, 0), material, rock, [0, 1.3, 0]);
-      body.rotation.set(0.2, obstacle.id, 0.3);
-      body.scale.set(1, 0.9, 1.05);
-      body.castShadow = true;
-      const hazard = this.mesh(new THREE.TorusGeometry(3.6, 0.07, 4, 28), this.materials.glow, rock, [0, 0, 0]);
-      hazard.rotation.x = Math.PI / 2;
-      this.place(rock, obstacle.distance, obstacle.lane);
+      this.place(drone, obstacle.distance, obstacleLane(obstacle, 0));
+      this.drones.push({ group: drone, obstacle });
     }
   }
 
@@ -343,20 +367,48 @@ export class World {
   }
 
   makePads() {
-    for (const pad of this.course.pads) {
-      const group = new THREE.Group();
-      const light = new THREE.MeshBasicMaterial({ color: '#78ecae' });
-      this.box([8, 0.12, 10], this.materials.dark, group, [0, -0.08, 0]);
-      for (let i = 0; i < 3; i++) {
-        for (const side of [-1, 1]) {
-          const arrow = this.box([0.24, 0.06, 2.4], light, group, [side * 0.9, 0.04, -3 + i * 2.6]);
-          arrow.rotation.y = side * -0.8;
-        }
+    this.padLights = null;
+    if (!this.course.pads.length) return;
+    const group = new THREE.Group(), light = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+    this.box([8, 0.12, 10], this.materials.dark, group, [0, -0.08, 0]);
+    for (let i = 0; i < 3; i++) {
+      for (const side of [-1, 1]) {
+        const arrow = this.box([0.24, 0.06, 2.4], light, group, [side * 0.9, 0.04, -3 + i * 2.6]);
+        arrow.rotation.y = side * -0.8;
       }
-      for (const side of [-1, 1]) this.box([0.18, 0.08, 10], light, group, [side * 3.7, 0.04, 0]);
-      this.place(group, pad.distance, pad.lane);
-      this.pads.push({ group, light, id: pad.id });
     }
+    for (const side of [-1, 1]) this.box([0.18, 0.08, 10], light, group, [side * 3.7, 0.04, 0]);
+    const parts = batchMeshes(group).children;
+    const transform = new THREE.Object3D(), color = new THREE.Color('#78ecae');
+    for (const part of parts) {
+      const instances = new THREE.InstancedMesh(part.geometry, part.material, this.course.pads.length);
+      instances.name = part.material === light ? 'pad-arrows' : 'pad-bases';
+      this.course.pads.forEach((pad, index) => {
+        const frame = this.frame(pad.distance, pad.lane);
+        transform.position.copy(frame.point); this.orient(transform, frame);
+        transform.scale.set((pad.width ?? 8) / 8, 1, 1); transform.updateMatrix();
+        instances.setMatrixAt(index, transform.matrix);
+        if (part.material === light) instances.setColorAt(index, color);
+      });
+      instances.instanceMatrix.needsUpdate = true;
+      instances.computeBoundingSphere();
+      if (part.material === light) { this.padLights = instances; instances.instanceColor.needsUpdate = true; }
+      this.scene.add(instances);
+    }
+    this.pads = this.course.pads.map(pad => ({ id: pad.id, active: false }));
+  }
+
+  updatePads(game) {
+    if (!this.padLights) return;
+    let changed = false;
+    const color = new THREE.Color();
+    this.pads.forEach((pad, index) => {
+      const active = game.activatedPads.has(pad.id);
+      if (active === pad.active) return;
+      this.padLights.setColorAt(index, color.set(active ? '#3b6353' : '#78ecae'));
+      pad.active = active; changed = true;
+    });
+    if (changed) this.padLights.instanceColor.needsUpdate = true;
   }
 
   makeBase() {
@@ -528,7 +580,7 @@ export class World {
       this.orient(drone.group, frame);
       drone.group.rotateZ(Math.cos(motionTime * drone.obstacle.frequency + drone.obstacle.phase) * -0.12);
     }
-    for (const pad of this.pads) pad.light.color.set(game.activatedPads.has(pad.id) ? '#3b6353' : '#78ecae');
+    this.updatePads(game);
     if (animated) {
       this.sparks = this.sparks.filter(spark => (spark.life -= dt) > 0);
       this.effectPositions.fill(10000);

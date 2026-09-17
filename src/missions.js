@@ -1,4 +1,5 @@
 import { makeEnvironment } from './environment.js';
+import { makeSpecialCourse } from './special-courses.js';
 
 const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾'];
 
@@ -85,16 +86,19 @@ const planets = [
   ['sapphire', '蓝宝星', '宝冠千湾', '蓝宝石冠与金属基座沿千重山湾铺开，冷光引向远方。', 'sapphire', '#91b8ff', '#121a3d', '#3d507c', 0.64, 0.42, 117000, 2, 66, 8],
   ['terrace', '梯田星', '千阶天路', '青绿色梯台与水晶灌溉塔沿山展开，攀上大陆最高处。', 'terrace', '#c4ef8c', '#24352a', '#647852', 0.25, 0.32, 120000, 2, 67, 7],
   ['odyssey', '远航星', '航标天涯', '航海仪与高耸帆架标记群湾，完成跨越整片大陆的终站。', 'sails', '#e5b6ff', '#21142f', '#655273', 0.77, 0.25, 123000, 2, 68, 8],
+  ['overdrive', '超频星', '无限加速环', '特殊航线 · 无障碍，全路宽加速带连续接力，按住油门享受免费极速。', 'accelerator', '#8cffe0', '#071f2c', '#285465', 0.5, 0.32, 96000, 0, 69, 8, 'boost'],
+  ['apocalypse', '末日星', '余烬生还线', '特殊航线 · 密集碎岩与陨石封锁废土，跟随核心穿过交替的安全缺口。', 'wasteland', '#ffaf83', '#2c1017', '#743d37', 0.035, 0.35, 99000, 2, 33, 7, 'hazard'],
+  ['earth', '地球', '绿野归航', '特殊航线 · 无障碍，蓝天白云下的绿意山路，穿过树林、草坡与花海。', 'earth', '#b7efac', '#8bc5df', '#b0cdb5', 0.29, 0.56, 102000, 0, 70, 8, 'garden'],
 ];
 
-export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family], index) => Object.freeze({
-  id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty,
-  number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ['入门', '进阶', '极限'][difficulty], variant: index,
+export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special], index) => Object.freeze({
+  id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, special,
+  number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ({ boost: '全程加速', hazard: '障碍密集', garden: '无障碍观光' })[special] ?? ['入门', '进阶', '极限'][difficulty], variant: index,
   endurance: length >= 90000,
   duration: length >= 90000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
   cargo: length >= 90000 ? 24 + difficulty * 6 : 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
-  music: { root, bpm: 124 + index % 4 * 6 }, points: mountainRoad(index, family ?? index % 5),
+  music: { root, bpm: special === 'garden' ? 112 : special === 'boost' ? 148 : 124 + index % 4 * 6, mode: special === 'garden' ? 'major' : 'minor' }, points: mountainRoad(index, family ?? index % 5),
 })));
 
 export const CRAFTS = Object.freeze([
@@ -121,6 +125,7 @@ export const CRAFTS = Object.freeze([
 ]);
 
 export function makeCourse(mission) {
+  if (mission.special) return makeSpecialCourse(mission);
   if (mission.endurance) {
     const blocks = Math.ceil(mission.length / 12000);
     const blockLength = mission.length / blocks;

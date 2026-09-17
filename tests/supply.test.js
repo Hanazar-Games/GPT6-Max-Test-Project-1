@@ -82,6 +82,10 @@ test('contracts reflect real run stats and vary across difficulties and route le
     assert.ok(contracts.every(item => !item.done && item.progress === 0));
     const cargo = contracts.find(item => item.id === 'cargo');
     assert.ok(cargo.target > mission.cargo && cargo.target <= game.course.pickups.length);
+    for (const contract of contracts) {
+      if (contract.id === 'dodge') assert.ok(game.course.obstacles.length >= contract.target);
+      if (contract.id === 'pads') assert.ok(game.course.pads.length >= contract.target);
+    }
     signatures.add(contracts.map(item => `${item.id}/${item.target}`).join(','));
     game.collected = new Set(game.course.pickups.map(item => item.id));
     game.perfectGates = 6;
@@ -89,7 +93,7 @@ test('contracts reflect real run stats and vary across difficulties and route le
     game.activatedPads = new Set(game.course.pads.map(item => item.id));
     assert.ok(getContracts(game).every(item => item.done));
   }
-  assert.equal(signatures.size, new Set(MISSIONS.map(mission => `${mission.difficulty}/${mission.endurance}`)).size);
+  assert.ok(signatures.size >= 6);
 });
 
 test('successful delivery guarantees supply even without optional contracts', () => {

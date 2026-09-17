@@ -209,12 +209,13 @@ export function updateGame(game, input, delta) {
     }
   }
   for (const pad of game.course.pads) {
-    if (!input.brake && !game.activatedPads.has(pad.id) && courseContact(pad, previous, game, 3, 4)?.height < 0.5) {
+    if (!input.brake && !game.activatedPads.has(pad.id) && courseContact(pad, previous, game, 3, (pad.width ?? 8) / 2)?.height < 0.5) {
+      const chained = game.padBoost > 0;
       game.activatedPads.add(pad.id);
       game.padBoost = 1.8;
       game.speed = Math.max(game.speed, game.craft.speed + 7);
       game.energy = Math.min(100, game.energy + 15);
-      game.events.push({ type: 'pad' });
+      game.events.push({ type: 'pad', chained });
     }
   }
 

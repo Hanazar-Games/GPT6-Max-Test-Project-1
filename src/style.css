@@ -73,6 +73,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; border
 .footer-note > span { color: var(--orange); font-size: 22px; }
 
 body:not([data-state="menu"]) .shade { background: linear-gradient(0deg, #07111ccf 0%, transparent 29%, transparent 70%, #07111cd9 100%); }
+body[data-biome="earth"] .hud :is(.mission-heading, .timer-box, .cargo-box, .speed-panel, .resource-panel) { background: #0c2538cc; box-shadow: 0 0 0 7px #0c2538cc; border-radius: 2px; }
 .hud { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
 .hud-top { position: absolute; top: 130px; left: 5.2%; right: 5.2%; display: flex; justify-content: space-between; align-items: flex-start; }
 .mission-heading { width: 310px; }

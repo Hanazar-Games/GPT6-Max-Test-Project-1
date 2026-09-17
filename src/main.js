@@ -141,8 +141,9 @@ function updateLoadout() {
   const { mission, craft } = game;
   const scrollPositions = ['mission-options', 'craft-options'].map(id => $(id).scrollTop);
   document.body.dataset.mode = mode;
+  document.body.dataset.biome = mission.biome;
   document.documentElement.style.setProperty('--mission', mission.color);
-  $('mission-caption').textContent = mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mission.name;
+  $('mission-caption').textContent = mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mission.special ? `${mission.name} · ${mission.label}` : mission.name;
   $('mission-number').textContent = mission.number;
   $('spec-time').textContent = mission.endurance ? `${Math.floor(mission.duration / 60)}:${String(mission.duration % 60).padStart(2, '0')}` : mission.duration;
   $('spec-time-unit').textContent = mission.endurance ? '分:秒' : '秒';
@@ -197,7 +198,7 @@ function filterMissions() {
   const query = search.disabled ? '' : search.value.trim().toLocaleLowerCase();
   let visible = 0;
   for (const mission of MISSIONS) {
-    const match = `${mission.planet} ${mission.name} ${mission.layout} ${mission.description} ${mission.endurance ? '长途 3分钟' : '短途'}`.toLocaleLowerCase().includes(query);
+    const match = `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.endurance ? '长途 3分钟' : '短途'}`.toLocaleLowerCase().includes(query);
     document.querySelector(`[data-mission="${mission.id}"]`).hidden = !match;
     visible += Number(match);
   }
@@ -562,7 +563,7 @@ function updateHUD() {
 
 function processEvents() {
   for (const event of game.events) {
-    audio.event(event.type);
+    if (!event.chained) audio.event(event.type);
     world.event(event, game);
     if (event.type === 'launch') toast('出发！按住 W / ↑ 加速，蓝色核心就在前方');
     if (event.type === 'pickup') toast(`能量核心 +1  /  ${game.collected.size >= game.mission.cargo ? '交付目标已达成' : `${game.collected.size} / ${game.mission.cargo}`}  ·  +${event.points}${game.combo >= 3 ? `  ·  ${game.combo} 连收` : ''}`, 'cyan');
@@ -573,7 +574,7 @@ function processEvents() {
       $('split-flash').dataset.tone = deltaTone(delta?.sector);
       splitFlashUntil = game.elapsed + 4;
     }
-    if (event.type === 'pad') toast('绿色加速带 · 免费超频 1.8 秒', 'cyan');
+    if (event.type === 'pad' && !event.chained) toast(game.mission.special === 'boost' ? '连续加速航线 · 免费超频接力，S 可制动' : '绿色加速带 · 免费超频 1.8 秒', 'cyan');
     if (event.type === 'dodge') toast('空中避障！  ·  +120', 'cyan');
     if (event.type === 'meteor-warning') toast('陨石正在接近 · 注意红色落点与撞击倒计时', 'warning');
     if (event.type === 'low-gravity') toast('进入低重力区 · F 延长跃升，腾空出区可获奖励', 'cyan');

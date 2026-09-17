@@ -27,6 +27,12 @@ export function makeMountainRoad(world) {
   const edge = new THREE.MeshStandardMaterial({ color: world.mission.color, emissive: world.mission.color, emissiveIntensity: 0.4, side: THREE.DoubleSide });
   const rail = new THREE.MeshStandardMaterial({ color: '#728797', roughness: 0.55, metalness: 0.7, side: THREE.DoubleSide });
   ribbon(world, -17, 17, asphalt);
+  if (world.mission.special === 'boost') {
+    const energy = new THREE.MeshBasicMaterial({ color: '#63f7c5', side: THREE.DoubleSide });
+    const surface = new THREE.MeshBasicMaterial({ color: '#4ed9ae', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
+    ribbon(world, -16, 16, surface, -0.29).name = 'accelerator-surface';
+    for (const side of [-1, 1]) ribbon(world, side * 10, side * 10.45, energy, -0.25);
+  }
   for (const side of [-1, 1]) {
     ribbon(world, side * 17, side * 17, asphalt, -0.38, -4);
     ribbon(world, side * 12.8, side * 12.8, rail, -1.2, -2.4);
@@ -100,6 +106,11 @@ export function makeMountainRoad(world) {
 
 export function makePlanetScenery(world, random) {
   const { biome, color, ground } = world.mission;
+  if (biome === 'earth') {
+    makeEarthForest(world, random);
+    makeLandmarks(world, random);
+    return;
+  }
   let geometry;
   if (['crystal', 'ice', 'spires', 'storm', 'aurora', 'prism'].includes(biome)) geometry = new THREE.ConeGeometry(1, 1, biome === 'ice' ? 4 : 6);
   else if (['mesa', 'sandstone', 'volcanic', 'geyser'].includes(biome)) geometry = new THREE.CylinderGeometry(0.7, 1, 1, biome === 'mesa' ? 6 : 8);
@@ -126,10 +137,41 @@ export function makePlanetScenery(world, random) {
   props.castShadow = true;
   world.scene.add(props);
   makeLandmarks(world, random);
-  if (['ocean', 'coral', 'volcanic'].includes(biome)) {
+  if (['ocean', 'coral', 'volcanic', 'wasteland'].includes(biome)) {
+    const lava = ['volcanic', 'wasteland'].includes(biome);
     const bounds = world.routeBounds.getSize(new THREE.Vector3());
     const center = world.routeBounds.getCenter(new THREE.Vector3());
-    const sea = world.mesh(new THREE.PlaneGeometry(bounds.x + 1000, bounds.z + 1000), new THREE.MeshStandardMaterial({ color: biome === 'volcanic' ? '#c4370d' : '#126e89', metalness: 0.55, roughness: 0.3, emissive: biome === 'volcanic' ? '#ff470d' : '#052d48', emissiveIntensity: biome === 'volcanic' ? 1.5 : 0.25 }), world.scene, [center.x, 5, center.z]);
+    const sea = world.mesh(new THREE.PlaneGeometry(bounds.x + 1000, bounds.z + 1000), new THREE.MeshStandardMaterial({ color: lava ? '#c4370d' : '#126e89', metalness: 0.55, roughness: 0.3, emissive: lava ? '#ff470d' : '#052d48', emissiveIntensity: lava ? 1.5 : 0.25 }), world.scene, [center.x, 5, center.z]);
     sea.rotation.x = -Math.PI / 2;
   }
+}
+
+function makeEarthForest(world, random) {
+  const count = Math.ceil(world.mission.length / 55);
+  const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.9, 10, 6).translate(0, 5, 0), new THREE.MeshStandardMaterial({ color: '#725239', roughness: 1 }), count);
+  const leaves = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1).scale(5, 6, 5).translate(0, 11, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95 }), count);
+  const flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0).scale(0.9, 0.4, 0.9), new THREE.MeshStandardMaterial({ color: '#fff0b7', roughness: 0.9 }), count * 3);
+  const transform = new THREE.Object3D(), tint = new THREE.Color();
+  for (let i = 0; i < count; i++) {
+    const p = world.frame((i + 0.4) / count * world.mission.length, (i % 2 ? -1 : 1) * (40 + random() * 160)).point;
+    const ground = world.groundInfo(p.x, p.z), size = 1 + random() * 1.3;
+    transform.position.set(p.x, ground.y, p.z);
+    transform.scale.setScalar(ground.distance > size * 6 + 23 ? size : 0);
+    transform.rotation.set(0, random() * Math.PI * 2, 0); transform.updateMatrix();
+    for (const mesh of [trunk, leaves]) mesh.setMatrixAt(i, transform.matrix);
+    leaves.setColorAt(i, tint.setHSL(0.25 + random() * 0.09, 0.45 + random() * 0.2, 0.24 + random() * 0.15));
+    for (let j = 0; j < 3; j++) {
+      const point = world.frame((i + (j + 0.3) / 3) / count * world.mission.length, (i % 2 ? -1 : 1) * (22 + random() * 12)).point;
+      const soil = world.groundInfo(point.x, point.z);
+      transform.position.set(point.x, soil.y + 0.35, point.z);
+      transform.scale.setScalar(soil.distance > 20 ? 1 : 0); transform.updateMatrix();
+      flowers.setMatrixAt(i * 3 + j, transform.matrix);
+    }
+  }
+  for (const mesh of [trunk, leaves, flowers]) {
+    mesh.name = mesh === flowers ? 'earth-wildflowers' : 'earth-forest';
+    mesh.instanceMatrix.needsUpdate = true; mesh.castShadow = mesh.receiveShadow = true;
+    mesh.computeBoundingSphere(); world.scene.add(mesh);
+  }
+  leaves.instanceColor.needsUpdate = true;
 }
