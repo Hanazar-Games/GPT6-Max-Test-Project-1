@@ -154,7 +154,7 @@ test('purchases require resupply, enforce funds and caps, and do not advance aut
   assert.equal(run.supply, 2);
 });
 
-test('all twenty stages complete once, preserve earnings, and new expeditions start empty', () => {
+test('all stages complete once, preserve earnings, and new expeditions start empty', () => {
   const run = createExpedition('interceptor');
   for (let stage = 0; stage < MISSIONS.length; stage++) {
     assert.equal(run.stage, stage);

@@ -100,8 +100,8 @@ export function makePlanetScenery(world, random) {
   const { biome, color, ground } = world.mission;
   let geometry;
   if (['crystal', 'ice', 'spires', 'storm', 'aurora', 'prism'].includes(biome)) geometry = new THREE.ConeGeometry(1, 1, biome === 'ice' ? 4 : 6);
-  else if (['mesa', 'sandstone', 'volcanic'].includes(biome)) geometry = new THREE.CylinderGeometry(0.7, 1, 1, biome === 'mesa' ? 6 : 8);
-  else if (['salt', 'industrial', 'ruins'].includes(biome)) geometry = new THREE.BoxGeometry(1, 1, 1);
+  else if (['mesa', 'sandstone', 'volcanic', 'geyser'].includes(biome)) geometry = new THREE.CylinderGeometry(0.7, 1, 1, biome === 'mesa' ? 6 : 8);
+  else if (['salt', 'industrial', 'ruins', 'solar', 'observatory'].includes(biome)) geometry = new THREE.BoxGeometry(1, 1, 1);
   else if (biome === 'dunes') geometry = new THREE.SphereGeometry(1, 12, 6);
   else geometry = new THREE.IcosahedronGeometry(1, biome === 'forest' ? 1 : 0);
   const material = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(ground, world.mission.saturation, ['ice', 'salt', 'aurora'].includes(biome) ? 0.72 : 0.34), roughness: biome === 'ice' ? 0.2 : 0.85, metalness: biome === 'crystal' ? 0.45 : 0.1, flatShading: true,

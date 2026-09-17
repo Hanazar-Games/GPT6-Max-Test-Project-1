@@ -12,8 +12,8 @@ function running(missionId = 'tranquility', craftId = 'scout') {
   return game;
 }
 
-test('twenty distinct missions provide deterministic, reachable route objects', () => {
-  assert.equal(MISSIONS.length, 20);
+test('expanded missions provide deterministic, reachable route objects', () => {
+  assert.ok(MISSIONS.length >= 25);
   const layouts = new Set();
   for (const mission of MISSIONS) {
     const course = makeCourse(mission);

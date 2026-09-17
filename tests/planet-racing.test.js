@@ -4,8 +4,9 @@ import { MISSIONS, CRAFTS } from '../src/missions.js';
 import { createRoute, routeFrame, speedFov } from '../src/route.js';
 import { createGame, updateGame } from '../src/game.js';
 
-test('twenty different planets have closed mountain roads at their actual advertised lengths', () => {
-  assert.ok(MISSIONS.length >= 20);
+test('at least twenty-five different planets have closed mountain roads at their actual advertised lengths', () => {
+  assert.ok(MISSIONS.length >= 25);
+  assert.equal(new Set(MISSIONS.map(mission => mission.id)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => mission.planet)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => JSON.stringify(mission.points))).size, MISSIONS.length);
   for (const mission of MISSIONS) {
@@ -58,6 +59,9 @@ test('hairpin road edges and guardrails never fold back across the driving surfa
 });
 
 test('all ships exceed 1100 km/h under boost and can brake from the new top speeds', () => {
+  assert.ok(CRAFTS.length >= 10);
+  assert.equal(new Set(CRAFTS.map(craft => craft.id)).size, CRAFTS.length);
+  assert.equal(new Set(CRAFTS.map(craft => [craft.speed, craft.boostSpeed, craft.handling, craft.hull, craft.recharge].join('/'))).size, CRAFTS.length);
   for (const craft of CRAFTS) {
     const game = createGame('tranquility', craft.id);
     game.status = 'running';
@@ -73,8 +77,8 @@ test('all ships exceed 1100 km/h under boost and can brake from the new top spee
   }
 });
 
-test('the expanded atlas has five route families and twenty distinct driving layouts', () => {
-  assert.ok(new Set(MISSIONS.map(mission => mission.layout)).size >= 5);
+test('the expanded atlas has seven route families and distinct driving layouts', () => {
+  assert.ok(new Set(MISSIONS.map(mission => mission.layout)).size >= 7);
   assert.equal(new Set(MISSIONS.map(mission => mission.biome)).size, MISSIONS.length);
   const shapes = new Set();
   for (const mission of MISSIONS) {
@@ -87,7 +91,8 @@ test('the expanded atlas has five route families and twenty distinct driving lay
 
 test('the fastest upgraded ship cannot tunnel through a gate, rock, core or boost strip', () => {
   for (const kind of ['gates', 'obstacles', 'pickups', 'pads']) {
-    const game = createGame('tranquility', 'interceptor', { engine: 2 });
+    const fastest = CRAFTS.reduce((best, craft) => craft.boostSpeed > best.boostSpeed ? craft : best);
+    const game = createGame('tranquility', fastest.id, { engine: 2 });
     Object.assign(game, { status: 'running', distance: 80, speed: game.craft.boostSpeed });
     for (const key of ['pickups', 'obstacles', 'gates', 'pads', 'meteors', 'gravityZones']) game.course[key] = [];
     game.course[kind] = [{ id: 0, distance: 100, lane: 0, radius: 2.8, width: 10, kind: 'rock' }];

@@ -7,7 +7,7 @@ import { createRoute } from '../src/route.js';
 import { World } from '../src/world.js';
 import { makeLandmarks } from '../src/landmarks.js';
 
-test('all twenty planetary landmarks stay outside the road within a bounded draw budget', () => {
+test('all planetary landmarks stay outside the road within a bounded draw budget', () => {
   const silhouettes = new Set();
   for (const mission of MISSIONS) {
     const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), materials: { dark: new THREE.MeshStandardMaterial() }, renderer: { renderLists: { dispose() {} } } });

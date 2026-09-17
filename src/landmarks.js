@@ -4,8 +4,8 @@ import { batchMeshes } from './model-utils.js';
 export function makeLandmarks(world, random) {
   const { biome, color } = world.mission;
   const model = new THREE.Group();
-  const polished = ['crystal', 'ice', 'prism', 'salt'].includes(biome);
-  const stone = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).lerp(new THREE.Color('#a6acae'), 0.35), roughness: polished ? 0.24 : 0.82, metalness: biome === 'industrial' ? 0.7 : polished ? 0.3 : 0.05, side: biome === 'fungal' ? THREE.DoubleSide : THREE.FrontSide });
+  const polished = ['crystal', 'ice', 'prism', 'salt', 'solar', 'observatory'].includes(biome);
+  const stone = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).lerp(new THREE.Color('#a6acae'), 0.35), roughness: polished ? 0.24 : 0.82, metalness: biome === 'industrial' ? 0.7 : polished ? 0.3 : 0.05, side: ['fungal', 'solar'].includes(biome) ? THREE.DoubleSide : THREE.FrontSide });
   if (['ridge', 'mesa', 'sandstone', 'dunes', 'volcanic'].includes(biome)) stone.color.setHSL(world.mission.ground, world.mission.saturation, biome === 'volcanic' ? 0.16 : 0.38);
   const dark = world.materials.dark;
   const light = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.55, roughness: 0.4 });
@@ -191,6 +191,69 @@ export function makeLandmarks(world, random) {
       const collar = ring(5, 0.6, dark, 20); collar.position.set(shard.position.x, 20, shard.position.z); collar.rotation.x = Math.PI / 2;
     }
     ring(20, 0.4, stone, 25).rotation.x = 0.8;
+  } else if (biome === 'lotus') {
+    foundation(17);
+    pillar(3, 23, dark, 0, 12, 0, 1.5);
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      const petal = add(new THREE.SphereGeometry(1, 16, 10), stone, Math.cos(a) * 10, 28, Math.sin(a) * 10);
+      petal.scale.set(5, 3, 15);
+      petal.rotation.set(0.38, Math.PI / 2 - a, 0);
+      branch([[0, 15, 0], [Math.cos(a) * 8, 23, Math.sin(a) * 8], [Math.cos(a) * 19, 32, Math.sin(a) * 19]], 0.35, light);
+    }
+    add(new THREE.SphereGeometry(5, 16, 12), light, 0, 30);
+    for (let i = 0; i < 5; i++) { const a = i * 2.4; rock([6, 2, 9], stone, Math.sin(a) * 11, 3, Math.cos(a) * 11); }
+  } else if (biome === 'solar') {
+    foundation(19);
+    pillar(3, 33, dark, 0, 19);
+    const dish = add(new THREE.SphereGeometry(17, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), stone, 0, 29);
+    dish.scale.y = 0.3;
+    dish.rotation.x = Math.PI;
+    const rim = ring(17, 0.65, dark, 29); rim.rotation.x = Math.PI / 2;
+    pillar(0.7, 16, light, 0, 40);
+    add(new THREE.OctahedronGeometry(3), light, 0, 49);
+    for (const side of [-1, 1]) {
+      pillar(1.2, 15, dark, side * 19, 7.5);
+      const panel = box([14, 0.7, 16], stone, side * 19, 15); panel.rotation.z = side * 0.25;
+      panel.updateMatrix();
+      for (let i = -2; i <= 2; i++) box([12, 0.1, 0.12], light, 0, 0.42, i * 3).applyMatrix4(panel.matrix);
+    }
+  } else if (biome === 'geyser') {
+    foundation(22);
+    for (let i = 0; i < 5; i++) {
+      pillar(21 - i * 3, 4, stone, 0, 3 + i * 4, 0, 19 - i * 3, 16);
+      const pool = ring(18 - i * 3, 0.55, light, 5 + i * 4); pool.rotation.x = Math.PI / 2;
+    }
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.4, r = i ? 3 : 0, h = 32 - i * 2;
+      branch([[Math.sin(a) * r, 20, Math.cos(a) * r], [Math.sin(a) * 5, 20 + h, Math.cos(a) * 5], [Math.sin(a) * 12, 28 + h * 0.3, Math.cos(a) * 12]], 0.4, light);
+      rock([2, 3, 2], light, Math.sin(a) * 12, 28 + h * 0.3, Math.cos(a) * 12);
+    }
+  } else if (biome === 'wind') {
+    foundation(16);
+    pillar(4, 48, stone, 0, 26, 0, 1.8);
+    box([6, 4, 9], dark, 0, 50, 2);
+    add(new THREE.SphereGeometry(2.8, 16, 12), light, 0, 50, -3.5);
+    for (let i = 0; i < 3; i++) {
+      const a = i * Math.PI * 2 / 3 + 0.3;
+      const blade = box([3, 24, 0.9], stone, Math.sin(a) * 14, 50 + Math.cos(a) * 14, -4);
+      blade.rotation.z = -a;
+      const strip = box([0.4, 18, 1], light, Math.sin(a) * 16, 50 + Math.cos(a) * 16, -4.2);
+      strip.rotation.z = -a;
+    }
+    for (const y of [12, 24, 36]) { const collar = ring(3.5, 0.3, dark, y); collar.rotation.x = Math.PI / 2; }
+  } else if (biome === 'observatory') {
+    foundation(22);
+    pillar(16, 12, dark, 0, 8, 0, 16, 24);
+    add(new THREE.SphereGeometry(16, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), stone, 0, 14);
+    const aperture = box([4, 5, 17], dark, 0, 25, -7); aperture.rotation.x = -0.45;
+    const telescope = pillar(2.2, 15, stone, 0, 31, -8); telescope.rotation.x = -0.6;
+    for (let i = 0; i < 3; i++) {
+      const orbit = ring(12 + i * 4, 0.5, i === 1 ? light : stone, 48);
+      orbit.rotation.set(i * 0.6 + 0.4, i * 0.7, i * 0.2);
+    }
+    add(new THREE.OctahedronGeometry(4), light, 0, 48);
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; box([1.2, 4, 1.2], light, Math.sin(a) * 16, 8, Math.cos(a) * 16); }
   }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;

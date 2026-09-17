@@ -1,11 +1,10 @@
 import { makeEnvironment } from './environment.js';
 
-const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯'];
+const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰'];
 
-function mountainRoad(index) {
+function mountainRoad(index, family) {
   const count = 6 + index % 3;
   const peak = 240 + index % 7 * 28;
-  const family = index % LAYOUTS.length;
   const points = [];
   if (family === 0) {
     points.push([0, 20, 510]);
@@ -26,6 +25,8 @@ function mountainRoad(index) {
       if (family === 1) radius = 420 + 125 * Math.cos(4 * a + phase);
       if (family === 2) radius = 400 + 150 * Math.cos(2 * a) + 65 * Math.cos(6 * a + phase);
       if (family === 3) radius = 410 + 135 * Math.sin(3 * a + phase) + 60 * Math.sin(a);
+      if (family === 5) radius = 430 + 115 * Math.cos(5 * a + phase);
+      if (family === 6) radius = 440 + 95 * Math.cos(7 * a + phase) + 50 * Math.sin(2 * a);
       if (family === 4) {
         radius = 1 + 0.17 * Math.cos(6 * a + phase);
         x = Math.sign(Math.cos(a)) * Math.abs(Math.cos(a)) ** 0.65 * 450 * radius;
@@ -34,7 +35,7 @@ function mountainRoad(index) {
         x = Math.cos(a) * radius * (family === 3 ? 0.75 : 1);
         z = Math.sin(a) * radius * (family === 3 ? 1.4 : 1);
       }
-      const y = 30 + peak * (0.42 * (1 - Math.cos(a * (family === 2 ? 2 : 1))) + 0.12 * (1 - Math.cos(a * 3)));
+      const y = 30 + peak * (0.42 * (1 - Math.cos(a * (family === 2 || family === 6 ? 2 : 1))) + 0.12 * (1 - Math.cos(a * 3)));
       points.push([x, y, z]);
     }
   }
@@ -65,21 +66,33 @@ const planets = [
   ['magnetar', '磁暴星', '磁悬回廊', '磁环托起悬浮岩块，环绕青蓝天坑高速攀升。', 'magnetic', '#79ceff', '#10152f', '#344368', 0.64, 0.34, 10600, 2, 52],
   ['copper', '铜锈星', '赤铜工区', '铜色散热塔与信标沿双峰排列，飞越废弃星际工区。', 'industrial', '#ffac7c', '#302322', '#65534a', 0.045, 0.42, 12600, 2, 53],
   ['prism', '棱镜星', '虹晶绝壁', '彩色棱晶沿悬崖生长，在长弯与下坡间掠过虹光。', 'prism', '#bfb6ff', '#211936', '#60546e', 0.73, 0.25, 13200, 2, 54],
-  ['singularity', '引力星', '星门终途', '多重星门矗立在暗色台阶高原，完成星图的最终航程。', 'stargate', '#89e9ff', '#070e23', '#1a304e', 0.61, 0.2, 14400, 2, 55],
+  ['singularity', '引力星', '星门终途', '多重星门矗立在暗色台阶高原，穿过引力边界继续远航。', 'stargate', '#89e9ff', '#070e23', '#1a304e', 0.61, 0.2, 14400, 2, 55],
+  ['lotus', '莲雾星', '云莲回湾', '巨型莲瓣托起荧光花蕊，绕过五瓣山湾掠向青碧云海。', 'lotus', '#ffb6da', '#12322e', '#497a6e', 0.39, 0.32, 11200, 1, 56, 5],
+  ['helios', '日冕星', '逐日环岭', '金色聚光镜追逐双日，穿越太阳能阵列旁的连续峰弯。', 'solar', '#ffe58a', '#362238', '#82614e', 0.085, 0.48, 13800, 2, 57, 6],
+  ['vapor', '蒸汽星', '雾泉天脊', '青色热泉从阶状岩盆涌起，沿花瓣山脊交替爬升俯冲。', 'geyser', '#a2f0ec', '#16333f', '#507780', 0.5, 0.21, 12200, 1, 58, 5],
+  ['zephyr', '长风星', '风翼群峰', '巨型三叶风塔沿峰顶列阵，在曲折长坡上释放全部推力。', 'wind', '#c4e9ff', '#203952', '#638494', 0.57, 0.2, 14200, 2, 59, 6],
+  ['chronos', '时序星', '天文环山', '星象仪与天文穹顶守候山湾，绕过观星台完成新的终站。', 'observatory', '#ffd1a2', '#181832', '#514861', 0.7, 0.22, 14800, 2, 60, 5],
 ];
 
-export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root], index) => Object.freeze({
+export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family], index) => Object.freeze({
   id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty,
-  number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[index % LAYOUTS.length], label: ['入门', '进阶', '极限'][difficulty], variant: index,
+  number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ['入门', '进阶', '极限'][difficulty], variant: index,
   duration: 95 + difficulty * 10 + Math.floor(index / 3) * 5, cargo: 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
-  music: { root, bpm: 124 + index % 4 * 6 }, points: mountainRoad(index),
+  music: { root, bpm: 124 + index % 4 * 6 }, points: mountainRoad(index, family ?? index % 5),
 })));
 
 export const CRAFTS = Object.freeze([
   { id: 'scout', model: 'LC–07', name: '游隼', role: '均衡型', description: '双矢量涡轮与前掠翼，1296 km/h 灵活切弯。', speed: 170, boostSpeed: 360, handling: 40, hull: 100, recharge: 11, color: '#ed703a', scale: [1, 1, 1] },
   { id: 'interceptor', model: 'LC–09', name: '光矛', role: '竞速型', description: '细长机身、尾部稳定鳍，1512 km/h 极限冲刺。', speed: 200, boostSpeed: 420, handling: 38, hull: 80, recharge: 9, color: '#a281ef', scale: [0.85, 0.9, 1.2] },
   { id: 'hauler', model: 'LC–12', name: '磐石', role: '重装型', description: '装甲货舱、宽翼推进器，1188 km/h 重载疾驰。', speed: 155, boostSpeed: 330, handling: 36, hull: 140, recharge: 15, color: '#54bbae', scale: [1.14, 1.1, 0.95] },
+  { id: 'viper', model: 'LC–14', name: '赤隼', role: '截击型', description: '分叉前翼与外置整流舱，1440 km/h 灵巧突进。', speed: 185, boostSpeed: 400, handling: 45, hull: 85, recharge: 10, color: '#ff6575', scale: [0.94, 0.9, 1.08] },
+  { id: 'skimmer', model: 'LC–16', name: '雨燕', role: '弯道型', description: '四片矢量小翼与翼尖导流片，1332 km/h 精准切弯。', speed: 175, boostSpeed: 370, handling: 50, hull: 90, recharge: 12, color: '#8bdba1', scale: [0.9, 0.88, 0.98] },
+  { id: 'manta', model: 'LC–18', name: '云鳐', role: '滑翔型', description: '一体三角翼与双翼脊，1404 km/h 稳定掠过山海。', speed: 190, boostSpeed: 390, handling: 42, hull: 105, recharge: 13, color: '#78c9ff', scale: [1.02, 0.85, 1] },
+  { id: 'wraith', model: 'LC–21', name: '夜莺', role: '疾行型', description: '折线后掠翼与背部整流脊，1548 km/h 暗夜穿行。', speed: 205, boostSpeed: 430, handling: 39, hull: 85, recharge: 8, color: '#a99cff', scale: [0.95, 0.88, 1.12] },
+  { id: 'bulwark', model: 'LC–24', name: '玄甲', role: '堡垒型', description: '双层侧盾与装甲背壳，1224 km/h 携重甲远征。', speed: 160, boostSpeed: 340, handling: 35, hull: 170, recharge: 14, color: '#d9b584', scale: [1.08, 1.05, 1] },
+  { id: 'pulse', model: 'LC–27', name: '流萤', role: '续航型', description: '发光储能环与电容翼舱，1368 km/h 快速补充能量。', speed: 180, boostSpeed: 380, handling: 43, hull: 95, recharge: 19, color: '#7de9da', scale: [0.96, 1, 1.02] },
+  { id: 'comet', model: 'LC–30', name: '彗星', role: '极速型', description: '双长矛翼与垂直稳定尾，1620 km/h 冲向速度极限。', speed: 215, boostSpeed: 450, handling: 37, hull: 75, recharge: 8, color: '#ffc46d', scale: [0.83, 0.9, 1.18] },
 ]);
 
 export function makeCourse(mission) {

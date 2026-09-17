@@ -20,7 +20,10 @@
 .hangar-section-title { color: #d5e0e7; font-size: 11px; letter-spacing: 2px; padding-bottom: 13px; display: flex; align-items: center; gap: 10px; }
 .hangar-section-title > span { color: #718da1; font: 10px var(--mono); letter-spacing: 1px; }
 .selection-list { display: grid; gap: 10px; }
-#mission-options { max-height: 438px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #526b7c #0b1825; padding: 2px 6px 2px 2px; }
+#mission-options, #craft-options { max-height: 438px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #526b7c #0b1825; padding: 2px 6px 2px 2px; }
+#craft-count { color: #a8bfcc; font-size: 10px; line-height: 1.7; margin: 0 0 12px; }
+.craft-energy { display: block; color: #a8bfcc; font: 8px var(--mono); margin-top: 9px; }
+.hangar-columns > section, .craft-option-copy { min-width: 0; }
 .mission-search { display: block; color: #a8bfcc; font-size: 10px; }
 .mission-search input { display: block; width: 100%; margin-top: 8px; padding: 11px; color: #e2edf2; background: #0b1825; border: 1px solid #aac7db44; border-radius: 0; font: inherit; }
 .mission-search input:focus { outline: 1px solid var(--mission); outline-offset: 2px; }

@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 屏幕适配修复</h2>
+      <h2 id="release-title">v${version} · 舰队与新星域</h2>
+      <p>十款飞船集结，再向五颗新星球出发。</p>
+      <ul class="release-list">
+        <li><strong>10 款飞船全部开放</strong>新增赤隼、雨燕、云鳐、夜莺、玄甲、流萤与彗星；分叉前翼、三角翼、重装侧盾和储能环带来不同轮廓，极速、机动、装甲与充能各有取舍。</li>
+        <li><strong>25 颗星球，260.3 公里山路</strong>新增莲雾、日冕、蒸汽、长风与时序星；花瓣回湾、锯齿群峰加入星图，沿途可见巨莲、聚光镜、热泉、风塔和天文台。</li>
+        <li><strong>彗星冲刺达到 1620 km/h</strong>延续随实际速度扩大的视野与动态配乐，全部新艇支持幽灵挑战、大奖赛与远征改装。</li>
+        <li><strong>机库与长途赛事同步扩充</strong>独立飞船缩略图、巡航与充能信息、保留位置的滚动列表；大奖赛扩展至 25 站，远征包含 75 项委托和 24 次补给。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>12 个版本</span></summary>
+      <article><h3>v1.4.2 · 屏幕适配修复</h3>
       <p>换个屏幕方向，也能看清航路、顺手操作。</p>
       <ul class="release-list">
         <li><strong>横屏布局衔接更稳</strong>修复调整窗口或旋转屏幕后，开始按钮、倒计时、导航提示和能量仪表相互遮挡的问题。</li>
         <li><strong>短竖屏也能顺利启航</strong>补齐小屏首页与驾驶布局，让大赛长标题、机库入口、远征委托和跃升提示各就其位。</li>
         <li><strong>警告不再盖住驾驶按钮</strong>调整横屏长提示的宽度与按钮间距，转向、跃升、制动、冲刺和加速操作保持清晰可见。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>11 个版本</span></summary>
+        </article>
         <article><h3>v1.4.1 · 视听与小屏修复</h3>
       <p>完整看见飞船，顺手驾驶，随操作听见星海。</p>
       <ul class="release-list">

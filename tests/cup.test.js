@@ -64,7 +64,7 @@ test('failure or the wrong mission, craft, or opponent field never advances the 
   assert.ok(completeStage(cup, finish(cup), field));
 });
 
-test('all twenty stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
+test('all stages finish the cup and award a trophy; a new cup resets only its own progress', () => {
   const cup = createCup('interceptor');
   for (let stage = 0; stage < MISSIONS.length; stage++) {
     const game = finish(cup, 40 + stage);
