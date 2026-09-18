@@ -129,6 +129,7 @@ let world;
 let lastStatus = '';
 let lastCountdown = 4;
 let toastTimeout;
+let toastPriority = 0;
 let guidePaused = false;
 let frameTime = performance.now();
 let accumulator = 0;
@@ -247,8 +248,10 @@ function configure(missionId, craftId, upgrades = {}) {
   }
 }
 
-function toast(message, tone = '') {
+function toast(message, tone = '', priority = tone === 'warning' ? 2 : 0) {
+  if ($('toast').classList.contains('visible') && priority < toastPriority) return;
   clearTimeout(toastTimeout);
+  toastPriority = priority;
   $('toast').textContent = message;
   $('toast').className = `toast visible ${tone}`;
   toastTimeout = setTimeout(() => $('toast').classList.remove('visible'), 2500);
@@ -554,7 +557,8 @@ function updateHUD() {
   document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
   refs.sector.innerHTML = game.gates === 6 ? '最后一程<span class="sector-stage">返回基地</span>' : `${game.mission.name}<span class="sector-stage">第 ${String(game.gates + 1).padStart(2, '0')} 区段</span>`;
   refs.objective.textContent = game.collected.size >= game.mission.cargo ? '能量已装载 · 沿航线返回基地' : `还需 ${game.mission.cargo - game.collected.size} 枚能量核心 · 留意蓝色晶体`;
-  refs['next-distance'].textContent = `${Math.max(0, Math.ceil((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance))} M`;
+  const nextDistance = Math.max(0, Math.ceil((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance));
+  refs['next-distance'].textContent = nextDistance >= 1000 ? `${(nextDistance / 1000).toFixed(1)} KM` : `${nextDistance} M`;
   refs['next-label'].textContent = game.gates < 6 ? '下一座导航门' : '返航基地';
   const cue = getFlightCue(game);
   const lowGravity = gravityAt(game.course, game.distance) === ENVIRONMENT.lowGravity;
@@ -566,10 +570,10 @@ function updateHUD() {
     $('cue-detail').textContent = cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
   } else {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : cue.kind === 'finish' ? '◇ 返回基地' : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' }[cue.direction];
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (isJumpReady(game) ? '跃升或左右避让' : '左右避让 · 注意航道边缘') : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
+    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   }
   refs['throttle-hint'].textContent = controls.held('brake') ? '制动中 · 松开后恢复驾驶' : game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
-  if (lowGravity) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
+  if (lowGravity && !controls.held('brake')) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
   document.body.classList.toggle('boosting', game.boosting);
   $('combo-value').textContent = game.combo;
   $('combo-multiplier').textContent = `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`;
@@ -597,13 +601,13 @@ function processEvents() {
     }
     if (event.type === 'pad' && !event.chained) toast(game.mission.special === 'boost' ? '连续加速航线 · 免费超频接力，S 可制动' : '绿色加速带 · 免费超频 1.8 秒', 'cyan');
     if (event.type === 'dodge') toast('空中避障！  ·  +120', 'cyan');
-    if (event.type === 'meteor-warning') toast('陨石正在接近 · 注意红色落点与撞击倒计时', 'warning');
+    if (event.type === 'meteor-warning') toast('陨石正在接近 · 注意红色落点与撞击倒计时', 'warning', 1);
     if (event.type === 'low-gravity') toast('进入低重力区 · F 延长跃升，腾空出区可获奖励', 'cyan');
     if (event.type === 'meteor-dodge') toast('踏星而行！跃过冲击波 · +180', 'cyan');
     if (event.type === 'glide') toast('引力旅人！腾空离开低重力区 · +200', 'cyan');
     if (event.type === 'miss') toast('未穿过导航门 · 已返回门前，时间 −4 秒', 'warning');
     if (event.type === 'impact') {
-      toast(event.source === 'meteor' ? '受到陨石冲击 · 避开红圈，核心可修复艇体' : '发生碰撞 · 避开岩石，收集核心修复艇体', 'warning');
+      toast(event.source === 'meteor' ? '受到陨石冲击 · 避开红圈，核心可修复艇体' : event.source === 'boundary' ? '擦碰航道边缘 · 松开转向并制动' : '发生碰撞 · 避开岩石，收集核心修复艇体', 'warning');
       $('impact-flash').classList.remove('flash');
       void $('impact-flash').offsetWidth;
       $('impact-flash').classList.add('flash');

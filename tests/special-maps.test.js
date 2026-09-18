@@ -22,6 +22,16 @@ test('Earth and overdrive contain no damaging or low-gravity course objects', ()
   }
 });
 
+test('safe-route boundary damage identifies the road edge instead of a nonexistent obstacle', () => {
+  for (const id of ['earth', 'overdrive']) {
+    const game = createGame(id, 'nova');
+    Object.assign(game, { status: 'running', lane: 15, speed: 200 });
+    updateGame(game, { accelerate: true, steer: 1 }, 1 / 60);
+    assert.equal(game.hull, game.craft.hull - 8);
+    assert.deepEqual(game.events.find(event => event.type === 'impact'), { type: 'impact', source: 'boundary' });
+  }
+});
+
 test('overdrive offers full-width boost coverage from launch to the finish', () => {
   const mission = special('overdrive'), { pads } = makeCourse(mission);
   assert.ok(pads.length >= mission.length / 300);

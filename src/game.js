@@ -79,6 +79,7 @@ function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.
 }
 
 export function getFlightCue(game) {
+  let timeToImpact;
   const hazard = game.course.obstacles.find(obstacle => {
     const distance = obstacle.distance - game.distance;
     if (distance < -3 || distance > game.speed * 1.6 + 3) return false;
@@ -88,7 +89,7 @@ export function getFlightCue(game) {
       verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) / 60 : 0;
       const after = { ...before, elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60, height: Math.max(0, before.height + verticalSpeed / 60) };
       const contact = courseContact(obstacle, before, after);
-      if (contact && contact.height < 2.5) return true;
+      if (contact && contact.height < 2.5) { timeToImpact = (step + 1) / 60; return true; }
       if (after.distance > obstacle.distance + 3) break;
       before = after;
     }
@@ -96,7 +97,7 @@ export function getFlightCue(game) {
   });
   const meteor = getMeteorCue(game);
   if (meteor && (!hazard || meteor.danger && meteor.distance < hazard.distance - game.distance)) return meteor;
-  if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind };
+  if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind, timeToImpact };
   const gate = game.course.gates[game.gates];
   if (!gate) return { kind: 'finish', distance: Math.ceil(game.mission.length - game.distance) };
   const offset = gate.lane - game.lane;
@@ -170,7 +171,7 @@ export function updateGame(game, input, delta) {
   if (Math.abs(game.lane) > PHYSICS.width) {
     game.lane = Math.sign(game.lane) * PHYSICS.width;
     game.lateralSpeed = 0;
-    impact(game, 8);
+    impact(game, 8, 'boundary');
   }
   if (game.hull <= 0) { game.status = 'lost'; game.reason = 'hull'; game.boosting = false; return; }
 

@@ -35,3 +35,17 @@ test('a jump that clears the projected collision suppresses the warning, but an 
   game.course.obstacles[0].distance = 30;
   assert.equal(getFlightCue(game).kind, 'hazard');
 });
+
+test('hazard guidance reports time to contact at the current speed', () => {
+  const game = createGame('apocalypse', 'nova');
+  game.course.meteors = [];
+  game.course.obstacles = [{ id: 0, distance: 303, lane: 0, kind: 'rock', radius: 2.8 }];
+  for (const speed of [240, 480]) {
+    game.speed = speed;
+    const cue = getFlightCue(game);
+    assert.equal(cue.kind, 'hazard');
+    assert.ok(Math.abs(cue.timeToImpact - 300 / speed) <= 1 / 60 + 1e-8);
+  }
+  Object.assign(game, { speed: 0, distance: 303 });
+  assert.ok(getFlightCue(game).timeToImpact <= 1 / 60);
+});

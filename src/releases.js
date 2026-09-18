@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 航线体验修复</h2>
+      <h2 id="release-title">v${version} · 高速预警优化</h2>
+      <p>速度很快，重要提示也要看得及时。</p>
+      <ul class="release-list">
+        <li><strong>危险还有多久抵达</strong>岩石与巡逻机预警增加按当前速度估算的接近时间；临近碰撞时直接提示立即横移，帮助判断操作时机。</li>
+        <li><strong>奖励不会挤掉警告</strong>碰撞与漏门提示优先显示，陨石预警也不会被连续收集或委托奖励覆盖；警告结束后恢复普通消息。</li>
+        <li><strong>擦边与制动说明更准确</strong>无障碍地图擦边时会提示远离航道边缘；低重力区制动时仍显示制动状态。</li>
+        <li><strong>长航程里程更易读</strong>一公里以上的导航距离显示为公里，接近导航门或终点后自动切回米数。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>16 个版本</span></summary>
+      <article><h3>v1.7.1 · 航线体验修复</h3>
       <p>看清当前航线的规则，让下一次出发更从容。</p>
       <ul class="release-list">
         <li><strong>每条航线都有合适的建议</strong>末日图超时后不再建议寻找加速带；无障碍地图会提示避开航道边缘、沿中央收集核心。普通航线、大奖赛和远征均按当前地图提供建议。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>加速与制动提示更准确</strong>超频星按所选飞船的持续冲刺速度估算用时，新星约 3.3 分钟；制动时不再误显示「免费超频中」。</li>
         <li><strong>小屏区段标题更清楚</strong>任务名称与区段编号分行显示，减少窄屏下的断字，保留清晰的任务信息。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>15 个版本</span></summary>
+      </article>
       <article><h3>v1.7.0 · 三境试航</h3>
       <p>无限加速、末日求生，还有绿意盎然的地球。</p>
       <ul class="release-list">
