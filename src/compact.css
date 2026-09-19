@@ -82,6 +82,14 @@
   .flight-direction { top: max(28%, 205px); }
 }
 
+@media (min-width: 601px) and (min-height: 651px) {
+  body:not([data-state="menu"]) .toast { top: auto; bottom: 8px; width: max-content; max-width: min(600px, 90vw); padding-block: 8px; }
+}
+
+@media (pointer: coarse) and (min-width: 601px) and (min-height: 651px) {
+  body:not([data-state="menu"]) .toast { max-width: min(600px, calc(90vw - 440px)); font-size: 8px; padding: 6px 8px; }
+}
+
 @media (pointer: coarse) and (min-width: 601px) and (min-height: 651px) and (max-height: 750px) {
   body[data-mode="expedition"] .map-panel { display: none; }
 }
