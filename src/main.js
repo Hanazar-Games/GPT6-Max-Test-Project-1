@@ -832,7 +832,10 @@ const toggleAudio = () => {
   $('audio-toggle').textContent = enabled ? '静音全部声音' : '恢复全部声音';
   $('audio-toggle').setAttribute('aria-pressed', String(!enabled));
 };
-$('sound').addEventListener('click', toggleAudio);
+$('sound').addEventListener('click', event => {
+  toggleAudio();
+  if (event.detail > 0) event.currentTarget.blur();
+});
 $('audio-toggle').addEventListener('click', toggleAudio);
 for (const bus of ['music', 'sfx']) $(`${bus}-volume`).addEventListener('input', event => {
   audio.setVolume(bus, Number(event.target.value) / 100);

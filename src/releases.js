@@ -7,7 +7,14 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 巡航油门</h2>
+      <h2 id="release-title">v${version} · 操作与界面修复</h2>
+      <p>切换声音后继续冲刺，航向提示看得更清楚。</p>
+      <ul class="release-list">
+        <li><strong>声音开关不再打断冲刺</strong>修复鼠标或触屏点击声音按钮后，空格误切换声音、无法冲刺的问题；键盘操作仍保留按钮焦点。</li>
+        <li><strong>远征导航不再被遮挡</strong>调整中等窄屏的导航卡片与委托面板宽度，保持两者分开，较长的航向说明在卡片内换行。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>21 个版本</span></summary>
+      <article><h3>v1.10.0 · 巡航油门</h3>
       <p>长途松开油门，专心看前方的路。</p>
       <ul class="release-list">
         <li><strong>长途保持加速更轻松</strong>按 C 或点击顶部巡航按钮保持普通加速，倒计时中也可开启；仍需手动转向、避障、收集和过门，冲刺另行按住。</li>
@@ -15,7 +22,7 @@ export function mountReleases() {
         <li><strong>触屏与键盘衔接顺畅</strong>点击巡航后可直接按空格冲刺，键盘操作保留焦点；长按 C 不反复切换，窄屏保留清楚的开关状态与点击空间。</li>
         <li><strong>关键驾驶提示优先</strong>低重力说明不再覆盖制动和冲刺解除锁定提示；巡航状态持续提醒手动转向，起飞提示与指南补充操作说明。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>20 个版本</span></summary>
+      </article>
       <article><h3>v1.9.0 · 星图机库</h3>
       <p>找到想去的星球，选一艘适合这趟旅程的飞船。</p>
       <ul class="release-list">

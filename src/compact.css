@@ -82,6 +82,12 @@
   .flight-direction { top: max(28%, 205px); }
 }
 
+@media (min-width: 601px) and (max-width: 800px) and (min-height: 651px) {
+  .flight-direction { width: 160px; }
+  .flight-cue { min-width: 0; width: 100%; }
+  .expedition-hud { width: min(220px, calc(45vw - 95px)); }
+}
+
 @media (min-width: 601px) and (min-height: 651px) {
   body:not([data-state="menu"]) .toast { top: auto; bottom: 8px; width: max-content; max-width: min(600px, 90vw); padding-block: 8px; }
 }
