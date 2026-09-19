@@ -5,7 +5,8 @@ import './cup.css';
 import './supply.css';
 import './environment.css';
 import './compact.css';
-import { createGame, startGame, updateGame, togglePause, getDebrief, getFlightCue, isJumpReady, PHYSICS } from './game.js';
+import './delivery.css';
+import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { craftIcon } from './craft-icons.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
@@ -88,6 +89,7 @@ $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
 $('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
 $('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">声音设置与操作指南</button>');
+$('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
 $('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">声音设置与操作指南</button>');
 $('sound').setAttribute('aria-pressed', 'false');
 $('error').setAttribute('role', 'alertdialog');
@@ -392,7 +394,14 @@ function syncPanels() {
     $('back-pause').textContent = '结束远征，返回基地';
     $('pause').querySelector('p').textContent = `第 ${expedition.stage + 1} / ${MISSIONS.length} 站已暂停。重飞保留已购升级与 ${expedition.supply} 点补给，本站委托重新开始；返回基地会结束远征。`;
   }
-  if (status === 'paused') $('resume').focus({ preventScroll: true });
+  if (status === 'paused') {
+    const delivery = getDeliveryStatus(game);
+    $('pause-progress').innerHTML = `<div><dt>航程进度</dt><dd>${Math.floor(game.distance / game.mission.length * 100)}%</dd></div><div><dt>剩余航程</dt><dd>${formatDistance(game.mission.length - game.distance)}</dd></div><div><dt>蓝色核心</dt><dd>${game.collected.size} / ${game.mission.cargo}</dd></div><div><dt>导航门</dt><dd>${game.gates} / ${game.course.gates.length}</dd></div>`;
+    $('pause-cargo-note').textContent = delivery.needed ? `还需 ${delivery.needed} 枚核心 · 前方剩余 ${delivery.remaining} 枚${delivery.shortfall ? '。前方余量不足，可重飞本站。' : '。保持低空收集。'}` : game.gates < game.course.gates.length ? '核心已齐，继续穿过剩余导航门。' : '核心与导航门已齐备，沿航线返回基地。';
+    $('pause-cargo-note').dataset.warning = String(delivery.shortfall > 0);
+    $('pause').querySelector('.modal-card').scrollTop = 0;
+    $('resume').focus({ preventScroll: true });
+  }
   if (status === 'won' || status === 'lost') {
     $('result').hidden = false;
     const won = status === 'won';
@@ -534,7 +543,13 @@ function drawMap() {
   map.beginPath(); map.arc(x, y, 11, 0, Math.PI * 2); map.strokeStyle = '#ffffff55'; map.lineWidth = 1; map.stroke();
 }
 
+function formatDistance(distance) {
+  const meters = Math.max(0, Math.ceil(distance));
+  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} KM` : `${meters} M`;
+}
+
 function updateHUD() {
+  const delivery = getDeliveryStatus(game);
   const seconds = Math.floor(game.time);
   const minutes = Math.floor(seconds / 60);
   refs.timer.innerHTML = `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}<small>.${String(Math.floor(game.time % 1 * 100)).padStart(2, '0')}</small>`;
@@ -542,6 +557,8 @@ function updateHUD() {
   refs['timer-fill'].style.width = `${game.time / game.mission.duration * 100}%`;
   refs.cargo.innerHTML = `${game.collected.size} <small>/ ${game.mission.cargo}</small>`;
   refs.cargo.classList.toggle('complete', game.collected.size >= game.mission.cargo);
+  refs.cargo.classList.toggle('shortfall', delivery.shortfall > 0);
+  refs.cargo.setAttribute('aria-label', `已收集 ${game.collected.size} 枚，目标 ${game.mission.cargo} 枚，前方剩余 ${delivery.remaining} 枚`);
   refs.gates.innerHTML = `${game.gates} <small>/ 6</small>`;
   refs.speed.textContent = String(Math.round(game.speed * 3.6)).padStart(3, '0');
   refs['energy-value'].textContent = `${Math.ceil(game.energy)}%`;
@@ -556,10 +573,10 @@ function updateHUD() {
   if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}`;
   document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
   refs.sector.innerHTML = game.gates === 6 ? '最后一程<span class="sector-stage">返回基地</span>' : `${game.mission.name}<span class="sector-stage">第 ${String(game.gates + 1).padStart(2, '0')} 区段</span>`;
-  refs.objective.textContent = game.collected.size >= game.mission.cargo ? '能量已装载 · 沿航线返回基地' : `还需 ${game.mission.cargo - game.collected.size} 枚能量核心 · 留意蓝色晶体`;
-  const nextDistance = Math.max(0, Math.ceil((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance));
-  refs['next-distance'].textContent = nextDistance >= 1000 ? `${(nextDistance / 1000).toFixed(1)} KM` : `${nextDistance} M`;
-  refs['next-label'].textContent = game.gates < 6 ? '下一座导航门' : '返航基地';
+  refs.objective.textContent = delivery.needed ? `还需 ${delivery.needed} 枚核心 · 前方剩余 ${delivery.remaining} 枚` : game.gates < 6 ? `核心已装载 · 还需 ${6 - game.gates} 座导航门` : '能量已装载 · 沿航线返回基地';
+  refs['next-distance'].textContent = formatDistance((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance);
+  refs['next-label'].textContent = `${game.gates < 6 ? '下一座导航门' : '返航基地'}${delivery.shortfall ? ' · 前方核心不足' : ''}`;
+  refs['next-label'].dataset.warning = String(delivery.shortfall > 0);
   const cue = getFlightCue(game);
   const lowGravity = gravityAt(game.course, game.distance) === ENVIRONMENT.lowGravity;
   document.body.classList.toggle('low-gravity', lowGravity);
@@ -568,9 +585,12 @@ function updateHUD() {
   if (cue.kind === 'meteor') {
     $('cue-action').textContent = `☄ ${cue.phase === 'impact' ? '冲击波' : '陨石落点'} ${cue.distance}m`;
     $('cue-detail').textContent = cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
+  } else if (cue.kind === 'cargo') {
+    $('cue-action').textContent = { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction];
+    $('cue-detail').textContent = `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`;
   } else {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : cue.kind === 'finish' ? '◇ 返回基地' : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' }[cue.direction];
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : cue.kind === 'finish' ? (game.collected.size >= game.mission.cargo ? '能量就位，全速返航' : '能量不足，留意剩余核心') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
+    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : cue.kind === 'finish' ? (!delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   }
   refs['throttle-hint'].textContent = controls.held('brake') ? '制动中 · 松开后恢复驾驶' : game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
   if (lowGravity && !controls.held('brake')) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
@@ -591,7 +611,7 @@ function processEvents() {
     if (!event.chained) audio.event(event.type);
     world.event(event, game);
     if (event.type === 'launch') toast('出发！按住 W / ↑ 加速，蓝色核心就在前方');
-    if (event.type === 'pickup') toast(`能量核心 +1  /  ${game.collected.size >= game.mission.cargo ? '交付目标已达成' : `${game.collected.size} / ${game.mission.cargo}`}  ·  +${event.points}${game.combo >= 3 ? `  ·  ${game.combo} 连收` : ''}`, 'cyan');
+    if (event.type === 'pickup') toast(`能量核心 +1  /  ${game.collected.size >= game.mission.cargo ? '核心目标已达成' : `${game.collected.size} / ${game.mission.cargo}`}  ·  +${event.points}${game.combo >= 3 ? `  ·  ${game.combo} 连收` : ''}`, 'cyan');
     if (event.type === 'gate') toast(event.perfect ? `精准过门！导航门 0${event.number}  ·  +500` : `导航门 0${event.number} 已点亮  ·  +300`, 'cyan');
     if (event.type === 'gate') {
       const delta = compareSplit(recorder?.splits, rival?.splits, event.number - 1);

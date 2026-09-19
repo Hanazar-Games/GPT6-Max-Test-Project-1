@@ -78,6 +78,17 @@ function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.
   return { height: before.height + (after.height - before.height) * time };
 }
 
+export function getDeliveryStatus(game) {
+  const needed = Math.max(0, game.mission.cargo - game.collected.size);
+  let remaining = 0, next = null;
+  for (const pickup of game.course.pickups) {
+    if (game.collected.has(pickup.id) || pickup.distance + 2 <= game.distance) continue;
+    remaining++;
+    if (!next || pickup.distance < next.distance) next = pickup;
+  }
+  return { needed, remaining, next, shortfall: Math.max(0, needed - remaining) };
+}
+
 export function getFlightCue(game) {
   let timeToImpact;
   const hazard = game.course.obstacles.find(obstacle => {
@@ -99,6 +110,16 @@ export function getFlightCue(game) {
   if (meteor && (!hazard || meteor.danger && meteor.distance < hazard.distance - game.distance)) return meteor;
   if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind, timeToImpact };
   const gate = game.course.gates[game.gates];
+  const delivery = getDeliveryStatus(game);
+  const gateDistance = gate ? gate.distance - game.distance : Infinity;
+  if (delivery.needed && delivery.next && delivery.next.distance < (gate?.distance ?? game.mission.length) && gateDistance > Math.max(45, game.speed * 0.8)) {
+    const distance = Math.max(0, delivery.next.distance - game.distance);
+    if (distance <= Math.max(180, game.speed * 2)) {
+      const offset = delivery.next.lane - game.lane;
+      const aligned = Math.abs(offset) < game.craft.pickupRange;
+      return { kind: 'cargo', distance: Math.ceil(distance), direction: aligned ? 'center' : offset < 0 ? 'left' : 'right', aligned, offset };
+    }
+  }
   if (!gate) return { kind: 'finish', distance: Math.ceil(game.mission.length - game.distance) };
   const offset = gate.lane - game.lane;
   return { kind: 'gate', direction: Math.abs(offset) < 2.5 ? 'center' : offset < 0 ? 'left' : 'right', aligned: Math.abs(offset) < gate.width, offset };

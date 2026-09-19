@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 高速预警优化</h2>
+      <h2 id="release-title">v${version} · 交付领航</h2>
+      <p>知道还差多少，也知道下一枚核心在哪里。</p>
+      <ul class="release-list">
+        <li><strong>核心收集有方向</strong>目标未完成时，提示附近核心的方向与距离，高空时提醒落回低空；磁场改装会计入对准范围，危险与临近导航门保持优先。</li>
+        <li><strong>前方余量看得清</strong>实时显示前方未收集的核心，漏门回退后重新计算；余量不足时提醒，已经没有核心时明确提示暂停重飞。</li>
+        <li><strong>暂停查看完整航程</strong>新增进度、剩余里程、核心与导航门摘要；大奖赛和远征保留本站说明，矮屏可滚动查看重飞与声音设置。</li>
+        <li><strong>小屏与目标提示修正</strong>修复窄屏暂停卡片被裁掉的问题；核心收齐后继续提醒剩余导航门，收集完成与交付完成各有准确说明。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>17 个版本</span></summary>
+      <article><h3>v1.7.2 · 高速预警优化</h3>
       <p>速度很快，重要提示也要看得及时。</p>
       <ul class="release-list">
         <li><strong>危险还有多久抵达</strong>岩石与巡逻机预警增加按当前速度估算的接近时间；临近碰撞时直接提示立即横移，帮助判断操作时机。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>擦边与制动说明更准确</strong>无障碍地图擦边时会提示远离航道边缘；低重力区制动时仍显示制动状态。</li>
         <li><strong>长航程里程更易读</strong>一公里以上的导航距离显示为公里，接近导航门或终点后自动切回米数。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>16 个版本</span></summary>
+      </article>
       <article><h3>v1.7.1 · 航线体验修复</h3>
       <p>看清当前航线的规则，让下一次出发更从容。</p>
       <ul class="release-list">
