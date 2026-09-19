@@ -6,6 +6,7 @@ import './supply.css';
 import './environment.css';
 import './compact.css';
 import './delivery.css';
+import './cruise.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { MISSION_CATEGORIES, filterMissions, filterCrafts } from './catalogue.js';
@@ -21,6 +22,7 @@ import { AudioEngine } from './audio.js';
 import { ENVIRONMENT, gravityAt, meteorState } from './environment.js';
 import { mountReleases } from './releases.js';
 import { FlightInput, KEY_ACTIONS } from './input.js';
+import { getDriveStatus } from './drive-status.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
 
@@ -93,6 +95,8 @@ $('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" c
 $('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
 $('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">声音设置与操作指南</button>');
 $('sound').setAttribute('aria-pressed', 'false');
+$('pause-button').insertAdjacentHTML('beforebegin', '<button id="cruise-button" type="button" aria-pressed="false" aria-label="开启巡航油门" aria-keyshortcuts="C" title="巡航油门 · C 切换，制动或暂停后解除" hidden><span>巡航油门</span><kbd>C</kbd></button>');
+$('countdown').querySelector('small').textContent = '按住 W / ↑ 加速，或按 C 开启巡航油门';
 $('error').setAttribute('role', 'alertdialog');
 $('error').setAttribute('aria-modal', 'true');
 $('error').setAttribute('aria-labelledby', 'error-title');
@@ -294,6 +298,17 @@ function clearInput() {
 
 function syncControls() {
   document.querySelectorAll('[data-control]').forEach(button => button.classList.toggle('pressed', controls.held(button.dataset.control)));
+  $('cruise-button').setAttribute('aria-pressed', String(controls.cruise));
+  $('cruise-button').setAttribute('aria-label', controls.cruise ? '关闭巡航油门' : '开启巡航油门');
+  $('cruise-button').querySelector('span').textContent = controls.cruise ? '巡航已开' : '巡航油门';
+  $('cruise-button').disabled = controls.held('brake');
+}
+
+function toggleCruise() {
+  if (!['running', 'countdown'].includes(game.status) || controls.held('brake')) return;
+  controls.toggleCruise();
+  syncControls();
+  toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '巡航油门已关闭 · 可手动加速或制动', 'cyan');
 }
 
 function launch() {
@@ -410,6 +425,7 @@ function syncPanels() {
   $('countdown').hidden = status !== 'countdown';
   $('pause').hidden = status !== 'paused';
   $('pause-button').hidden = !['running', 'countdown', 'paused'].includes(status);
+  $('cruise-button').hidden = !['running', 'countdown', 'paused'].includes(status);
   $('expedition-hud').hidden = !expedition;
   $('rival-panel').hidden = !!expedition;
   $('restart-pause').textContent = cup ? '重飞本站' : '重新挑战';
@@ -429,6 +445,7 @@ function syncPanels() {
     $('resume').focus({ preventScroll: true });
   }
   if (status === 'won' || status === 'lost') {
+    clearInput();
     $('result').hidden = false;
     const won = status === 'won';
     const debrief = getDebrief(game);
@@ -621,8 +638,9 @@ function updateHUD() {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : '◇ 返回基地';
     $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
   }
-  refs['throttle-hint'].textContent = controls.held('brake') ? '制动中 · 松开后恢复驾驶' : game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
-  if (lowGravity && !controls.held('brake')) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
+  const drive = getDriveStatus(game, { brake: controls.held('brake'), cruise: controls.cruise, lowGravity });
+  refs['throttle-hint'].textContent = drive.text;
+  refs['throttle-hint'].dataset.kind = drive.kind;
   document.body.classList.toggle('boosting', game.boosting);
   $('combo-value').textContent = game.combo;
   $('combo-multiplier').textContent = `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`;
@@ -637,9 +655,10 @@ function updateHUD() {
 
 function processEvents() {
   for (const event of game.events) {
+    if (controls.cruise && ['impact', 'miss'].includes(event.type)) { controls.cruise = false; syncControls(); }
     if (!event.chained) audio.event(event.type);
     world.event(event, game);
-    if (event.type === 'launch') toast('出发！按住 W / ↑ 加速，蓝色核心就在前方');
+    if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '出发！按住 W / ↑ 加速，或按 C 开启巡航油门');
     if (event.type === 'pickup') toast(`能量核心 +1  /  ${game.collected.size >= game.mission.cargo ? '核心目标已达成' : `${game.collected.size} / ${game.mission.cargo}`}  ·  +${event.points}${game.combo >= 3 ? `  ·  ${game.combo} 连收` : ''}`, 'cyan');
     if (event.type === 'gate') toast(event.perfect ? `精准过门！导航门 0${event.number}  ·  +500` : `导航门 0${event.number} 已点亮  ·  +300`, 'cyan');
     if (event.type === 'gate') {
@@ -723,6 +742,10 @@ $('upgrade-options').addEventListener('click', event => {
 $('restart-pause').addEventListener('click', launch);
 $('resume').addEventListener('click', pause);
 $('pause-button').addEventListener('click', pause);
+$('cruise-button').addEventListener('click', event => {
+  toggleCruise();
+  if (event.detail > 0) event.currentTarget.blur();
+});
 $('back-pause').addEventListener('click', home);
 $('back-result').addEventListener('click', home);
 $('open-hangar').addEventListener('click', () => { updateLoadout(); $('hangar').showModal(); });
@@ -780,10 +803,12 @@ $('next-mission').addEventListener('click', () => {
   launch();
 });
 $('guide').querySelector('.guide-keys').insertAdjacentHTML('beforeend', '<div><span><kbd>F</kbd></span><span>跃升避障 · 消耗 18 能量</span></div>');
+$('guide').querySelector('.guide-keys').insertAdjacentHTML('beforeend', '<div><span><kbd>C</kbd> / 顶部巡航按钮</span><span>巡航油门 · 制动解除</span></div>');
 $('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向驾驶；速度越快，镜头视野越宽。跃升高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。临近导航门时，提示按当前速度和松开转向后的惯性预判；继续转向或变速后需重新判断。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', `<p class="cup-guide-note">在任务机库选择「月环大奖赛」，与三名电脑领航员连赛 ${MISSIONS.length} 站。须收集核心并穿过全部导航门才能晋级；每站重新计时并补满艇体，失败可重试。对手投影互不碰撞，结束赛事或刷新会清空赛事积分。</p>`);
 $('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', `<p class="cup-guide-note">「远征补给」沿 ${MISSIONS.length} 站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。${MISSIONS.length - 1} 次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>`);
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('beforebegin', '<p id="route-guide" class="cup-guide-note"></p>');
+$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<p class="cup-guide-note">巡航油门等同于持续按住加速，仍需手动转向、避障、收集和过门；冲刺需另行按住。按 C 或顶部巡航按钮切换，制动、暂停、切出页面、碰撞、漏门、结算与重飞都会解除，继续飞行后需主动重新开启。</p>');
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<div class="environment-guide"><div id="meteor-help"><strong>☄ 陨石预警</strong><p>红圈提前 2.6 秒预警，撞击后 1 秒内低空艇体会受到 22 点伤害；横向避开红圈，或按 F 腾空越过冲击波可获 180 分。灰色落点和退去的余辉没有伤害。</p></div><div id="gravity-help"><strong>⌁ 低重力航段</strong><p>紫色边线标出低重力区，跃升滞空更久；腾空离开区域可获 200 分，高空仍会错过核心。</p></div><small>每处技巧奖励只计一次。环境按飞行用时循环，暂停时冻结；重飞从头开始，雷达同步标出环境航段。</small></div>');
 document.querySelector('.flight-help').innerHTML = '<span>A / D 避障</span><span>F 跃升</span><span>S 制动</span><span>Esc 暂停</span>';
 document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); if (game.status === 'menu') return; if (['running', 'countdown'].includes(game.status)) pause(); else home(); });
@@ -837,6 +862,10 @@ window.addEventListener('keydown', (event) => {
   if (event.repeat && ['Space', 'Enter'].includes(event.code) && event.target.closest('button, a, summary')) { event.preventDefault(); return; }
   if (!$('error').hidden) return;
   if (document.querySelector('dialog[open]')) return;
+  if (event.code === 'KeyC' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (!event.repeat && !event.isComposing) toggleCruise();
+    return;
+  }
   if (event.code === 'Tab' && ['paused', 'won', 'lost'].includes(game.status)) {
     const panel = game.status === 'paused' ? $('pause') : $('result');
     const buttons = [...panel.querySelectorAll('button, summary')].filter(button => !button.disabled && button.getClientRects().length);

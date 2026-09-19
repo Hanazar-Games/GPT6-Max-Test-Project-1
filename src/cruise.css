@@ -1,0 +1,12 @@
+#cruise-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; min-width: 86px; padding: 8px 10px; border: 1px solid #a8c6d24d; background: #0b1c2ae8; color: #c5dce6; font-size: 11px; }
+#cruise-button kbd { min-width: 19px; height: 20px; font-size: 9px; }
+#cruise-button[aria-pressed="true"] { color: #b6ffe0; border-color: #8be5c0; background: #12372ce8; }
+#cruise-button:hover:enabled { border-color: #dbf5ff; }
+#cruise-button:disabled { cursor: default; opacity: 0.5; }
+#throttle-hint[data-kind="cruise"], #throttle-hint[data-kind="pad"] { color: #a4eace; }
+#throttle-hint[data-kind="locked"] { color: #ffb18d; }
+@media (max-width: 600px) {
+  body:not([data-state="menu"]) .brand > span:last-child { display: none; }
+  #cruise-button { min-width: 78px; padding-inline: 8px; font-size: 10px; }
+}
+@media (pointer: coarse) { #cruise-button kbd { display: none; } }

@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 星图机库</h2>
+      <h2 id="release-title">v${version} · 巡航油门</h2>
+      <p>长途松开油门，专心看前方的路。</p>
+      <ul class="release-list">
+        <li><strong>长途保持加速更轻松</strong>按 C 或点击顶部巡航按钮保持普通加速，倒计时中也可开启；仍需手动转向、避障、收集和过门，冲刺另行按住。</li>
+        <li><strong>需要接管时及时解除</strong>制动、暂停、切出页面、碰撞、漏门、结算和重飞都会关闭巡航，继续飞行后需主动重开；三种模式均适用。</li>
+        <li><strong>触屏与键盘衔接顺畅</strong>点击巡航后可直接按空格冲刺，键盘操作保留焦点；长按 C 不反复切换，窄屏保留清楚的开关状态与点击空间。</li>
+        <li><strong>关键驾驶提示优先</strong>低重力说明不再覆盖制动和冲刺解除锁定提示；巡航状态持续提醒手动转向，起飞提示与指南补充操作说明。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>20 个版本</span></summary>
+      <article><h3>v1.9.0 · 星图机库</h3>
       <p>找到想去的星球，选一艘适合这趟旅程的飞船。</p>
       <ul class="release-list">
         <li><strong>按玩法探索航线</strong>短途、长途、无障碍与障碍密集一键筛选；可用「地球 长途」等组合关键词继续缩小范围。</li>
@@ -15,7 +24,7 @@ export function mountReleases() {
         <li><strong>当前选择始终明确</strong>筛选和排序保留已选配置，移出结果时明确标注；没有匹配结果可一键重置，确认按钮停靠底部。</li>
         <li><strong>赛事顺序清晰保留</strong>大奖赛与远征展示完整 38 站，回到自由速递后恢复筛选；飞船搜索与排序在三种模式中均可使用，浏览偏好刷新后清空。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>19 个版本</span></summary>
+      </article>
       <article><h3>v1.8.1 · 惯性领航</h3>
       <p>看见现在的航向，也看见松手后的去向。</p>
       <ul class="release-list">

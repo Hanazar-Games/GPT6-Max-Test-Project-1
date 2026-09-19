@@ -94,6 +94,7 @@ test('cancelled touch presses do not execute a queued jump or stop another contr
 
 test('clearing input discards taps and holds before a pause or a new flight', () => {
   const controls = new FlightInput();
+  controls.toggleCruise();
   controls.press('KeyF', 'jump');
   controls.release('KeyF');
   controls.press('pointer:1', 'accelerate');
@@ -105,6 +106,61 @@ test('clearing input discards taps and holds before a pause or a new flight', ()
   updateGame(game, controls.read(), 1 / 60);
   assert.equal(game.height, 0);
   assert.equal(game.speed, 0);
+  assert.equal(controls.cruise, false);
+});
+
+test('cruise maintains the normal throttle without holding a key or consuming boost energy', () => {
+  const game = flight();
+  const controls = new FlightInput();
+  assert.equal(controls.toggleCruise(), true);
+  for (let i = 0; i < 180; i++) updateGame(game, controls.read(), 1 / 60);
+  assert.equal(game.speed, game.craft.speed);
+  assert.equal(game.energy, 100);
+  assert.equal(game.boosting, false);
+  assert.equal(controls.held('accelerate'), false);
+  assert.equal(controls.toggleCruise(), false);
+  updateGame(game, controls.read(), 1 / 60);
+  assert.ok(game.speed < game.craft.speed);
+});
+
+test('cruise cooperates with physical throttle, steering, jumping and manual boost', () => {
+  const game = flight();
+  const controls = new FlightInput();
+  controls.toggleCruise();
+  controls.press('KeyW', 'accelerate');
+  controls.release('KeyW');
+  assert.equal(controls.read().accelerate, true);
+  controls.press('KeyD', 'right');
+  controls.press('Space', 'boost');
+  controls.press('KeyF', 'jump');
+  updateGame(game, controls.read(), 1 / 60);
+  assert.ok(game.lane > 0 && game.height > 0);
+  assert.equal(game.boosting, true);
+  assert.ok(game.energy < 100);
+  controls.release('Space');
+  assert.equal(controls.read().accelerate, true);
+  controls.press('pointer:1', 'accelerate');
+  controls.toggleCruise();
+  assert.equal(controls.read().accelerate, true);
+  controls.release('pointer:1');
+  assert.equal(controls.read().accelerate, false);
+});
+
+test('any brake source cancels cruise immediately and prevents reactivation until all brakes release', () => {
+  for (const source of ['KeyS', 'ArrowDown', 'pointer:1']) {
+    const controls = new FlightInput();
+    controls.toggleCruise();
+    controls.press(source, 'brake');
+    assert.equal(controls.cruise, false);
+    assert.equal(controls.read().accelerate, false);
+    assert.equal(controls.toggleCruise(), false);
+    controls.press('pointer:2', 'brake');
+    controls.release(source);
+    assert.equal(controls.toggleCruise(), false);
+    controls.release('pointer:2');
+    assert.equal(controls.read().accelerate, false);
+    assert.equal(controls.toggleCruise(), true);
+  }
 });
 
 test('a held countdown jump launches once, while an earlier released tap expires', () => {
