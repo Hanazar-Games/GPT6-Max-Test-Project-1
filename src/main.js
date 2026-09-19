@@ -581,16 +581,19 @@ function updateHUD() {
   const lowGravity = gravityAt(game.course, game.distance) === ENVIRONMENT.lowGravity;
   document.body.classList.toggle('low-gravity', lowGravity);
   $('flight-cue').dataset.kind = cue.kind;
-  $('flight-cue').dataset.danger = String(cue.danger ?? false);
+  $('flight-cue').dataset.danger = String(cue.danger ?? cue.drifting ?? false);
   if (cue.kind === 'meteor') {
     $('cue-action').textContent = `☄ ${cue.phase === 'impact' ? '冲击波' : '陨石落点'} ${cue.distance}m`;
     $('cue-detail').textContent = cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
   } else if (cue.kind === 'cargo') {
     $('cue-action').textContent = { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction];
     $('cue-detail').textContent = `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`;
+  } else if (cue.kind === 'gate') {
+    $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
+    $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   } else {
-    $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : cue.kind === 'finish' ? '◇ 返回基地' : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' }[cue.direction];
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : cue.kind === 'finish' ? (!delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞') : cue.aligned ? '航向有效 · 中央高速有奖励' : `偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
+    $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : '◇ 返回基地';
+    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
   }
   refs['throttle-hint'].textContent = controls.held('brake') ? '制动中 · 松开后恢复驾驶' : game.padBoost > 0 ? '加速带驱动 · 免费超频中' : game.boosting ? '能量冲刺中' : game.boostLocked ? '松开冲刺键后可再次启动' : game.speed < 3 ? '按住 W / ↑ 或触屏加速键' : '悬浮引擎运行正常';
   if (lowGravity && !controls.held('brake')) refs['throttle-hint'].textContent = '低重力区 · 跃升滞空更久';
@@ -729,7 +732,7 @@ $('next-mission').addEventListener('click', () => {
   launch();
 });
 $('guide').querySelector('.guide-keys').insertAdjacentHTML('beforeend', '<div><span><kbd>F</kbd></span><span>跃升避障 · 消耗 18 能量</span></div>');
-$('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向驾驶；速度越快，镜头视野越宽。跃升高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
+$('guide').querySelector('.guide-tip').textContent = '山路航向自动跟随，负责加速与横向驾驶；速度越快，镜头视野越宽。跃升高空会错过核心。连续收集提升倍率，门中央高速通过有精准奖励。临近导航门时，提示按当前速度和松开转向后的惯性预判；继续转向或变速后需重新判断。紫色幽灵重现同配置的最快成功航程，不会碰撞或抢走核心。分段比较实际飞行用时，暂停不计时；漏门会退回门前，另外扣除剩余时限 4 秒。所有纪录刷新后清空。';
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', `<p class="cup-guide-note">在任务机库选择「月环大奖赛」，与三名电脑领航员连赛 ${MISSIONS.length} 站。须收集核心并穿过全部导航门才能晋级；每站重新计时并补满艇体，失败可重试。对手投影互不碰撞，结束赛事或刷新会清空赛事积分。</p>`);
 $('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', `<p class="cup-guide-note">「远征补给」沿 ${MISSIONS.length} 站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。${MISSIONS.length - 1} 次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>`);
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('beforebegin', '<p id="route-guide" class="cup-guide-note"></p>');

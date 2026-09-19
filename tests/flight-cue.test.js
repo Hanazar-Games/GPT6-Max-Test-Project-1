@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, getFlightCue } from '../src/game.js';
+import { createGame, getFlightCue, updateGame } from '../src/game.js';
+import { CRAFTS } from '../src/missions.js';
 
 test('guidance points toward the next gate and recognizes a centered approach', () => {
   const game = createGame();
@@ -48,4 +49,91 @@ test('hazard guidance reports time to contact at the current speed', () => {
   }
   Object.assign(game, { speed: 0, distance: 303 });
   assert.ok(getFlightCue(game).timeToImpact <= 1 / 60);
+});
+
+function gateApproach(craft = 'nova') {
+  const game = createGame('frontier', craft);
+  const index = game.course.gates.findIndex(gate => gate.lane === 0);
+  Object.assign(game, { status: 'running', gates: index, speed: game.craft.boostSpeed });
+  game.distance = game.course.gates[index].distance - 50;
+  for (const key of ['obstacles', 'meteors', 'pickups', 'pads', 'gravityZones']) game.course[key] = [];
+  return game;
+}
+
+test('near-gate guidance warns when coasting lateral momentum would miss an apparently aligned gate', () => {
+  const game = gateApproach();
+  game.distance -= 50;
+  Object.assign(game, { lane: 8.2, lateralSpeed: 38 });
+  const cue = getFlightCue(game);
+  assert.equal(cue.kind, 'gate');
+  assert.equal(cue.projected, true);
+  assert.equal(cue.drifting, true);
+  assert.equal(cue.aligned, false);
+  assert.equal(cue.direction, 'left');
+  assert.ok(cue.offset < -8.5);
+  const corrected = structuredClone(game);
+  let missed = false;
+  let recovered = false;
+  for (let i = 0; i < 16; i++) {
+    updateGame(game, { accelerate: true, boost: true }, 1 / 60);
+    updateGame(corrected, { accelerate: true, boost: true, steer: -1 }, 1 / 60);
+    missed ||= game.events.some(event => event.type === 'miss');
+    recovered ||= corrected.events.some(event => event.type === 'gate');
+  }
+  assert.equal(missed, true);
+  assert.equal(recovered, true);
+});
+
+test('gate projection recognizes neutral steering that will finish centering the craft', () => {
+  const game = gateApproach();
+  Object.assign(game, { lane: -4.2, lateralSpeed: 38 });
+  const cue = getFlightCue(game);
+  assert.equal(cue.projected, true);
+  assert.equal(cue.direction, 'center');
+  assert.equal(cue.aligned, true);
+  assert.equal(cue.drifting, false);
+  assert.ok(Math.abs(cue.offset) < 2.5);
+});
+
+test('projected gate offsets match fixed-step crossing positions across every ship', () => {
+  for (const craft of CRAFTS) for (const side of [-1, 1]) {
+    const game = gateApproach(craft.id);
+    const gate = game.course.gates[game.gates];
+    game.distance = gate.distance - game.speed * 0.237;
+    Object.assign(game, { lane: side * 5, lateralSpeed: side * craft.handling });
+    const before = structuredClone(game);
+    const cue = getFlightCue(game);
+    assert.deepEqual(game, before);
+    assert.equal(cue.projected, true);
+    const prediction = gate.lane - cue.offset;
+    const freeFlight = structuredClone(game);
+    freeFlight.course.gates = [];
+    let crossed = false;
+    for (let step = 0; step < 20 && !crossed; step++) {
+      const distance = game.distance, lane = game.lane;
+      updateGame(freeFlight, { accelerate: true, boost: true }, 1 / 60);
+      updateGame(game, { accelerate: true, boost: true }, 1 / 60);
+      if (game.events.some(event => event.type === 'gate' || event.type === 'miss')) {
+        const fraction = (gate.distance - distance) / (freeFlight.distance - distance);
+        const crossing = lane + (freeFlight.lane - lane) * fraction;
+        assert.ok(Math.abs(prediction - crossing) < 1e-8, craft.id);
+        assert.equal(cue.aligned, game.events.some(event => event.type === 'gate'), craft.id);
+        crossed = true;
+      }
+    }
+    assert.equal(crossed, true, craft.id);
+  }
+});
+
+test('distant and stationary gate cues use current alignment while immediate hazards keep priority', () => {
+  const game = gateApproach();
+  Object.assign(game, { lane: 8.2, lateralSpeed: 38, speed: 0 });
+  assert.equal(getFlightCue(game).projected, false);
+  assert.equal(getFlightCue(game).aligned, true);
+  game.speed = 480;
+  game.distance = game.course.gates[game.gates].distance - 500;
+  assert.equal(getFlightCue(game).projected, false);
+  game.distance = game.course.gates[game.gates].distance - 50;
+  game.course.obstacles = [{ id: 0, distance: game.distance + 20, lane: game.lane, kind: 'rock', radius: 2.8 }];
+  assert.equal(getFlightCue(game).kind, 'hazard');
 });

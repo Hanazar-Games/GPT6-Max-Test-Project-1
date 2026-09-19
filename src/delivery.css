@@ -1,5 +1,7 @@
 .flight-cue[data-kind="cargo"] { color: #a5edff; background: #102d3aeb; border-color: #7cdbef70; }
 .flight-cue[data-kind="cargo"] small { color: #b4dce5; }
+.flight-cue[data-kind="gate"][data-danger="true"] { color: #ffd0b1; background: #42201fed; border-color: #ff9a6670; }
+.flight-cue[data-kind="gate"][data-danger="true"] small { color: #ffd0b1; }
 #cargo.shortfall, #next-label[data-warning="true"], #pause-cargo-note[data-warning="true"] { color: #ffb18d; }
 #next-label { max-width: 180px; line-height: 1.7; }
 #pause .modal-card { max-width: calc(100vw - 50px); max-height: calc(100dvh - 50px); overflow-y: auto; }

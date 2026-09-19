@@ -7,7 +7,15 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 交付领航</h2>
+      <h2 id="release-title">v${version} · 惯性领航</h2>
+      <p>看见现在的航向，也看见松手后的去向。</p>
+      <ul class="release-list">
+        <li><strong>对准了，也留意惯性</strong>临近导航门时预判松开转向后的落点；当前位置在门内、惯性仍可能导致漏门时，高亮提醒反向修正。</li>
+        <li><strong>该松手时及时提醒</strong>预计会滑向中央时提示松开转向；区分当前偏移与预计偏移，帮助减少反复调整。</li>
+        <li><strong>预判条件说清楚</strong>按当前速度与松开方向后的惯性估算，转向或变速后随状态更新；危险预警保持优先，指南补充使用说明。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>18 个版本</span></summary>
+      <article><h3>v1.8.0 · 交付领航</h3>
       <p>知道还差多少，也知道下一枚核心在哪里。</p>
       <ul class="release-list">
         <li><strong>核心收集有方向</strong>目标未完成时，提示附近核心的方向与距离，高空时提醒落回低空；磁场改装会计入对准范围，危险与临近导航门保持优先。</li>
@@ -15,7 +23,7 @@ export function mountReleases() {
         <li><strong>暂停查看完整航程</strong>新增进度、剩余里程、核心与导航门摘要；大奖赛和远征保留本站说明，矮屏可滚动查看重飞与声音设置。</li>
         <li><strong>界面与目标提示修正</strong>修复窄屏暂停卡片裁切和桌面消息遮住导航距离的问题；核心收齐后继续提醒剩余导航门，收集完成与交付完成各有准确说明。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>17 个版本</span></summary>
+      </article>
       <article><h3>v1.7.2 · 高速预警优化</h3>
       <p>速度很快，重要提示也要看得及时。</p>
       <ul class="release-list">

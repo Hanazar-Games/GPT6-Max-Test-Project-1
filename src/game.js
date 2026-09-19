@@ -3,6 +3,7 @@ import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
 
 export const PHYSICS = Object.freeze({ width: 15, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
+const STEERING_RESPONSE = 9;
 
 export function isJumpReady(game) {
   return game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost;
@@ -121,8 +122,19 @@ export function getFlightCue(game) {
     }
   }
   if (!gate) return { kind: 'finish', distance: Math.ceil(game.mission.length - game.distance) };
-  const offset = gate.lane - game.lane;
-  return { kind: 'gate', direction: Math.abs(offset) < 2.5 ? 'center' : offset < 0 ? 'left' : 'right', aligned: Math.abs(offset) < gate.width, offset };
+  const projected = game.speed > 0 && gateDistance <= Math.max(45, game.speed * 0.8);
+  let lane = game.lane;
+  if (projected) {
+    const frames = Math.max(0, gateDistance) / game.speed * 60;
+    const whole = Math.floor(frames), decay = 1 - STEERING_RESPONSE / 60;
+    // Sum neutral steering decay, then interpolate the frame that crosses the gate.
+    lane += game.lateralSpeed / 60 * decay * ((1 - decay ** whole) / (1 - decay) + (frames - whole) * decay ** whole);
+    lane = Math.max(-PHYSICS.width, Math.min(PHYSICS.width, lane));
+  }
+  const offset = gate.lane - lane;
+  const aligned = Math.abs(offset) < gate.width;
+  return { kind: 'gate', direction: Math.abs(offset) < 2.5 ? 'center' : offset < 0 ? 'left' : 'right', aligned, offset, projected,
+    drifting: Math.abs(gate.lane - game.lane) < gate.width && !aligned };
 }
 
 export function getDebrief(game) {
@@ -187,7 +199,7 @@ export function updateGame(game, input, delta) {
   game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
 
   const steer = Math.max(-1, Math.min(1, input.steer || 0));
-  game.lateralSpeed += (steer * (game.speed > 1 ? game.craft.handling : 6) - game.lateralSpeed) * Math.min(1, dt * 9);
+  game.lateralSpeed += (steer * (game.speed > 1 ? game.craft.handling : 6) - game.lateralSpeed) * Math.min(1, dt * STEERING_RESPONSE);
   game.lane += game.lateralSpeed * dt;
   if (Math.abs(game.lane) > PHYSICS.width) {
     game.lane = Math.sign(game.lane) * PHYSICS.width;
