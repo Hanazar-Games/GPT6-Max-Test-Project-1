@@ -8,6 +8,7 @@ import './compact.css';
 import './delivery.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
+import { MISSION_CATEGORIES, filterMissions, filterCrafts } from './catalogue.js';
 import { craftIcon } from './craft-icons.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
 import { RACERS, buildField } from './pilots.js';
@@ -80,7 +81,7 @@ document.querySelector('#app').innerHTML = `
   <section id="result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden><div class="modal-card result-card"><span id="result-eyebrow" class="eyebrow">MISSION COMPLETE</span><div id="result-symbol" class="result-symbol">✦</div><h2 id="result-title">能量送达，欢迎回家。</h2><p id="result-copy"></p><div class="result-stats"><div><strong id="result-score">0</strong><span>任务得分</span></div><div><strong id="result-time">0</strong><span>飞行用时</span></div><div><strong id="result-cargo">0</strong><span>收集核心</span></div></div><div id="result-details" class="result-details"></div><div id="result-medals" class="result-medals"></div><div id="result-rating" class="result-rating"></div><button id="retry" class="primary-button"><span>再飞一次</span>${icon('arrow')}</button><button id="next-mission" class="secondary-button" hidden>下一条航线 →</button><button id="back-result" class="text-button">返回基地</button></div></section>
   <dialog id="guide"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p>在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
   <div id="error" class="overlay" hidden><div class="modal-card"><span class="eyebrow">CONNECTION INTERRUPTED</span><h2>月面连接未能建立。</h2><p id="error-copy">请启用浏览器硬件加速，或换用支持 WebGL 2 的现代浏览器。</p><button id="reload" class="primary-button"><span>重新连接</span>${icon('arrow')}</button></div></div>
-  <dialog id="hangar" aria-labelledby="hangar-title"><button id="close-hangar" class="icon-button dialog-close" aria-label="关闭任务机库">${icon('close')}</button><span class="eyebrow">FLIGHT DECK / 自由选择，立即出发</span><h2 id="hangar-title">每一次出发，都有新选择。</h2><div class="hangar-columns"><section><div class="hangar-section-title"><span>01</span> 选择航线</div><div id="mission-options" class="selection-list"></div></section><section><div class="hangar-section-title"><span>02</span> 选择悬浮艇</div><p id="craft-count"></p><div id="craft-options" class="selection-list"></div></section></div><div id="hangar-summary" class="hangar-summary"></div><button id="confirm-hangar" class="primary-button"><span>确认飞行配置</span>${icon('arrow')}</button></dialog>
+  <dialog id="hangar" aria-labelledby="hangar-title"><button id="close-hangar" class="icon-button dialog-close" aria-label="关闭任务机库">${icon('close')}</button><span class="eyebrow">FLIGHT DECK / 自由选择，立即出发</span><h2 id="hangar-title">每一次出发，都有新选择。</h2><div class="hangar-columns"><section><div class="hangar-section-title"><span>01</span> 选择航线</div><div id="mission-options" class="selection-list"></div></section><section><div class="hangar-section-title"><span>02</span> 选择悬浮艇</div><div id="craft-options" class="selection-list"></div></section></div><div id="hangar-summary" class="hangar-summary"></div><button id="confirm-hangar" class="primary-button"><span>确认飞行配置</span>${icon('arrow')}</button></dialog>
 `;
 
 const $ = (id) => document.getElementById(id);
@@ -105,12 +106,24 @@ $('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="
 $('result-details').insertAdjacentHTML('beforebegin', '<section id="cup-result" class="cup-result" aria-label="赛事积分榜" hidden><div id="cup-stage-strip" class="cup-stage-strip"></div><div class="cup-table-title"><strong id="cup-board-title">赛事总积分</strong><span>四艇计时赛</span></div><table><thead><tr><th scope="col">名次</th><th scope="col">领航员</th><th scope="col">积分</th><th scope="col">累计用时</th></tr></thead><tbody id="cup-standings"></tbody></table><p id="cup-standing-note"></p></section>');
 $('retry').insertAdjacentHTML('beforebegin', `<button id="continue-cup" class="primary-button" hidden><span>前往下一站</span>${icon('arrow')}</button>`);
 mountExpeditionUI();
-$('mission-options').insertAdjacentHTML('beforebegin', '<label class="mission-search">探索星图<input id="mission-search" type="search" placeholder="搜索星球、航线、路线类型或长途" autocomplete="off" maxlength="40"></label><p id="mission-count" class="mission-count" role="status"></p>');
+$('mission-options').insertAdjacentHTML('beforebegin', `
+  <label class="catalogue-field">探索星图<input id="mission-search" type="search" placeholder="星球、航线、类型 · 空格组合搜索" autocomplete="off" maxlength="60" aria-controls="mission-options" aria-describedby="mission-count"></label>
+  <div id="mission-categories" class="catalogue-filters" role="group" aria-label="航线分类">${MISSION_CATEGORIES.map(category => `<button type="button" data-category="${category.id}" aria-pressed="${category.id === 'all'}">${category.label}<span>${filterMissions('', category.id).length}</span></button>`).join('')}</div>
+  <div class="catalogue-meta"><p id="mission-count" class="catalogue-count" role="status"></p><button id="reset-missions" class="catalogue-reset" hidden>重置筛选</button></div>
+  <p id="mission-empty" class="catalogue-empty" hidden>没有匹配的航线。<br>试试其他关键词或重置筛选。</p>
+`);
+$('craft-options').insertAdjacentHTML('beforebegin', `
+  <label class="catalogue-field">查找飞船<input id="craft-search" type="search" placeholder="名称、型号、定位 · 如 LC-60" autocomplete="off" maxlength="60" aria-controls="craft-options" aria-describedby="craft-count"></label>
+  <label class="catalogue-field craft-sort">性能排序<select id="craft-sort" aria-controls="craft-options"><option value="catalogue">图鉴顺序</option><option value="boostSpeed">冲刺极速 · 高到低</option><option value="handling">机动能力 · 高到低</option><option value="hull">艇体装甲 · 高到低</option><option value="recharge">能量充能 · 高到低</option></select></label>
+  <div class="catalogue-meta"><p id="craft-count" class="catalogue-count" role="status"></p><button id="reset-crafts" class="catalogue-reset" hidden>重置列表</button></div>
+  <p id="craft-empty" class="catalogue-empty" hidden>没有匹配的飞船。<br>试试名称、型号或重置列表。</p>
+`);
 $('result-details').insertAdjacentHTML('beforebegin', '<div id="environment-result" class="environment-result"></div>');
 const game = createGame();
 const records = new Map();
 const fields = new Map();
 let mode = 'delivery';
+let missionCategory = 'all';
 let cup = null;
 let expedition = null;
 let completedContracts = new Set();
@@ -195,27 +208,40 @@ function updateLoadout() {
     return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ' <i>·</i> ≥3 分钟' : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
-  $('craft-count').textContent = `${CRAFTS.length} 款全部开放 · 已选 ${craft.name}`;
   $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
   const estimate = mission.special === 'boost' ? `持续加速约 ${(mission.length / craft.boostSpeed / 60).toFixed(1)} 分钟` : mission.endurance ? `预计 ${Math.ceil(mission.length / craft.boostSpeed / 60)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`;
   $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${estimate}</small>`;
   if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
   if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
-  filterMissions();
+  updateMissionCatalogue();
+  updateCraftCatalogue();
   ['mission-options', 'craft-options'].forEach((id, index) => { $(id).scrollTop = scrollPositions[index]; });
 }
 
-function filterMissions() {
+function updateMissionCatalogue() {
   const search = $('mission-search');
   search.disabled = mode !== 'delivery';
-  const query = search.disabled ? '' : search.value.trim().toLocaleLowerCase();
-  let visible = 0;
-  for (const mission of MISSIONS) {
-    const match = `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.endurance ? '长途 3分钟' : '短途'}`.toLocaleLowerCase().includes(query);
-    document.querySelector(`[data-mission="${mission.id}"]`).hidden = !match;
-    visible += Number(match);
+  const category = search.disabled ? 'all' : missionCategory;
+  for (const button of $('mission-categories').children) {
+    button.disabled = search.disabled;
+    button.setAttribute('aria-pressed', String(button.dataset.category === category));
   }
-  $('mission-count').textContent = visible ? `${visible} / ${MISSIONS.length} 条航线 · ${mode === 'delivery' ? '全部开放' : '按顺序挑战'}` : '未找到航线，试试星球名或路线类型。';
+  const visible = new Set(filterMissions(search.disabled ? '' : search.value, category).map(mission => mission.id));
+  for (const button of $('mission-options').children) button.hidden = !visible.has(button.dataset.mission);
+  $('mission-count').textContent = search.disabled ? `${MISSIONS.length} 条航线 · 按顺序挑战，航线筛选暂不可用` : `${visible.size} / ${MISSIONS.length} 条航线 · 已选${game.mission.planet}${visible.has(game.mission.id) ? '' : '（筛选外）'}`;
+  $('mission-empty').hidden = visible.size > 0;
+  $('reset-missions').hidden = search.disabled || (category === 'all' && !search.value.trim());
+}
+
+function updateCraftCatalogue() {
+  const crafts = filterCrafts($('craft-search').value, $('craft-sort').value);
+  const visible = new Set(crafts.map(craft => craft.id));
+  const buttons = new Map([...$('craft-options').children].map(button => [button.dataset.craft, button]));
+  for (const [id, button] of buttons) button.hidden = !visible.has(id);
+  for (const craft of crafts) $('craft-options').append(buttons.get(craft.id));
+  $('craft-count').textContent = `${crafts.length} / ${CRAFTS.length} 款飞船 · 已选${game.craft.name}${visible.has(game.craft.id) ? '' : '（筛选外）'}`;
+  $('craft-empty').hidden = crafts.length > 0;
+  $('reset-crafts').hidden = !$('craft-search').value.trim() && $('craft-sort').value === 'catalogue';
 }
 
 function showError(message) {
@@ -702,7 +728,29 @@ $('back-result').addEventListener('click', home);
 $('open-hangar').addEventListener('click', () => { updateLoadout(); $('hangar').showModal(); });
 $('close-hangar').addEventListener('click', () => $('hangar').close());
 $('confirm-hangar').addEventListener('click', () => $('hangar').close());
-$('mission-search').addEventListener('input', filterMissions);
+$('mission-search').addEventListener('input', () => { updateMissionCatalogue(); $('mission-options').scrollTop = 0; });
+$('mission-categories').addEventListener('click', event => {
+  const button = event.target.closest('[data-category]');
+  if (!button || mode !== 'delivery') return;
+  missionCategory = button.dataset.category;
+  updateMissionCatalogue();
+  $('mission-options').scrollTop = 0;
+});
+$('reset-missions').addEventListener('click', () => {
+  missionCategory = 'all';
+  $('mission-search').value = '';
+  updateMissionCatalogue();
+  $('mission-options').scrollTop = 0;
+  $('mission-search').focus();
+});
+for (const [id, event] of [['craft-search', 'input'], ['craft-sort', 'change']]) $(id).addEventListener(event, () => { updateCraftCatalogue(); $('craft-options').scrollTop = 0; });
+$('reset-crafts').addEventListener('click', () => {
+  $('craft-search').value = '';
+  $('craft-sort').value = 'catalogue';
+  updateCraftCatalogue();
+  $('craft-options').scrollTop = 0;
+  $('craft-search').focus();
+});
 $('mode-options').addEventListener('click', event => {
   const button = event.target.closest('[data-mode]');
   if (!button || game.status !== 'menu') return;

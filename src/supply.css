@@ -7,7 +7,6 @@
 .expedition-brief > small { display: block; color: #8daea6; font-size: 9px; line-height: 1.9; }
 body[data-mode="expedition"] #start, #continue-expedition { background: #94ebc6; }
 body[data-mode="expedition"] .mission-option:disabled { opacity: 0.85; cursor: default; }
-body[data-mode="expedition"] #confirm-hangar { position: sticky; bottom: 0; z-index: 1; }
 .expedition-hud { position: absolute; top: 29%; right: 5.2%; width: 252px; padding: 13px; border: 1px solid #94ebc63b; border-left: 2px solid #94ebc6; background: #0b211ed6; backdrop-filter: blur(8px); }
 .expedition-heading { display: flex; justify-content: space-between; gap: 8px; color: #b4ecd7; font: 10px var(--mono); }
 .expedition-heading b { font-weight: 400; }

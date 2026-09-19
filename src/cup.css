@@ -39,7 +39,6 @@ body[data-mode="cup"] #start { background: #ffd096; }
 .cup-result > p { font-size: 8px; line-height: 1.8; color: #8ba4b4; margin: 13px 0 0; }
 .cup-trophy { width: 60px; height: 60px; filter: drop-shadow(0 0 18px #ffd88038); stroke-width: 1; }
 #continue-cup { position: sticky; bottom: 0; z-index: 1; background: #ffd096; box-shadow: 0 -12px 24px #0c1b28; }
-body[data-mode="cup"] #hangar #confirm-hangar { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 -12px 24px #0e1d2b; }
 .cup-guide-note { font-size: 10px; color: #cbbd99; line-height: 1.9; margin: 0 0 16px; }
 .result-card { scroll-padding-bottom: 95px; }
 @media (max-width: 360px) { .result-stats { gap: 8px; } .result-stats strong { font-size: 17px; } .result-stats > div { min-width: 0; } .result-stats span { letter-spacing: 1px; } }

@@ -1,0 +1,27 @@
+import { MISSIONS, CRAFTS } from './missions.js';
+
+export const MISSION_CATEGORIES = [
+  { id: 'all', label: '全部', matches: () => true },
+  { id: 'short', label: '短途', matches: mission => !mission.endurance },
+  { id: 'long', label: '长途', matches: mission => mission.endurance },
+  { id: 'clear', label: '无障碍', matches: mission => ['boost', 'garden'].includes(mission.special) },
+  { id: 'hazard', label: '障碍密集', matches: mission => mission.special === 'hazard' },
+];
+
+const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\u2010-\u2015\u2212]/g, '-');
+const terms = query => normalize(query).split(/\s+/).filter(Boolean);
+const matches = (text, queryTerms) => queryTerms.every(term => normalize(text).includes(term));
+
+export function filterMissions(query = '', category = 'all') {
+  const queryTerms = terms(query);
+  const group = MISSION_CATEGORIES.find(item => item.id === category);
+  return MISSIONS.filter(mission => group.matches(mission) && matches(
+    `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.endurance ? '长途 3分钟' : '短途'}`, queryTerms,
+  ));
+}
+
+export function filterCrafts(query = '', sort = 'catalogue') {
+  const queryTerms = terms(query);
+  const result = CRAFTS.filter(craft => matches(`${craft.model} ${craft.name} ${craft.role} ${craft.description}`, queryTerms));
+  return sort === 'catalogue' ? result : result.sort((a, b) => b[sort] - a[sort]);
+}

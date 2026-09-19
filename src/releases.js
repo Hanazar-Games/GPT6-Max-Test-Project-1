@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 惯性领航</h2>
+      <h2 id="release-title">v${version} · 星图机库</h2>
+      <p>找到想去的星球，选一艘适合这趟旅程的飞船。</p>
+      <ul class="release-list">
+        <li><strong>按玩法探索航线</strong>短途、长途、无障碍与障碍密集一键筛选；可用「地球 长途」等组合关键词继续缩小范围。</li>
+        <li><strong>按性能挑选飞船</strong>搜索名称、型号或定位，支持输入 LC-60；按冲刺极速、机动、装甲与充能从高到低排列 20 款飞船。</li>
+        <li><strong>当前选择始终明确</strong>筛选和排序保留已选配置，移出结果时明确标注；没有匹配结果可一键重置，确认按钮停靠底部。</li>
+        <li><strong>赛事顺序清晰保留</strong>大奖赛与远征展示完整 38 站，回到自由速递后恢复筛选；飞船搜索与排序在三种模式中均可使用，浏览偏好刷新后清空。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>19 个版本</span></summary>
+      <article><h3>v1.8.1 · 惯性领航</h3>
       <p>看见现在的航向，也看见松手后的去向。</p>
       <ul class="release-list">
         <li><strong>对准了，也留意惯性</strong>临近导航门时预判松开转向后的落点；当前位置在门内、惯性仍可能导致漏门时，高亮提醒反向修正。</li>
         <li><strong>该松手时及时提醒</strong>预计会滑向中央时提示松开转向；区分当前偏移与预计偏移，帮助减少反复调整。</li>
         <li><strong>预判条件说清楚</strong>按当前速度与松开方向后的惯性估算，转向或变速后随状态更新；危险预警保持优先，指南补充使用说明。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>18 个版本</span></summary>
+      </article>
       <article><h3>v1.8.0 · 交付领航</h3>
       <p>知道还差多少，也知道下一枚核心在哪里。</p>
       <ul class="release-list">

@@ -1,0 +1,59 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { MISSIONS, CRAFTS } from '../src/missions.js';
+import { filterMissions, filterCrafts } from '../src/catalogue.js';
+
+const ids = items => items.map(item => item.id);
+
+test('route categories expose every route and classify special routes by their rules', () => {
+  assert.deepEqual(filterMissions(), MISSIONS);
+  const short = filterMissions('', 'short');
+  const long = filterMissions('', 'long');
+  assert.equal(short.length, 25);
+  assert.equal(long.length, 13);
+  assert.deepEqual([...short, ...long], MISSIONS);
+  assert.deepEqual(ids(filterMissions('', 'clear')), ['overdrive', 'earth']);
+  assert.deepEqual(ids(filterMissions('', 'hazard')), ['apocalypse']);
+});
+
+test('route search combines spaced terms across fields with the active category', () => {
+  assert.deepEqual(ids(filterMissions('  地球　长途\n无障碍 ', 'clear')), ['earth']);
+  assert.deepEqual(ids(filterMissions('长途 地球', 'short')), []);
+  assert.deepEqual(ids(filterMissions('全程加速', 'long')), ['overdrive']);
+  assert.deepEqual(ids(filterMissions('霁蓝 连环')), ['tranquility']);
+  assert.deepEqual(filterMissions('不存在的星球'), []);
+  assert.deepEqual(filterMissions(' \t\n'), MISSIONS);
+});
+
+test('craft search recognizes names, roles and typed model dash variants', () => {
+  for (const query of ['新星', '超速型', 'lc-60', 'LC–60', 'ＬＣ－６０', 'LC—60', 'lc−60']) {
+    assert.deepEqual(ids(filterCrafts(query)), ['nova'], query);
+  }
+  assert.deepEqual(ids(filterCrafts('  lc-60　超速 ')), ['nova']);
+  assert.deepEqual(ids(filterCrafts('回充 同心')), ['nautilus']);
+  assert.deepEqual(filterCrafts('lc-60 护卫'), []);
+  assert.deepEqual(filterCrafts('不存在的飞船'), []);
+  assert.deepEqual(filterCrafts(' \t'), CRAFTS);
+});
+
+test('performance ordering ranks the full fleet and preserves catalogue order on ties', () => {
+  for (const [sort, winner] of [['boostSpeed', 'nova'], ['handling', 'dragonfly'], ['hull', 'paladin'], ['recharge', 'nautilus']]) {
+    const result = filterCrafts('', sort);
+    assert.equal(result[0].id, winner);
+    assert.equal(result.length, CRAFTS.length);
+    for (let i = 1; i < result.length; i++) {
+      assert.ok(result[i - 1][sort] >= result[i][sort]);
+      if (result[i - 1][sort] === result[i][sort]) assert.ok(CRAFTS.indexOf(result[i - 1]) < CRAFTS.indexOf(result[i]));
+    }
+  }
+});
+
+test('filtered performance results retain their order without modifying the source fleet', () => {
+  const original = structuredClone(CRAFTS);
+  const result = filterCrafts('1440', 'recharge');
+  assert.deepEqual(ids(result), ['nautilus', 'viper']);
+  assert.equal(result[0], CRAFTS.find(craft => craft.id === 'nautilus'));
+  assert.deepEqual(filterCrafts('', 'catalogue'), CRAFTS);
+  assert.deepEqual(CRAFTS, original);
+  assert.deepEqual(filterCrafts('not-a-craft', 'boostSpeed'), []);
+});
