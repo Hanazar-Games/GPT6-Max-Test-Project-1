@@ -177,6 +177,24 @@ export function makeCraftModel(materials) {
     }
     const cell = add(new THREE.TorusGeometry(.65, .13, 8, 24), capacitor, [s(3.35), 1.65, -.4], variants.atlas);
     cell.rotation.x = Math.PI / 2;
+    box([2.7, .2, .45], materials.metal, [s(2.9), .55, .5], variants.osprey);
+    const rotor = add(new THREE.TorusGeometry(1.15, .25, 8, 28), materials.orange, [s(4), .6, .5], variants.osprey);
+    rotor.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 3; i++) {
+      const vane = box([1.8, .1, .18], materials.metal, [s(4), .6, .5], variants.osprey);
+      vane.rotation.y = i * Math.PI / 3;
+    }
+    box([3.2, .7, 1.4], materials.orange, [s(2), .7, 3.1], variants.hammerhead);
+    tube([[s(.8), 1.2, 4], [s(3.9), 1.2, 4], [s(4.1), .4, 2.4], [s(2), .1, 1.5]], .18, materials.metal, variants.hammerhead);
+    for (let i = 0; i < 3; i++) plate([[s(1.1), 1.6 - i], [s(4 - i * .3), -.7 - i], [s(3.4 - i * .3), -1.4 - i], [s(1.2), -.1 - i]], .09, materials.orange, .3, variants.sailfish);
+    const sail = plate([[0, -3], [.12, -3], [.12, 1.3], [0, 1.3]], 1.6, materials.orange, .5, variants.sailfish);
+    sail.rotation.z = side * .16;
+    for (const z of [-1.7, 1.1]) {
+      add(new THREE.SphereGeometry(.72, 12, 10), capacitor, [s(3.5), .5, z], variants.firecrest);
+      const collar = add(new THREE.TorusGeometry(.9, .12, 6, 24), materials.orange, [s(3.5), .5, z], variants.firecrest);
+      collar.rotation.x = Math.PI / 2;
+      box([2, .2, .3], materials.metal, [s(2.8), .2, z], variants.firecrest);
+    }
   }
   const pulseRing = add(new THREE.TorusGeometry(1.18, 0.17, 10, 40), materials.metal, [0, 0.9, -1.8], variants.pulse);
   pulseRing.rotation.x = -Math.PI / 2;

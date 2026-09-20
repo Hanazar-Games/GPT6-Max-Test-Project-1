@@ -136,6 +136,9 @@ export class AudioEngine {
   }
 
   event(type) {
+    if (type === 'powerup') [520, 780, 1040].forEach((note, i) => this.tone(note, .18, i * .07));
+    if (type === 'shield-block') { this.tone(260, .25, 0, 'triangle'); this.tone(520, .2, .06); }
+    if (type === 'challenge') [880, 1100, 1320].forEach((note, i) => this.tone(note, .2, i * .06));
     if (type === 'pickup') { this.tone(780); this.tone(1170, 0.22, 0.08); }
     if (type === 'gate') [440, 660, 880].forEach((note, i) => this.tone(note, 0.25, i * 0.09));
     if (type === 'impact' || type === 'miss') { this.tone(75, 0.3, 0, 'triangle'); this.tone(48, 0.3, 0.06, 'sawtooth'); }

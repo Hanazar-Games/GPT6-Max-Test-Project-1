@@ -7,9 +7,11 @@ import './environment.css';
 import './compact.css';
 import './delivery.css';
 import './cruise.css';
+import './rewards.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
-import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveMinutes } from './catalogue.js';
+import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } from './catalogue.js';
+import { POWERUPS } from './route-rewards.js';
 import { BRIDGE_NAMES, bridgeAt } from './bridges.js';
 import { craftIcon } from './craft-icons.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
@@ -88,6 +90,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 const $ = (id) => document.getElementById(id);
+document.querySelector('.resource-panel').insertAdjacentHTML('afterbegin', '<div id="route-tools" class="route-tools" hidden><span id="power-status"></span><span id="challenge-status"></span></div>');
 mountReleases();
 $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
@@ -201,6 +204,7 @@ function updateLoadout() {
     garden: '本航线无障碍与陨石。沿中央收集核心、通过导航门，绿色加速带提供短时免费冲刺；航道边缘仍会损伤艇体。',
   }[mission.special] ?? '绿色加速带提供免费超频，F 可跃过障碍；留意岩石、巡逻机和陨石预警。';
   if (mission.bridges.length) $('route-guide').textContent += ` 本航线长 ${mission.length / 1000} 公里，沿途有 ${mission.bridges.length} 座斜拉桥、悬索桥与峡谷高架桥；上下山与桥面均需主动驾驶，桥上保留障碍与导航门。`;
+  if (mission.tour) $('route-guide').textContent += ' 本线道具自动拾取：蓝色护盾 12 秒内挡一次撞击；紫色磁吸持续 8 秒；绿色维修恢复 35 装甲、30 能量。金色极速环需低空达到巡航速度的 90%，紫色跃升环需在 F 跃升后以 2.8–6.2 米高度穿过；左右容差 3.5 米。挑战环只奖分与能量，连续命中加分，漏环或受撞中断连锁，不影响交付晋级。';
   const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
   $('guide').querySelector('.environment-guide').hidden = !meteors && !gravity;
   $('meteor-help').hidden = !meteors;
@@ -211,11 +215,11 @@ function updateLoadout() {
     const minX = Math.min(...xs), minZ = Math.min(...zs);
     const scale = Math.min(85 / (Math.max(...xs) - minX), 45 / (Math.max(...zs) - minZ));
     const points = preview.map(({ x, z }) => `${5 + (x - minX) * scale},${5 + (z - minZ) * scale}`).join(' ');
-    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ` <i>·</i> ≥${minimumDriveMinutes(option)} 分钟` : ''}${option.bridges.length ? ` <i>·</i> ${option.bridges.length} 座桥` : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
+    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ` <i>·</i> ${minimumDriveLabel(option)}` : ''}${option.bridges.length ? ` <i>·</i> ${option.bridges.length} 座桥` : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
   $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
-  const estimate = mission.special === 'boost' ? `持续加速约 ${(mission.length / craft.boostSpeed / 60).toFixed(1)} 分钟` : mission.endurance ? `预计 ${Math.ceil(mission.length / craft.boostSpeed / 60)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`;
+  const estimate = mission.special === 'boost' ? `持续加速约 ${(mission.length / craft.boostSpeed / 60).toFixed(1)} 分钟` : mission.endurance ? `用时参考 ${(mission.length / craft.boostSpeed / 60).toFixed(1)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`;
   $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${estimate}</small>`;
   if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
   if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
@@ -468,6 +472,7 @@ function syncPanels() {
     document.querySelectorAll('.result-stats > div > span').forEach((label, index) => { label.textContent = (cup || expedition ? ['本站得分', '本站用时', '本站核心'] : ['任务得分', '飞行用时', '收集核心'])[index]; });
     $('result-details').innerHTML = `<span>最高连收 <b>${game.maxCombo}</b></span><span>精准过门 <b>${game.perfectGates} / 6</b></span>${game.course.obstacles.length ? `<span>空中避障 <b>${game.airDodges}</b></span>` : ''}`;
     $('result-medals').innerHTML = debrief.medals.map(medal => `<span><b>${medal.symbol}</b>${medal.name}</span>`).join('');
+    if (game.mission.tour) $('result-details').insertAdjacentHTML('beforeend', `<span>道具 <b>${game.powerupsTaken.size}</b></span><span>挑战命中 <b>${game.challengeHits}/${game.course.challenges.length}</b></span><span>最长连锁 <b>${game.maxChallengeChain}</b></span><span>护盾抵挡 <b>${game.shieldBlocks}</b></span>`);
     $('result-rating').textContent = won ? `${debrief.rank}  /  ${{ S: '星际传奇', A: '王牌速递员', B: '可靠领航员' }[debrief.rank]}${record.newScore ? ' · 本次会话得分新纪录' : ''}` : `已完成 ${Math.floor(game.distance / game.mission.length * 100)}% 航程 · 每一次出发都更接近终点`;
     $('result-challenge').textContent = !won ? (rival ? '个人幽灵已保留 · 下次继续追逐' : '成功返航后建立你的第一道幽灵') : record.previousTime === null ? '首航纪录已建立 · 再飞一次，与自己的幽灵同场' : record.newBest ? `刷新最快航程！快了 ${(record.previousTime - game.elapsed).toFixed(2)} 秒` : `距个人最快 ${deltaText(game.elapsed - record.previousTime)} · 再找一条更快的路线`;
     $('result-challenge').dataset.tone = record.newBest ? 'ahead' : 'neutral';
@@ -479,7 +484,8 @@ function syncPanels() {
     $('next-mission').hidden = !won || game.mission.id === MISSIONS.at(-1).id;
     $('cup-result').hidden = !cup;
     $('expedition-result').hidden = !expedition;
-    for (const id of ['result-details', 'result-medals', 'result-rating', 'split-review']) $(id).hidden = !!expedition;
+    $('result-details').hidden = !!expedition && !game.mission.tour;
+    for (const id of ['result-medals', 'result-rating', 'split-review']) $(id).hidden = !!expedition;
     $('result-challenge').hidden = !!cup || !!expedition;
     $('continue-cup').hidden = !cup || !won;
     $('continue-expedition').hidden = !expedition || !won;
@@ -635,6 +641,11 @@ function updateHUD() {
   } else if (cue.kind === 'cargo') {
     $('cue-action').textContent = { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction];
     $('cue-detail').textContent = `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`;
+  } else if (cue.kind === 'powerup' || cue.kind === 'challenge') {
+    const title = cue.kind === 'powerup' ? POWERUPS[cue.reward].name : cue.reward === 'jump' ? '跃升环' : '极速环';
+    $('cue-action').textContent = `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`;
+    const jumpNow = game.speed > 0 && cue.distance / game.speed >= .3 && cue.distance / game.speed <= .65;
+    $('cue-detail').textContent = cue.kind === 'powerup' ? '可选补给 · 低空接近自动拾取' : cue.reward === 'speed' ? `可选挑战 · 低空 ≥${Math.ceil(game.craft.speed * .9 * 3.6)} km/h` : `${jumpNow && isJumpReady(game) ? '现在按 F 跃升' : '接近后按 F 跃升'} · 环内高度 2.8–6.2m`;
   } else if (cue.kind === 'gate') {
     $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
@@ -649,6 +660,9 @@ function updateHUD() {
   $('combo-value').textContent = game.combo;
   $('combo-multiplier').textContent = `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`;
   $('combo-panel').classList.toggle('active', game.combo >= 3);
+  $('route-tools').hidden = !game.mission.tour;
+  $('power-status').textContent = [game.shieldTime > 0 ? `护盾 ${Math.ceil(game.shieldTime)}s` : '', game.magnetTime > 0 ? `磁吸 ${Math.ceil(game.magnetTime)}s` : ''].filter(Boolean).join(' · ') || '道具待拾取';
+  $('challenge-status').textContent = `挑战 ${game.challengeHits}/${game.course.challenges.length} · 连锁 ${game.challengeChain}`;
   $('jump-status').textContent = game.height > 0 ? `低空跃升 ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪';
   if (lowGravity && game.height > 0) $('jump-status').textContent = `低重力滑翔 ${game.height.toFixed(1)}m`;
   document.querySelector('[data-control="jump"]').setAttribute('aria-disabled', String(!isJumpReady(game)));
@@ -663,6 +677,9 @@ function processEvents() {
     if (!event.chained) audio.event(event.type);
     world.event(event, game);
     if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '出发！按住 W / ↑ 加速，或按 C 开启巡航油门');
+    if (event.type === 'powerup') toast(`${POWERUPS[event.kind].name} · ${POWERUPS[event.kind].description}`, 'cyan');
+    if (event.type === 'shield-block') toast('护盾抵挡撞击 · 护盾已消耗', 'cyan');
+    if (event.type === 'challenge') toast(`${event.kind === 'jump' ? '跃升环' : '极速环'}命中 · ${game.challengeChain} 连锁 · +${event.points}`, 'cyan');
     if (event.type === 'pickup') toast(`能量核心 +1  /  ${game.collected.size >= game.mission.cargo ? '核心目标已达成' : `${game.collected.size} / ${game.mission.cargo}`}  ·  +${event.points}${game.combo >= 3 ? `  ·  ${game.combo} 连收` : ''}`, 'cyan');
     if (event.type === 'gate') toast(event.perfect ? `精准过门！导航门 0${event.number}  ·  +500` : `导航门 0${event.number} 已点亮  ·  +300`, 'cyan');
     if (event.type === 'gate') {

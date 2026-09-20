@@ -37,7 +37,7 @@ export function makeBridges(world) {
     for (let distance = start; distance <= end; distance += 60) {
       beam('steel', point(distance, -17, -4.8), point(distance, 17, -4.8), 1.2);
       for (const side of [-1, 1]) {
-        beam('lights', point(distance, side * 18.5, 1.6), point(distance, side * 18.5, 3), .25);
+        beam('lights', point(distance, side * 19.5, 1.6), point(distance, side * 19.5, 3), .25);
         if (kind === 'viaduct') pier(distance, side * 12.8, 3.4, 5);
       }
     }

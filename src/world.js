@@ -14,6 +14,8 @@ import { batchMeshes } from './model-utils.js';
 import { createGroundSampler } from './terrain-sampler.js';
 import { bridgeDepth } from './bridges.js';
 import { partitionLandscape } from './landscape-chunks.js';
+import { RewardView } from './reward-view.js';
+import { pickupRange } from './route-rewards.js';
 
 let seed = 4517;
 function random() {
@@ -100,6 +102,7 @@ export class World {
     this.makeGates();
     this.makePickups();
     this.makePads();
+    this.rewards = new RewardView(this);
     this.environment = new EnvironmentView(this);
     this.makeBase();
     this.makeCraft();
@@ -431,6 +434,9 @@ export class World {
     this.magnetRing = this.mesh(new THREE.TorusGeometry(1, 0.012, 4, 48), new THREE.MeshBasicMaterial({ color: '#94ebc6', transparent: true, opacity: 0.35, depthWrite: false }), this.craft, [0, -0.5, 0]);
     this.magnetRing.rotation.x = Math.PI / 2;
     this.magnetRing.visible = false;
+    this.shieldBubble = this.mesh(new THREE.SphereGeometry(5.1, 18, 12), new THREE.MeshBasicMaterial({ color: '#89cfff', wireframe: true, transparent: true, opacity: .14, depthWrite: false }), this.craft);
+    this.shieldBubble.scale.set(1, .55, 1.2);
+    this.shieldBubble.visible = false;
     this.engineLight = new THREE.PointLight('#67dafb', 15, 12, 2);
     this.engineLight.position.set(0, 0, -1.5);
     this.craft.add(this.engineLight);
@@ -489,7 +495,7 @@ export class World {
 
   event(event, game) {
     if (event.type === 'impact') this.shake = 0.65;
-    if (!['pickup', 'impact', 'jump', 'gate', 'dodge', 'meteor-strike', 'meteor-dodge', 'glide'].includes(event.type)) return;
+    if (!['pickup', 'impact', 'jump', 'gate', 'dodge', 'meteor-strike', 'meteor-dodge', 'glide', 'powerup', 'challenge', 'shield-block'].includes(event.type)) return;
     const strike = event.type === 'meteor-strike';
     const color = new THREE.Color(event.type === 'impact' || strike ? '#ff925e' : event.type === 'glide' ? '#c6acff' : event.type === 'gate' ? '#8cf2bd' : '#89e8ff');
     const origin = strike ? this.frame(event.distance, event.lane, 0.5).point : this.frame(game.distance, game.lane, 2 + game.height).point;
@@ -540,6 +546,7 @@ export class World {
     if (animated) this.clock += dt;
     const motionTime = game.status === 'menu' ? this.clock : game.elapsed;
     this.environment.render(game.status === 'menu' ? 0 : game.elapsed);
+    this.rewards.render(game);
     const menu = game.status === 'menu';
     const frame = this.frame(game.distance, game.lane, 1.9 + game.height);
     this.sky.position.copy(frame.point);
@@ -547,8 +554,9 @@ export class World {
     this.craft.position.copy(point);
     this.orient(this.craft, frame);
     this.craftBody.position.y = Math.sin(this.clock * 3.5) * 0.13;
-    this.magnetRing.visible = game.craft.pickupRange > 3.7 && game.height < 2.3;
-    this.magnetRing.scale.setScalar(game.craft.pickupRange);
+    this.magnetRing.visible = pickupRange(game) > 3.7 && game.height < 2.3;
+    this.magnetRing.scale.setScalar(pickupRange(game));
+    this.shieldBubble.visible = game.shieldTime > 0;
     this.magnetRing.material.opacity = 0.25 + Math.sin(this.clock * 2) * 0.08;
     this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * 0.009, Math.min(1, dt * 7));
     this.craftBody.rotation.x = -game.speed * 0.0004 + game.verticalSpeed * 0.013;

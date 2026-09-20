@@ -1,6 +1,7 @@
 import { makeEnvironment } from './environment.js';
 import { makeSpecialCourse } from './special-courses.js';
 import { makeBridgeSpans } from './bridges.js';
+import { addRouteRewards } from './route-rewards.js';
 
 const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊'];
 
@@ -98,15 +99,20 @@ const planets = [
   ['icefall', '冰岚星', '冰川通天', '超长山桥航线 · 冰瀑尖峰和冷光桥塔守望深谷，从峡底爬升到银蓝色山巅。', 'icefall', '#b0e5ff', '#172d46', '#7a99af', 0.57, 0.18, 204000, 2, 74, 10],
   ['highland', '苍岭星', '云岭远廊', '超长山桥航线 · 绿色山岭间的中继林塔指向远方，连续桥梁串起整片高原。', 'relayforest', '#b8eeb2', '#173c37', '#668876', 0.34, 0.38, 222000, 1, 75, 9],
   ['summit', '天穹星', '万峰云桥', '超长山桥航线 · 240 公里跨越冠状群峰，悬索、斜拉与高架交替连接高山大陆。', 'crownridge', '#dabdff', '#241b3c', '#736584', 0.72, 0.25, 240000, 2, 76, 10],
+  ['cascade', '云瀑星', '飞瀑穿峡', '20 km 探索线 · 冷光瀑帘与阶状水塔守望山湾，借助沿途道具穿过极速环与跃升环。', 'cascade', '#8ee9f5', '#153548', '#557d89', .51, .3, 20000, 1, 77, 5],
+  ['regatta', '赤帆星', '风帆天路', '20 km 探索线 · 赤金翼帆沿峰顶排列，连续山弯与可选挑战环考验驾驶节奏。', 'regatta', '#ffc58a', '#36252d', '#8d6b5c', .07, .36, 20000, 2, 78, 6],
+  ['lantern', '穹灯星', '光穹回廊', '20 km 探索线 · 巨型灯笼与光穹照亮长岸，拾取磁吸道具，挑战核心与技巧双连收。', 'lantern', '#f7b7de', '#281b3b', '#705b80', .78, .28, 20000, 1, 79, 3],
+  ['marathon', '远岚星', '山海马拉松', '50 km 马拉松 · 跨越五段山桥与补给驿站，管理护盾、维修和磁吸，完成耐力交付。', 'waystation', '#cce99c', '#213c37', '#688875', .32, .32, 50000, 2, 80, 9],
 ];
 
 export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special], index) => Object.freeze({
   id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, special,
   number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ({ boost: '全程加速', hazard: '障碍密集', garden: '无障碍观光' })[special] ?? ['入门', '进阶', '极限'][difficulty], variant: index,
-  endurance: length >= 90000,
+  endurance: length >= 20000,
+  tour: length >= 20000 && length < 90000,
   bridges: family >= 9 ? makeBridgeSpans(length, index) : Object.freeze([]),
-  duration: length >= 90000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
-  cargo: length >= 150000 ? 42 + difficulty * 6 : length >= 90000 ? 24 + difficulty * 6 : 6 + difficulty * 2,
+  duration: length >= 20000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
+  cargo: length >= 150000 ? 42 + difficulty * 6 : length >= 90000 ? 24 + difficulty * 6 : length >= 20000 ? 18 + difficulty * 6 : 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
   music: { root, bpm: special === 'garden' ? 112 : special === 'boost' ? 148 : 124 + index % 4 * 6, mode: special === 'garden' ? 'major' : 'minor' }, points: mountainRoad(index, family ?? index % 5),
 })));
@@ -138,17 +144,25 @@ export const CRAFTS = Object.freeze([
   { id: 'tortoise', model: 'LC–72', name: '山岳', role: '工程型', description: '履带状重甲浮筏与外露承力框，1260 km/h、210 装甲稳行远路。', speed: 170, boostSpeed: 350, handling: 36, hull: 210, recharge: 17, color: '#deb98b', scale: [1.04, 1.03, 1.02] },
   { id: 'arrow', model: 'LC–75', name: '穿云', role: '破风型', description: '分体前掠长翼与双竖尾，1710 km/h 掠过桥塔云层。', speed: 225, boostSpeed: 475, handling: 40, hull: 85, recharge: 12, color: '#bba5ff', scale: [0.9, 0.92, 1.13] },
   { id: 'atlas', model: 'LC–78', name: '驮星', role: '科考型', description: '双层科考货架与环形蓄能舱，1458 km/h、22/s 充能适合洲际长航。', speed: 195, boostSpeed: 405, handling: 40, hull: 160, recharge: 22, color: '#79daca', scale: [1.02, 1, 1.02] },
+  { id: 'osprey', model: 'LC–81', name: '鱼鹰', role: '旋翼型', description: '双倾转涵道与桥式翼架，1584 km/h 稳定跨越山口。', speed: 202, boostSpeed: 440, handling: 47, hull: 105, recharge: 15, color: '#82d9ee', scale: [.94, .96, 1.03] },
+  { id: 'hammerhead', model: 'LC–84', name: '锤鲨', role: '破障型', description: '横向锤形前舱与双层保险框，1368 km/h、200 装甲护航马拉松。', speed: 180, boostSpeed: 380, handling: 38, hull: 200, recharge: 18, color: '#e8b780', scale: [1.04, 1.03, .97] },
+  { id: 'sailfish', model: 'LC–87', name: '旗鱼', role: '追风型', description: '高背帆鳍与分段剪翼，1692 km/h 抢占极速挑战环。', speed: 222, boostSpeed: 470, handling: 44, hull: 82, recharge: 10, color: '#d6a0f5', scale: [.9, .91, 1.1] },
+  { id: 'firecrest', model: 'LC–90', name: '火冠', role: '补给型', description: '四枚球形储能舱与护环，1476 km/h 灵巧收集沿途补给。', speed: 192, boostSpeed: 410, handling: 48, hull: 98, recharge: 20, color: '#f4d68c', scale: [.96, .94, 1] },
 ]);
 
 export function makeCourse(mission) {
+  return addRouteRewards(makeBaseCourse(mission), mission);
+}
+
+function makeBaseCourse(mission) {
   if (mission.special) return makeSpecialCourse(mission);
   if (mission.endurance) {
     const blocks = Math.ceil(mission.length / 12000);
     const blockLength = mission.length / blocks;
-    const course = makeCourse({ ...mission, endurance: false });
+    const course = makeBaseCourse({ ...mission, endurance: false });
     for (const key of ['pickups', 'obstacles', 'pads', 'meteors', 'gravityZones']) course[key] = [];
     for (let block = 0; block < blocks; block++) {
-      const segment = makeCourse({ ...mission, endurance: false, length: blockLength, variant: mission.variant + block });
+      const segment = makeBaseCourse({ ...mission, endurance: false, length: blockLength, variant: mission.variant + block });
       const offset = block * blockLength;
       for (const key of ['pickups', 'obstacles', 'pads', 'meteors', 'gravityZones']) {
         for (const item of segment[key]) course[key].push(key === 'gravityZones'

@@ -1,0 +1,8 @@
+.route-tools { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; font: 10px var(--mono); color: #d8c5ef; }
+.route-tools[hidden] { display: none; }
+.route-tools span { white-space: nowrap; }
+.result-details { flex-wrap: wrap; }
+.result-details > span { white-space: nowrap; }
+@media (max-width: 600px), (max-height: 650px) {
+  .route-tools { font-size: 8px; gap: 3px 8px; margin-bottom: 6px; }
+}

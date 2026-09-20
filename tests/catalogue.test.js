@@ -11,7 +11,7 @@ test('route categories expose every route and classify special routes by their r
   const short = filterMissions('', 'short');
   const long = filterMissions('', 'long');
   assert.equal(short.length, 25);
-  assert.equal(long.length, 19);
+  assert.equal(long.length, 23);
   assert.deepEqual([...short, ...long], MISSIONS);
   assert.deepEqual(ids(filterMissions('', 'clear')), ['overdrive', 'earth']);
   assert.deepEqual(ids(filterMissions('', 'hazard')), ['apocalypse']);
@@ -53,12 +53,12 @@ test('minimum journey labels remain attainable lower bounds even with the fastes
   const fastest = Math.max(...CRAFTS.map(craft => upgradeCraft(craft, { engine: 2 }).boostSpeed));
   for (const mission of MISSIONS.filter(mission => mission.endurance)) {
     const minutes = minimumDriveMinutes(mission);
-    assert.ok(minutes >= 3);
+    assert.ok(minutes >= (mission.tour ? 0 : 3));
     assert.ok(minutes * 60 <= mission.length / fastest);
     assert.ok((minutes + 1) * 60 > mission.length / fastest);
-    assert.ok(filterMissions(`${minutes}分钟`).includes(mission));
+    assert.ok(filterMissions(minutes ? `${minutes}分钟` : "40秒").includes(mission));
   }
-  assert.equal(minimumDriveMinutes(MISSIONS.at(-1)), 8);
+  assert.equal(minimumDriveMinutes(MISSIONS.find(m => m.id === "summit")), 8);
 });
 
 test('filtered performance results retain their order without modifying the source fleet', () => {

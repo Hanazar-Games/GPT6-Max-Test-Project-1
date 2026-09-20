@@ -45,7 +45,7 @@ test('landscape tiles preserve geometry attributes, transforms and instance colo
 });
 
 test('the largest mountain route renders nearby tiles with a bounded visible triangle count and frees all resources', () => {
-  const mission = MISSIONS.at(-1), game = createGame(mission.id);
+  const mission = MISSIONS.find(mission => mission.id === 'summit'), game = createGame(mission.id);
   const world = Object.assign(Object.create(World.prototype), {
     mission, course: game.course, curve: createRoute(mission), scene: new THREE.Scene(), drones: [],
     materials: { dark: new THREE.MeshStandardMaterial(), metal: new THREE.MeshStandardMaterial(), glow: new THREE.MeshBasicMaterial(), cyan: new THREE.MeshBasicMaterial() },

@@ -7,11 +7,11 @@ import { World } from '../src/world.js';
 import { filterMissions } from '../src/catalogue.js';
 
 test('six new mountain routes and six new craft extend the fleet with five-minute minimum journeys', () => {
-  assert.equal(CRAFTS.length, 26);
-  assert.equal(MISSIONS.length, 44);
-  const routes = MISSIONS.filter(mission => mission.bridges?.length);
+  assert.equal(CRAFTS.length, 30);
+  assert.equal(MISSIONS.length, 48);
+  const routes = MISSIONS.filter(mission => mission.length >= 150000);
   assert.equal(routes.length, 6);
-  assert.deepEqual(filterMissions('', 'bridges'), routes);
+  assert.ok(routes.every(mission => filterMissions('', 'bridges').includes(mission)));
   const fastest = Math.max(...CRAFTS.map(craft => craft.boostSpeed + 12));
   for (const mission of routes) {
     assert.ok(mission.length >= 150000 && mission.length <= 240000);
@@ -34,8 +34,8 @@ test('six new mountain routes and six new craft extend the fleet with five-minut
 });
 
 test('mountain terrain stays below the road and bridge valleys have real clearance within a mesh budget', () => {
-  const routes = MISSIONS.filter(mission => mission.bridges?.length);
-  assert.equal(routes.length, 6);
+  const routes = MISSIONS.filter(mission => mission.length >= 150000 || mission.tour);
+  assert.equal(routes.length, 10);
   for (const mission of routes) {
     const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } } });
     world.samples = world.curve.getSpacedPoints(Math.ceil(mission.length / 20));

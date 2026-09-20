@@ -7,7 +7,17 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 山海长桥</h2>
+      <h2 id="release-title">v${version} · 道具拉力</h2>
+      <p>拾起沿途补给，穿过挑战光环，跑完属于你的山海马拉松。</p>
+      <ul class="release-list">
+        <li><strong>三条 20 公里，一场 50 公里马拉松</strong>飞瀑穿峡、风帆天路与光穹回廊各长 20 公里；山海马拉松长 50 公里，五座山桥连接高峰与补给驿站。四颗新星球各有地标与配乐。</li>
+        <li><strong>四款新艇，三十种选择</strong>鱼鹰的倾转涵道、锤鲨的宽体前舱、旗鱼的帆鳍剪翼与火冠的球形储能舱加入机库，兼顾竞速、装甲与续航。</li>
+        <li><strong>沿途拾取三类道具</strong>新四条航线开放护盾、磁吸与维修：12 秒内抵挡一次撞击、8 秒扩大核心吸附范围，或恢复 35 装甲与 30 能量；暂停冻结效果，重飞重新拾取。</li>
+        <li><strong>极速与跃升双挑战</strong>低空保持速度穿过金色环，跃起穿过紫色环，连续命中奖励分数与能量；可选挑战不影响交付晋级，三种模式均显示本站表现。</li>
+        <li><strong>长途驾驶与界面修整</strong>核心、障碍和加速带碰撞只查询附近物件，电脑避让减少远处扫描；外移陡弯桥灯，修复新路线最低用时显示。星图达 48 张、2932.3 公里，大奖赛与远征同步扩至 48 站；1.11.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>23 个版本</span></summary>
+      <article><h3>v1.11.0 · 山海长桥</h3>
       <p>穿过云岭，越过深谷，向更远的山海出发。</p>
       <ul class="release-list">
         <li><strong>六款新艇，二十六种选择</strong>隼羽、信天翁、山猫、山岳、穿云与驮星加入机库，分别配备折翼、环翼、涵道舱、重甲浮筏、前掠长翼与科考货架。</li>
@@ -16,7 +26,8 @@ export function mountReleases() {
         <li><strong>大地图减少远景开销</strong>道路、山体、桥梁与地标按空间分块，镜头外的部分不再整图绘制，保留桥面与地形的连续外观。</li>
         <li><strong>山桥长线一键查找</strong>机库增加山桥分类、最低用时与桥梁数量，驶入桥段显示桥型。星图扩至 44 张、2822.3 公里，大奖赛与远征同步扩至 44 站。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>22 个版本</span></summary>
+      </article>
+
       <article><h3>v1.10.1 · 操作与界面修复</h3>
       <p>切换声音后继续冲刺，航向提示看得更清楚。</p>
       <ul class="release-list">

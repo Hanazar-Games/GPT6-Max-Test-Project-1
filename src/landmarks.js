@@ -444,6 +444,43 @@ export function makeLandmarks(world, random) {
     for (const y of [14, 30]) { const rim = ring(18, 2, dark, y); rim.rotation.x = Math.PI / 2; }
     add(new THREE.OctahedronGeometry(5), light, 0, 60);
   }
+  if (biome === 'cascade') {
+    foundation(23);
+    for (const side of [-1, 1]) {
+      pillar(6, 52, stone, side * 17, 27, 0, 4, 7);
+      for (let i = 0; i < 5; i++) box([1.1, 39 - i * 3, .5], light, side * (5 + i * 2.5), 24, 1);
+    }
+    for (const y of [5, 21, 46]) box([41, 3, 13], stone, 0, y);
+  } else if (biome === 'regatta') {
+    foundation(21);
+    for (let i = -1; i <= 1; i++) {
+      pillar(1.2, 51 - Math.abs(i) * 8, dark, i * 14, 27);
+      const sail = add(new THREE.ConeGeometry(12, 32, 3), stone, i * 11, 30);
+      sail.scale.z = .18; sail.rotation.z = i * -.18;
+      box([.4, 26, .5], light, i * 14 + 1.5, 29, -1);
+    }
+    box([43, 2.2, 12], stone, 0, 9);
+  } else if (biome === 'lantern') {
+    foundation(19);
+    pillar(3, 50, dark, 0, 26);
+    for (let i = 0; i < 3; i++) {
+      const y = 18 + i * 14, r = 13 - i * 2;
+      pillar(r, 9, light, 0, y, 0, r, 8);
+      for (const h of [-5, 5]) pillar(r + 1, 1.3, stone, 0, y + h, 0, r + 1, 8);
+      for (let j = 0; j < 8; j++) { const a = j * Math.PI / 4; box([.6, 10, .6], dark, Math.cos(a) * r, y, Math.sin(a) * r); }
+    }
+  } else if (biome === 'waystation') {
+    foundation(25);
+    for (const x of [-16, 16]) {
+      box([5, 45, 8], stone, x, 24);
+      box([1, 36, .5], light, x, 25, -4.2);
+    }
+    box([42, 5, 17], stone, 0, 47);
+    for (const y of [16, 30]) box([25, 2, 11], dark, 0, y);
+    ring(9, 1.1, light, 34);
+    pillar(1, 15, dark, 0, 57);
+    add(new THREE.OctahedronGeometry(3), light, 0, 66);
+  }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;
     model.children.forEach((mesh, index) => {

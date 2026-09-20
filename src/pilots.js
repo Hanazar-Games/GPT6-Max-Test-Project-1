@@ -1,6 +1,7 @@
 import { createGame, startGame, updateGame, obstacleLane } from './game.js';
 import { FlightRecorder } from './ghost.js';
 import { meteorState, ENVIRONMENT } from './environment.js';
+import { firstAtOrAfter } from './route-rewards.js';
 
 export const RACERS = Object.freeze([
   Object.freeze({ id: 'aurora', name: '迎光', color: '#8ee9f5', coast: 0, offset: -1.4, style: '持续推进' }),
@@ -11,13 +12,7 @@ export const RACERS = Object.freeze([
 export function pilotInput(game, racer) {
   let upcoming;
   for (const objects of [game.course.pickups, game.course.gates]) {
-    let low = 0, high = objects.length;
-    while (low < high) {
-      const middle = (low + high) >>> 1;
-      if (objects[middle].distance < game.distance - 2) low = middle + 1;
-      else high = middle;
-    }
-    const object = objects[low];
+    const object = objects[firstAtOrAfter(objects, game.distance - 2)];
     if (object && (!upcoming || object.distance < upcoming.distance)) upcoming = object;
   }
   const speed = Math.max(game.speed, game.craft.speed * 0.5);
@@ -26,11 +21,12 @@ export function pilotInput(game, racer) {
   if (gateApproach) upcoming = gate;
   const desired = (upcoming?.lane ?? 0) + racer.offset;
   const nearby = item => item.distance > game.distance - 4 && item.distance < game.distance + speed * 1.5 && (!gateApproach || item.distance < gate.distance - 6);
-  const threats = game.course.obstacles.filter(nearby).map(item => {
+  const local = items => items.slice(firstAtOrAfter(items, game.distance - 4), firstAtOrAfter(items, game.distance + speed * 1.5));
+  const threats = local(game.course.obstacles).filter(nearby).map(item => {
     const arrival = Math.max(0, item.distance - game.distance) / speed;
     return { lane: obstacleLane(item, game.elapsed + arrival), radius: item.radius + 1.7, arrival };
   });
-  for (const item of game.course.meteors.filter(nearby)) {
+  for (const item of local(game.course.meteors).filter(nearby)) {
     const arrival = Math.max(0, item.distance - game.distance) / speed;
     const radius = item.radius + ENVIRONMENT.craftRadius + 1;
     if ([-radius / speed, 0, radius / speed].some(offset => meteorState(item, game.elapsed + arrival + offset).phase === 'impact')) {
