@@ -3,7 +3,7 @@ import { makeSpecialCourse } from './special-courses.js';
 import { makeBridgeSpans } from './bridges.js';
 import { addRouteRewards } from './route-rewards.js';
 
-const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊'];
+const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊', '星冠盘山', '叠湾天路'];
 
 function mountainRoad(index, family) {
   const count = 6 + index % 3;
@@ -35,15 +35,18 @@ function mountainRoad(index, family) {
       if (family === 8) radius = 1350 + 340 * Math.sin(12 * a + phase) + 140 * Math.cos(4 * a);
       if (family === 9) radius = 2500 + 500 * Math.cos(9 * a + phase) + 220 * Math.sin(3 * a);
       if (family === 10) radius = 2600 + 580 * Math.sin(8 * a + phase) + 260 * Math.cos(3 * a);
+      if (family === 11) radius = 2000 + 430 * Math.cos(6 * a + phase) + 170 * Math.sin(3 * a);
+      if (family === 12) radius = 2150 + 410 * Math.sin(5 * a + phase) + 180 * Math.cos(2 * a);
       if (family === 4) {
         radius = 1 + 0.17 * Math.cos(6 * a + phase);
         x = Math.sign(Math.cos(a)) * Math.abs(Math.cos(a)) ** 0.65 * 450 * radius;
         z = Math.sign(Math.sin(a)) * Math.abs(Math.sin(a)) ** 0.65 * 360 * radius;
       } else {
-        x = Math.cos(a) * radius * (family === 3 ? 0.75 : 1);
-        z = Math.sin(a) * radius * (family === 3 ? 1.4 : 1);
+        x = Math.cos(a) * radius * (family === 3 ? 0.75 : family === 12 ? .85 : 1);
+        z = Math.sin(a) * radius * (family === 3 ? 1.4 : family === 12 ? 1.2 : 1);
       }
-      const y = 30 + peak * (0.42 * (1 - Math.cos(a * (family >= 7 ? 4 : family === 2 || family === 6 ? 2 : 1))) + 0.12 * (1 - Math.cos(a * 3)));
+      const climbs = family === 11 ? 3 : family === 12 ? 2 : family >= 7 ? 4 : family === 2 || family === 6 ? 2 : 1;
+      const y = 30 + peak * (0.42 * (1 - Math.cos(a * climbs)) + 0.12 * (1 - Math.cos(a * 3)));
       points.push([x, y, z]);
     }
   }
@@ -103,6 +106,12 @@ const planets = [
   ['regatta', '赤帆星', '风帆天路', '20 km 探索线 · 赤金翼帆沿峰顶排列，连续山弯与可选挑战环考验驾驶节奏。', 'regatta', '#ffc58a', '#36252d', '#8d6b5c', .07, .36, 20000, 2, 78, 6],
   ['lantern', '穹灯星', '光穹回廊', '20 km 探索线 · 巨型灯笼与光穹照亮长岸，拾取磁吸道具，挑战核心与技巧双连收。', 'lantern', '#f7b7de', '#281b3b', '#705b80', .78, .28, 20000, 1, 79, 3],
   ['marathon', '远岚星', '山海马拉松', '50 km 马拉松 · 跨越五段山桥与补给驿站，管理护盾、维修和磁吸，完成耐力交付。', 'waystation', '#cce99c', '#213c37', '#688875', .32, .32, 50000, 2, 80, 9],
+  ['glasshaven', '琉璃星', '镜穹巡游', '24 km 入门拉力 · 玻璃穹顶与蓝色镜柱点亮花瓣山湾，在舒展长弯中熟悉道具与挑战环。', 'glassworks', '#a2eeff', '#163745', '#628b97', .52, .23, 24000, 0, 31, 5],
+  ['bellspire', '鸣钟星', '钟塔回响', '32 km 山口拉力 · 巨型钟架守望锯齿峰群，沿连弯追逐金色极速环。', 'carillon', '#ffdb9e', '#312a3d', '#7f718b', .72, .23, 32000, 1, 32, 6],
+  ['cloudreef', '云礁星', '浮礁长岸', '40 km 海岸拉力 · 层叠礁台与悬光浮珠沿长岸排列，连续上下坡串起补给与跃升挑战。', 'cloudreef', '#ffb6d6', '#263a51', '#7897aa', .57, .22, 40000, 1, 81, 3],
+  ['astrolabe', '星仪星', '星冠天桥', '60 km 星冠盘山 · 六瓣峰湾环抱三重高岭，巨型星仪与跨谷桥指向山顶。', 'orrery', '#cdb7ff', '#221c3f', '#6b608e', .72, .3, 60000, 1, 82, 11],
+  ['bluefen', '蓝泽星', '湿地悬廊', '72 km 叠湾天路 · 蓝绿色芦苇塔环绕双峰长湾，悬索与高架连接开阔高原。', 'reedbed', '#acecca', '#173e3c', '#5b8b7e', .42, .35, 72000, 1, 83, 12],
+  ['emberforge', '铸火星', '炉心远征', '84 km 高山拉力 · 巨型熔炉与散热烟囱照亮星冠群峰，七座跨谷桥串起耐力交付。', 'forge', '#ffac81', '#3b202a', '#8d605d', .025, .35, 84000, 2, 84, 11],
 ];
 
 export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special], index) => Object.freeze({
@@ -148,6 +157,12 @@ export const CRAFTS = Object.freeze([
   { id: 'hammerhead', model: 'LC–84', name: '锤鲨', role: '破障型', description: '横向锤形前舱与双层保险框，1368 km/h、200 装甲护航马拉松。', speed: 180, boostSpeed: 380, handling: 38, hull: 200, recharge: 18, color: '#e8b780', scale: [1.04, 1.03, .97] },
   { id: 'sailfish', model: 'LC–87', name: '旗鱼', role: '追风型', description: '高背帆鳍与分段剪翼，1692 km/h 抢占极速挑战环。', speed: 222, boostSpeed: 470, handling: 44, hull: 82, recharge: 10, color: '#d6a0f5', scale: [.9, .91, 1.1] },
   { id: 'firecrest', model: 'LC–90', name: '火冠', role: '补给型', description: '四枚球形储能舱与护环，1476 km/h 灵巧收集沿途补给。', speed: 192, boostSpeed: 410, handling: 48, hull: 98, recharge: 20, color: '#f4d68c', scale: [.96, .94, 1] },
+  { id: 'bat', model: 'LC–93', name: '狐蝠', role: '巡弯型', description: '折线膜翼与外露翼骨，1566 km/h 灵巧切入连续山弯。', speed: 208, boostSpeed: 435, handling: 51, hull: 90, recharge: 12, color: '#c6abf2', scale: [.93, .91, 1.02] },
+  { id: 'mantis', model: 'LC–96', name: '螳螂', role: '长矛型', description: '双折臂长矛与肩部关节，1685 km/h 追逐直道光环。', speed: 224, boostSpeed: 468, handling: 43, hull: 88, recharge: 10, color: '#b6df87', scale: [.9, .92, 1.05] },
+  { id: 'petrel', model: 'LC–99', name: '海燕', role: '双翼型', description: '上下双层弧翼与翼间支柱，1490 km/h 平稳穿越峡谷。', speed: 198, boostSpeed: 414, handling: 46, hull: 120, recharge: 17, color: '#91d7f2', scale: [.95, .92, 1.02] },
+  { id: 'rhino', model: 'LC–102', name: '犀甲', role: '护航型', description: '分段楔甲与前置防撞犀角，1296 km/h、205 装甲护航山桥。', speed: 174, boostSpeed: 360, handling: 37, hull: 205, recharge: 19, color: '#d9b899', scale: [1.02, 1, .98] },
+  { id: 'hummingbird', model: 'LC–105', name: '蜂鸟', role: '轻旋型', description: '竖置双环与短矢量翼，1451 km/h、53 机动迅捷拾取道具。', speed: 190, boostSpeed: 403, handling: 53, hull: 84, recharge: 16, color: '#f4bcce', scale: [.9, .9, .98] },
+  { id: 'medusa', model: 'LC–108', name: '水母', role: '电容型', description: '发光穹舱与弧形导能须，1447 km/h、21/s 充能适合长途。', speed: 193, boostSpeed: 402, handling: 44, hull: 130, recharge: 21, color: '#99e6d5', scale: [.98, .94, 1.01] },
 ]);
 
 export function makeCourse(mission) {

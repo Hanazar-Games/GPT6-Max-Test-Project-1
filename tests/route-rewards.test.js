@@ -11,9 +11,9 @@ function running() {
   return game;
 }
 
-test('three exact 20 km routes and one 50 km marathon join a thirty-craft fleet', () => {
-  assert.equal(MISSIONS.length, 48); assert.equal(CRAFTS.length, 30);
-  assert.deepEqual(MISSIONS.slice(-4).map(m => m.length), [20000, 20000, 20000, 50000]);
+test('the original rally routes retain their distances and rewards stay ordered across the atlas', () => {
+  assert.equal(MISSIONS.length, 54); assert.equal(CRAFTS.length, 36);
+  assert.deepEqual(MISSIONS.slice(44, 48).map(m => m.length), [20000, 20000, 20000, 50000]);
   for (const mission of MISSIONS) {
     const course = makeCourse(mission);
     assert.equal(new Set(course.powerups.map(item => item.kind)).size, mission.tour ? 3 : 0);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS } from '../src/missions.js';
-import { filterMissions, filterCrafts, minimumDriveMinutes } from '../src/catalogue.js';
+import { filterMissions, filterCrafts, minimumDriveMinutes, minimumDriveLabel } from '../src/catalogue.js';
 import { upgradeCraft } from '../src/upgrades.js';
 
 const ids = items => items.map(item => item.id);
@@ -11,7 +11,7 @@ test('route categories expose every route and classify special routes by their r
   const short = filterMissions('', 'short');
   const long = filterMissions('', 'long');
   assert.equal(short.length, 25);
-  assert.equal(long.length, 23);
+  assert.equal(long.length, 29);
   assert.deepEqual([...short, ...long], MISSIONS);
   assert.deepEqual(ids(filterMissions('', 'clear')), ['overdrive', 'earth']);
   assert.deepEqual(ids(filterMissions('', 'hazard')), ['apocalypse']);
@@ -56,7 +56,7 @@ test('minimum journey labels remain attainable lower bounds even with the fastes
     assert.ok(minutes >= (mission.tour ? 0 : 3));
     assert.ok(minutes * 60 <= mission.length / fastest);
     assert.ok((minutes + 1) * 60 > mission.length / fastest);
-    assert.ok(filterMissions(minutes ? `${minutes}分钟` : "40秒").includes(mission));
+    assert.ok(filterMissions(minimumDriveLabel(mission).replace(/\s/g, "")).includes(mission));
   }
   assert.equal(minimumDriveMinutes(MISSIONS.find(m => m.id === "summit")), 8);
 });

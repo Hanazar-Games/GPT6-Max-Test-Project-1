@@ -4,7 +4,7 @@ import { batchMeshes } from './model-utils.js';
 export function makeLandmarks(world, random) {
   const { biome, color } = world.mission;
   const model = new THREE.Group();
-  const polished = ['crystal', 'ice', 'prism', 'salt', 'solar', 'observatory'].includes(biome);
+  const polished = ['crystal', 'ice', 'prism', 'salt', 'solar', 'observatory', 'glassworks', 'orrery'].includes(biome);
   const stone = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).lerp(new THREE.Color('#a6acae'), 0.35), roughness: polished ? 0.24 : 0.82, metalness: biome === 'industrial' ? 0.7 : polished ? 0.3 : 0.05, side: ['fungal', 'solar'].includes(biome) ? THREE.DoubleSide : THREE.FrontSide });
   if (['ridge', 'mesa', 'sandstone', 'dunes', 'volcanic'].includes(biome)) stone.color.setHSL(world.mission.ground, world.mission.saturation, biome === 'volcanic' ? 0.16 : 0.38);
   const dark = biome === 'earth' ? new THREE.MeshStandardMaterial({ color: '#725134', roughness: 1 }) : world.materials.dark;
@@ -480,6 +480,68 @@ export function makeLandmarks(world, random) {
     ring(9, 1.1, light, 34);
     pillar(1, 15, dark, 0, 57);
     add(new THREE.OctahedronGeometry(3), light, 0, 66);
+  } else if (biome === 'glassworks') {
+    foundation(23);
+    const dome = add(new THREE.SphereGeometry(19, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), stone, 0, 15);
+    dome.scale.y = 1.2;
+    for (const x of [-16, 16]) {
+      pillar(2, 30, dark, x, 17);
+      pillar(1, 24, light, x, 18, 1);
+    }
+    for (const y of [8, 15]) { const rim = ring(20, .8, light, y); rim.rotation.x = Math.PI / 2; }
+    pillar(3, 12, stone, 0, 39, 0, 0, 6);
+  } else if (biome === 'carillon') {
+    foundation(23);
+    for (const x of [-18, 18]) box([4, 51, 7], stone, x, 27);
+    for (const y of [21, 48]) box([42, 3, 7], dark, 0, y);
+    for (let i = -1; i <= 1; i++) {
+      const y = 31 + Math.abs(i) * 7;
+      pillar(.7, 48 - y, dark, i * 11, (48 + y) / 2);
+      pillar(6, 10, stone, i * 11, y - 4, 0, 2.5);
+      add(new THREE.SphereGeometry(1.3, 8, 6), light, i * 11, y - 10);
+    }
+    box([38, 1, 1], light, 0, 52);
+  } else if (biome === 'cloudreef') {
+    foundation(22);
+    for (let i = 0; i < 3; i++) {
+      const x = (i - 1) * 13, y = 18 + (i % 2) * 18;
+      pillar(1.4, y, dark, x, y / 2, 0);
+      rock([12, 4.5, 9], stone, x, y);
+      const pearl = add(new THREE.SphereGeometry(4.2, 12, 8), light, x, y + 9);
+      pearl.scale.y = 1.25;
+      for (const side of [-1, 1]) branch([[x, y + 1, 0], [x + side * 7, y + 7, 0], [x + side * 5, y + 12, 0]], .7, dark);
+    }
+  } else if (biome === 'orrery') {
+    foundation(23);
+    pillar(4, 24, stone, 0, 14, 0, 7);
+    for (let i = 0; i < 3; i++) {
+      const orbit = ring(15 + i * 3, .7, i === 1 ? light : dark, 39);
+      orbit.rotation.set(i * .7 + .3, i * .8, .3);
+    }
+    add(new THREE.IcosahedronGeometry(6, 1), light, 0, 39);
+    for (const x of [-18, 18]) add(new THREE.SphereGeometry(3.5, 12, 8), stone, x, 40, 3);
+  } else if (biome === 'reedbed') {
+    foundation(21);
+    for (let i = -2; i <= 2; i++) {
+      const x = i * 7, h = 40 + (2 - Math.abs(i)) * 8;
+      branch([[x, 2, 0], [x + i * 1.2, h * .6, 0], [x + i * 2, h, 2]], 1.3, dark);
+      const bud = add(new THREE.CapsuleGeometry(2.6, 9, 6, 10), light, x + i * 2, h, 2);
+      bud.rotation.z = i * -.08;
+      for (const side of [-1, 1]) {
+        const leaf = add(new THREE.ConeGeometry(4, 20, 5), stone, x + side * 5, h * .4);
+        leaf.rotation.z = side * -.6; leaf.scale.z = .2;
+      }
+    }
+  } else if (biome === 'forge') {
+    foundation(25);
+    pillar(15, 22, stone, 0, 15, 0, 11, 8);
+    for (const y of [7, 18, 26]) { const rim = ring(15 - (y > 18 ? 4 : 0), 1.2, dark, y); rim.rotation.x = Math.PI / 2; }
+    for (const x of [-17, 17]) {
+      pillar(4, 53, stone, x, 29, 0, 3, 8);
+      pillar(4.2, 2, light, x, 54, 0, 4.2, 8);
+      branch([[x, 34, 0], [x * .5, 32, 0], [0, 26, 0]], 2, dark);
+    }
+    for (let i = -2; i <= 2; i++) box([1.2, 10, 1], light, i * 3, 14, -13.5);
   }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;

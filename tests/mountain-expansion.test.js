@@ -7,8 +7,8 @@ import { World } from '../src/world.js';
 import { filterMissions } from '../src/catalogue.js';
 
 test('six new mountain routes and six new craft extend the fleet with five-minute minimum journeys', () => {
-  assert.equal(CRAFTS.length, 30);
-  assert.equal(MISSIONS.length, 48);
+  assert.equal(CRAFTS.length, 36);
+  assert.equal(MISSIONS.length, 54);
   const routes = MISSIONS.filter(mission => mission.length >= 150000);
   assert.equal(routes.length, 6);
   assert.ok(routes.every(mission => filterMissions('', 'bridges').includes(mission)));
@@ -35,7 +35,7 @@ test('six new mountain routes and six new craft extend the fleet with five-minut
 
 test('mountain terrain stays below the road and bridge valleys have real clearance within a mesh budget', () => {
   const routes = MISSIONS.filter(mission => mission.length >= 150000 || mission.tour);
-  assert.equal(routes.length, 10);
+  assert.equal(routes.length, 16);
   for (const mission of routes) {
     const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } } });
     world.samples = world.curve.getSpacedPoints(Math.ceil(mission.length / 20));

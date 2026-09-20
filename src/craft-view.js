@@ -195,7 +195,35 @@ export function makeCraftModel(materials) {
       collar.rotation.x = Math.PI / 2;
       box([2, .2, .3], materials.metal, [s(2.8), .2, z], variants.firecrest);
     }
+    plate([[s(1), 2], [s(4.9), .4], [s(4.5), -2.6], [s(3.6), -1.8], [s(2.6), -3.1], [s(1.1), -2.2]], .09, materials.orange, .45, variants.bat);
+    for (const [x, z] of [[4.8, .4], [4.4, -2.5], [2.6, -3]]) tube([[s(1), .62, 1.7], [s(2.5), .7, .1], [s(x), .6, z]], .07, materials.metal, variants.bat);
+    tube([[s(1.4), .45, -2], [s(3.4), .7, -.4], [s(3.5), .9, 2.7], [s(2.4), .7, 5.1]], .22, materials.orange, variants.mantis);
+    for (const z of [-.4, 2.7]) add(new THREE.SphereGeometry(.38, 10, 8), materials.metal, [s(3.5), .8, z], variants.mantis);
+    plate([[s(2.6), 2.5], [s(2.4), 5.2], [s(1.95), 3.9]], .14, materials.dark, .65, variants.mantis);
+    for (const y of [.25, 1.35]) plate([[s(1.1), 1.3], [s(4.35), .3], [s(4.05), -1.45], [s(1.2), -.4]], .09, materials.orange, y, variants.petrel);
+    for (const x of [2.2, 3.9]) box([.13, 1.15, .18], materials.metal, [s(x), .85, -.2], variants.petrel);
+    for (let i = 0; i < 3; i++) {
+      const z = 1.7 - i * 1.65;
+      plate([[s(1.2), z + .65], [s(3.65), z + .35], [s(3.8), z - .6], [s(1.3), z - .65]], .38, materials.orange, .65 + i * .12, variants.rhino);
+      box([1.8, .13, .2], materials.metal, [s(2.5), 1.17 + i * .12, z], variants.rhino);
+    }
+    const fan = add(new THREE.TorusGeometry(1.2, .18, 8, 28), materials.orange, [s(3.4), .7, -.2], variants.hummingbird);
+    fan.rotation.y = side * .28;
+    for (let i = 0; i < 4; i++) {
+      const blade = box([2.05, .12, .12], materials.metal, [s(3.4), .7, -.2], variants.hummingbird);
+      blade.rotation.z = i * Math.PI / 4;
+    }
+    box([2.2, .2, .6], materials.dark, [s(2.5), .35, -.1], variants.hummingbird);
+    const dome = add(new THREE.SphereGeometry(1.1, 16, 10), capacitor, [s(3.25), .85, -.5], variants.medusa);
+    dome.scale.set(1, .62, 1.35);
+    const rim = add(new THREE.TorusGeometry(1.1, .09, 6, 28), materials.orange, [s(3.25), .75, -.5], variants.medusa);
+    rim.rotation.x = Math.PI / 2; rim.scale.y = 1.35;
+    for (let i = 0; i < 3; i++) tube([[s(2.7 + i * .5), .7, -.8], [s(3.2 + i * .4), .4, -2.7], [s(2.4 + i * .55), .1, -4.1]], .065, capacitor, variants.medusa);
   }
+  const horn = add(new THREE.ConeGeometry(.42, 1.65, 6), materials.metal, [0, 1, 3.3], variants.rhino);
+  horn.rotation.x = .65;
+  const medusaCore = add(new THREE.SphereGeometry(.75, 16, 10), capacitor, [0, 1.15, -2], variants.medusa);
+  medusaCore.scale.set(1, .7, 1.2);
   const pulseRing = add(new THREE.TorusGeometry(1.18, 0.17, 10, 40), materials.metal, [0, 0.9, -1.8], variants.pulse);
   pulseRing.rotation.x = -Math.PI / 2;
   const pulseCore = add(new THREE.TorusGeometry(0.95, 0.07, 8, 40), capacitor, [0, 0.95, -1.8], variants.pulse);
