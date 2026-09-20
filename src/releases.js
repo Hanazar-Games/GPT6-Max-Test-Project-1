@@ -7,13 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 操作与界面修复</h2>
+      <h2 id="release-title">v${version} · 山海长桥</h2>
+      <p>穿过云岭，越过深谷，向更远的山海出发。</p>
+      <ul class="release-list">
+        <li><strong>六款新艇，二十六种选择</strong>隼羽、信天翁、山猫、山岳、穿云与驮星加入机库，分别配备折翼、环翼、涵道舱、重甲浮筏、前掠长翼与科考货架。</li>
+        <li><strong>六条超长山路</strong>云脊、霁峡、赭岳、冰岚、苍岭与天穹六颗星球开放，单程 150–240 公里；最快满级飞船持续冲刺也需 5–8 分钟以上，实际驾驶更久。</li>
+        <li><strong>跨越峡谷的九十九座桥</strong>斜拉桥、悬索桥与峡谷高架桥连接高山道路，桥塔、拉索、吊索与落地桥墩构成完整结构；新增六类专属地标。</li>
+        <li><strong>大地图减少远景开销</strong>道路、山体、桥梁与地标按空间分块，镜头外的部分不再整图绘制，保留桥面与地形的连续外观。</li>
+        <li><strong>山桥长线一键查找</strong>机库增加山桥分类、最低用时与桥梁数量，驶入桥段显示桥型。星图扩至 44 张、2822.3 公里，大奖赛与远征同步扩至 44 站。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>22 个版本</span></summary>
+      <article><h3>v1.10.1 · 操作与界面修复</h3>
       <p>切换声音后继续冲刺，航向提示看得更清楚。</p>
       <ul class="release-list">
         <li><strong>声音开关不再打断冲刺</strong>修复鼠标或触屏点击声音按钮后，空格误切换声音、无法冲刺的问题；键盘操作仍保留按钮焦点。</li>
         <li><strong>远征导航不再被遮挡</strong>调整中等窄屏的导航卡片与委托面板宽度，保持两者分开，较长的航向说明在卡片内换行。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>21 个版本</span></summary>
+      </article>
       <article><h3>v1.10.0 · 巡航油门</h3>
       <p>长途松开油门，专心看前方的路。</p>
       <ul class="release-list">

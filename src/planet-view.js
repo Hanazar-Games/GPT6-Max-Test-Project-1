@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { makeLandmarks } from './landmarks.js';
 import { makeSurfaceTexture } from './surface-view.js';
 import { batchMeshes } from './model-utils.js';
+import { bridgeAt } from './bridges.js';
+import { makeBridges } from './bridge-view.js';
 
 function ribbon(world, left, right, material, height = -0.38, depth = 0) {
   const positions = [], indices = [], uvs = [];
@@ -73,10 +75,12 @@ export function makeMountainRoad(world) {
     dummy.position.set(frame.point.x, ground + height / 2, frame.point.z);
     dummy.rotation.set(0, Math.atan2(frame.tangent.x, frame.tangent.z), 0);
     dummy.scale.set(1.3, height, 2.8);
+    if (bridgeAt(world.mission, i / pierCount * world.mission.length)) dummy.scale.setScalar(0);
     dummy.updateMatrix();
     piers.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix);
   }
   world.scene.add(piers);
+  makeBridges(world);
   const signMaterial = new THREE.MeshBasicMaterial({ color: world.mission.color });
   const signs = new THREE.Group();
   const signCount = Math.max(50, Math.ceil(world.mission.length / 180));

@@ -12,6 +12,8 @@ import { makeReflectionMap, makeSurfaceTexture, terrainElevation } from './surfa
 import { makeSpaceport } from './base-view.js';
 import { batchMeshes } from './model-utils.js';
 import { createGroundSampler } from './terrain-sampler.js';
+import { bridgeDepth } from './bridges.js';
+import { partitionLandscape } from './landscape-chunks.js';
 
 let seed = 4517;
 function random() {
@@ -48,6 +50,7 @@ export class World {
 
   clearScene() {
     const resources = new Set();
+    if (this.terrainGeometry) resources.add(this.terrainGeometry);
     if (this.scene.environment) resources.add(this.scene.environment);
     this.scene.environment = null;
     this.terrainGeometry = null;
@@ -93,6 +96,7 @@ export class World {
     this.makeTrack();
     this.makeRocks();
     makePlanetScenery(this, random);
+    if (this.mission.bridges.length) partitionLandscape(this.scene, this.terrainGeometry);
     this.makeGates();
     this.makePickups();
     this.makePads();
@@ -222,19 +226,22 @@ export class World {
 
   groundInfo(x, z) {
     this.groundSampler ??= createGroundSampler(this.samples);
-    const { y, distance } = this.groundSampler(x, z);
-    const blend = THREE.MathUtils.smoothstep(distance, this.mission.endurance ? 80 : 36, this.mission.endurance ? 220 : 145);
+    const { y, distance, progress } = this.groundSampler(x, z);
+    const mountain = this.mission.bridges?.length > 0;
+    const blend = THREE.MathUtils.smoothstep(distance, mountain ? 160 : this.mission.endurance ? 80 : 36, mountain ? 400 : this.mission.endurance ? 220 : 145);
     const wave = Math.sin(x * 0.01 + Math.cos(z * 0.013) * 2) * Math.cos(z * 0.016) * 35;
     const peaks = Math.max(0, Math.sin(x * 0.009 - z * 0.007)) ** 3 * 160;
     const surface = this.terrainGeometry ? terrainElevation(this.terrainGeometry, x, z) : null;
-    return { y: surface ?? y - 7 + blend * (wave + peaks - 24), distance };
+    const valley = mountain ? bridgeDepth(this.mission, progress * this.mission.length) * (1 - THREE.MathUtils.smoothstep(distance, 200, 600)) : 0;
+    return { y: surface ?? y - (mountain ? 20 : 7) - valley + blend * (wave + peaks - 24), distance };
   }
 
   makeTerrain() {
     this.routeBounds = new THREE.Box3().setFromPoints(this.samples);
     const bounds = this.routeBounds.clone().expandByScalar(400);
     const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
-    const geometry = new THREE.PlaneGeometry(size.x, size.z, Math.max(200, Math.ceil(size.x / 36)), Math.max(200, Math.ceil(size.z / 36)));
+    const limit = this.mission.bridges?.length ? 512 : Infinity;
+    const geometry = new THREE.PlaneGeometry(size.x, size.z, Math.min(limit, Math.max(200, Math.ceil(size.x / 36))), Math.min(limit, Math.max(200, Math.ceil(size.z / 36))));
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(center.x, 0, center.z);
     const positions = geometry.attributes.position;

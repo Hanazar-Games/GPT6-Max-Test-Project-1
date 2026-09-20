@@ -18,7 +18,7 @@ export function createGroundSampler(points) {
   const root = build(segments);
   return (x, z) => {
     const bound = node => Math.max(node.minX - x, 0, x - node.maxX) ** 2 + Math.max(node.minZ - z, 0, z - node.maxZ) ** 2;
-    let nearest = Infinity, y = 0, low = Infinity, index = Infinity;
+    let nearest = Infinity, y = 0, low = Infinity, index = Infinity, progress = 0;
     const visit = node => {
       if (bound(node) > Math.max(nearest, 42 ** 2)) return;
       if (node.segments) {
@@ -27,7 +27,7 @@ export function createGroundSampler(points) {
           const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
           const d = (a.x + dx * t - x) ** 2 + (a.z + dz * t - z) ** 2;
           const level = a.y + (b.y - a.y) * t;
-          if (d < nearest || d === nearest && id < index) { nearest = d; y = level; index = id; }
+          if (d < nearest || d === nearest && id < index) { nearest = d; y = level; index = id; progress = (id + t) / (points.length - 1); }
           if (d < 42 ** 2) low = Math.min(low, level);
         }
       } else {
@@ -36,6 +36,6 @@ export function createGroundSampler(points) {
       }
     };
     visit(root);
-    return { y: Math.min(y, low), distance: Math.sqrt(nearest) };
+    return { y: Math.min(y, low), distance: Math.sqrt(nearest), progress };
   };
 }

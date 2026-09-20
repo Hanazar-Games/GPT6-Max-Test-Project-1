@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS } from '../src/missions.js';
-import { filterMissions, filterCrafts } from '../src/catalogue.js';
+import { filterMissions, filterCrafts, minimumDriveMinutes } from '../src/catalogue.js';
+import { upgradeCraft } from '../src/upgrades.js';
 
 const ids = items => items.map(item => item.id);
 
@@ -10,7 +11,7 @@ test('route categories expose every route and classify special routes by their r
   const short = filterMissions('', 'short');
   const long = filterMissions('', 'long');
   assert.equal(short.length, 25);
-  assert.equal(long.length, 13);
+  assert.equal(long.length, 19);
   assert.deepEqual([...short, ...long], MISSIONS);
   assert.deepEqual(ids(filterMissions('', 'clear')), ['overdrive', 'earth']);
   assert.deepEqual(ids(filterMissions('', 'hazard')), ['apocalypse']);
@@ -37,7 +38,7 @@ test('craft search recognizes names, roles and typed model dash variants', () =>
 });
 
 test('performance ordering ranks the full fleet and preserves catalogue order on ties', () => {
-  for (const [sort, winner] of [['boostSpeed', 'nova'], ['handling', 'dragonfly'], ['hull', 'paladin'], ['recharge', 'nautilus']]) {
+  for (const [sort, winner] of [['boostSpeed', 'nova'], ['handling', 'dragonfly'], ['hull', 'tortoise'], ['recharge', 'atlas']]) {
     const result = filterCrafts('', sort);
     assert.equal(result[0].id, winner);
     assert.equal(result.length, CRAFTS.length);
@@ -46,6 +47,18 @@ test('performance ordering ranks the full fleet and preserves catalogue order on
       if (result[i - 1][sort] === result[i][sort]) assert.ok(CRAFTS.indexOf(result[i - 1]) < CRAFTS.indexOf(result[i]));
     }
   }
+});
+
+test('minimum journey labels remain attainable lower bounds even with the fastest upgraded craft', () => {
+  const fastest = Math.max(...CRAFTS.map(craft => upgradeCraft(craft, { engine: 2 }).boostSpeed));
+  for (const mission of MISSIONS.filter(mission => mission.endurance)) {
+    const minutes = minimumDriveMinutes(mission);
+    assert.ok(minutes >= 3);
+    assert.ok(minutes * 60 <= mission.length / fastest);
+    assert.ok((minutes + 1) * 60 > mission.length / fastest);
+    assert.ok(filterMissions(`${minutes}分钟`).includes(mission));
+  }
+  assert.equal(minimumDriveMinutes(MISSIONS.at(-1)), 8);
 });
 
 test('filtered performance results retain their order without modifying the source fleet', () => {

@@ -1,11 +1,12 @@
 import { makeEnvironment } from './environment.js';
 import { makeSpecialCourse } from './special-courses.js';
+import { makeBridgeSpans } from './bridges.js';
 
-const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾'];
+const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊'];
 
 function mountainRoad(index, family) {
   const count = 6 + index % 3;
-  const peak = 240 + index % 7 * 28;
+  const peak = family >= 9 ? 1250 + index % 4 * 140 : 240 + index % 7 * 28;
   const points = [];
   if (family === 0) {
     points.push([0, 20, 510]);
@@ -31,6 +32,8 @@ function mountainRoad(index, family) {
       if (family === 6) radius = 440 + 95 * Math.cos(7 * a + phase) + 50 * Math.sin(2 * a);
       if (family === 7) radius = 1300 + 260 * Math.cos(18 * a + phase) + 110 * Math.sin(3 * a);
       if (family === 8) radius = 1350 + 340 * Math.sin(12 * a + phase) + 140 * Math.cos(4 * a);
+      if (family === 9) radius = 2500 + 500 * Math.cos(9 * a + phase) + 220 * Math.sin(3 * a);
+      if (family === 10) radius = 2600 + 580 * Math.sin(8 * a + phase) + 260 * Math.cos(3 * a);
       if (family === 4) {
         radius = 1 + 0.17 * Math.cos(6 * a + phase);
         x = Math.sign(Math.cos(a)) * Math.abs(Math.cos(a)) ** 0.65 * 450 * radius;
@@ -89,14 +92,21 @@ const planets = [
   ['overdrive', '超频星', '无限加速环', '特殊航线 · 无障碍，全路宽加速带连续接力，按住油门享受免费极速。', 'accelerator', '#8cffe0', '#071f2c', '#285465', 0.5, 0.32, 96000, 0, 69, 8, 'boost'],
   ['apocalypse', '末日星', '余烬生还线', '特殊航线 · 密集碎岩与陨石封锁废土，跟随核心穿过交替的安全缺口。', 'wasteland', '#ffaf83', '#2c1017', '#743d37', 0.035, 0.35, 99000, 2, 33, 7, 'hazard'],
   ['earth', '地球', '绿野归航', '特殊航线 · 无障碍，蓝天白云下的绿意山路，穿过树林、草坡与花海。', 'earth', '#b7efac', '#8bc5df', '#b0cdb5', 0.29, 0.56, 102000, 0, 70, 8, 'garden'],
+  ['meridian', '云脊星', '悬桥天脊', '超长山桥航线 · 翻越两千米云脊，驶过斜拉桥与峡谷高架，沿连峰天路归航。', 'viaduct', '#ffcc91', '#102b40', '#516d7c', 0.12, 0.23, 150000, 1, 71, 9],
+  ['fjord', '霁峡星', '千湾悬索', '超长山桥航线 · 蓝色峡湾切开群峰，悬索桥跨过深谷，接入高低起伏的沿岸长弯。', 'fjord', '#91e9e5', '#123747', '#527d83', 0.47, 0.36, 168000, 1, 72, 10],
+  ['badlands', '赭岳星', '赤壁天堑', '超长山桥航线 · 红褐峭壁与扶壁石塔层叠展开，高架桥连接漫长的山顶回旋。', 'buttress', '#ffb782', '#39252c', '#986b58', 0.055, 0.42, 186000, 2, 73, 9],
+  ['icefall', '冰岚星', '冰川通天', '超长山桥航线 · 冰瀑尖峰和冷光桥塔守望深谷，从峡底爬升到银蓝色山巅。', 'icefall', '#b0e5ff', '#172d46', '#7a99af', 0.57, 0.18, 204000, 2, 74, 10],
+  ['highland', '苍岭星', '云岭远廊', '超长山桥航线 · 绿色山岭间的中继林塔指向远方，连续桥梁串起整片高原。', 'relayforest', '#b8eeb2', '#173c37', '#668876', 0.34, 0.38, 222000, 1, 75, 9],
+  ['summit', '天穹星', '万峰云桥', '超长山桥航线 · 240 公里跨越冠状群峰，悬索、斜拉与高架交替连接高山大陆。', 'crownridge', '#dabdff', '#241b3c', '#736584', 0.72, 0.25, 240000, 2, 76, 10],
 ];
 
 export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special], index) => Object.freeze({
   id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, special,
   number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ({ boost: '全程加速', hazard: '障碍密集', garden: '无障碍观光' })[special] ?? ['入门', '进阶', '极限'][difficulty], variant: index,
   endurance: length >= 90000,
+  bridges: family >= 9 ? makeBridgeSpans(length, index) : Object.freeze([]),
   duration: length >= 90000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
-  cargo: length >= 90000 ? 24 + difficulty * 6 : 6 + difficulty * 2,
+  cargo: length >= 150000 ? 42 + difficulty * 6 : length >= 90000 ? 24 + difficulty * 6 : 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
   music: { root, bpm: special === 'garden' ? 112 : special === 'boost' ? 148 : 124 + index % 4 * 6, mode: special === 'garden' ? 'major' : 'minor' }, points: mountainRoad(index, family ?? index % 5),
 })));
@@ -122,6 +132,12 @@ export const CRAFTS = Object.freeze([
   { id: 'specter', model: 'LC–52', name: '幽影', role: '掠袭型', description: '菱形折翼与双叉尾，1638 km/h 掠过夜色群峰。', speed: 218, boostSpeed: 455, handling: 42, hull: 90, recharge: 9, color: '#c29aeb', scale: [0.91, 0.88, 1.08] },
   { id: 'sunbird', model: 'LC–56', name: '金乌', role: '蓄能型', description: '分段太阳翼与尾部能量扇，1512 km/h 均衡长航。', speed: 200, boostSpeed: 420, handling: 43, hull: 100, recharge: 20, color: '#ffd06f', scale: [0.96, 0.93, 1] },
   { id: 'nova', model: 'LC–60', name: '新星', role: '超速型', description: '箭形侧翼与三棱背鳍，1728 km/h 驶向遥远新世界。', speed: 230, boostSpeed: 480, handling: 38, hull: 75, recharge: 8, color: '#ff99cb', scale: [0.86, 0.9, 1.16] },
+  { id: 'kestrel', model: 'LC–63', name: '隼羽', role: '山路型', description: '双层折翼与外倾翼梢，1674 km/h 穿越连峰山桥。', speed: 215, boostSpeed: 465, handling: 49, hull: 85, recharge: 11, color: '#ffc08f', scale: [0.94, 0.94, 1.04] },
+  { id: 'albatross', model: 'LC–66', name: '信天翁', role: '巡天型', description: '连体环翼与长肩支架，1494 km/h 从容掠过深谷。', speed: 205, boostSpeed: 415, handling: 42, hull: 125, recharge: 18, color: '#bde6ff', scale: [0.96, 0.9, 1.06] },
+  { id: 'lynx', model: 'LC–69', name: '山猫', role: '矢量型', description: '四座涵道悬浮舱与短翼骨架，1422 km/h 灵巧横移。', speed: 185, boostSpeed: 395, handling: 52, hull: 105, recharge: 15, color: '#a4edbe', scale: [0.92, 0.95, 0.96] },
+  { id: 'tortoise', model: 'LC–72', name: '山岳', role: '工程型', description: '履带状重甲浮筏与外露承力框，1260 km/h、210 装甲稳行远路。', speed: 170, boostSpeed: 350, handling: 36, hull: 210, recharge: 17, color: '#deb98b', scale: [1.04, 1.03, 1.02] },
+  { id: 'arrow', model: 'LC–75', name: '穿云', role: '破风型', description: '分体前掠长翼与双竖尾，1710 km/h 掠过桥塔云层。', speed: 225, boostSpeed: 475, handling: 40, hull: 85, recharge: 12, color: '#bba5ff', scale: [0.9, 0.92, 1.13] },
+  { id: 'atlas', model: 'LC–78', name: '驮星', role: '科考型', description: '双层科考货架与环形蓄能舱，1458 km/h、22/s 充能适合洲际长航。', speed: 195, boostSpeed: 405, handling: 40, hull: 160, recharge: 22, color: '#79daca', scale: [1.02, 1, 1.02] },
 ]);
 
 export function makeCourse(mission) {

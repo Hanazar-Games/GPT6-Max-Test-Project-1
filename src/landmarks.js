@@ -379,6 +379,70 @@ export function makeLandmarks(world, random) {
     }
     ring(9, 0.7, light, 28);
     ring(12, 0.9, stone, 28).rotation.y = 0.65;
+  } else if (biome === 'viaduct') {
+    foundation(23);
+    for (const side of [-1, 1]) {
+      box([5, 64, 7], stone, side * 15, 34);
+      box([.6, 56, .8], light, side * 15, 35, -3.8);
+      for (let i = 0; i < 4; i++) {
+        const brace = box([2, 24, 2], dark, side * 7, 12 + i * 14);
+        brace.rotation.z = side * -.65;
+      }
+    }
+    box([39, 4, 12], stone, 0, 66);
+    box([33, 1, 10], light, 0, 69);
+    pillar(1, 15, dark, 0, 77);
+  } else if (biome === 'fjord') {
+    foundation(24);
+    for (let i = 0; i < 3; i++) {
+      const y = 17 + i * 15, radius = 20 - i * 4;
+      ring(radius, 2.4, stone, y, Math.PI);
+      for (const side of [-1, 1]) pillar(2, y, dark, side * radius, y / 2);
+      ring(radius - 3, .45, light, y, Math.PI);
+    }
+    pillar(3, 48, stone, 0, 24);
+    add(new THREE.OctahedronGeometry(4), light, 0, 58);
+  } else if (biome === 'buttress') {
+    foundation(25);
+    for (let i = -2; i <= 2; i++) {
+      const height = 62 - Math.abs(i) * 14;
+      for (let level = 0; level < 5; level++) {
+        box([8 - level * .6, height / 5, 18 - level * 2], stone, i * 9, 3 + (level + .5) * height / 5);
+        box([8 - level * .6, .6, 18 - level * 2], dark, i * 9, 3 + level * height / 5);
+      }
+      box([.8, height * .75, .4], light, i * 9, height / 2, -9.3);
+    }
+  } else if (biome === 'icefall') {
+    foundation(22);
+    for (let i = -2; i <= 2; i++) {
+      const height = 57 - Math.abs(i) * 8;
+      const blade = box([6, height, 11], stone, i * 8, height / 2 + 3, Math.abs(i) * 3);
+      blade.rotation.z = i * -.1;
+      branch([[i * 8, 4, -6], [i * 9, height * .5, -5], [i * 10, height + 4, -4]], .7, light);
+      rock([5, 4, 6], dark, i * 9, 4, -7);
+    }
+    ring(13, 1, light, 39).rotation.y = Math.PI / 2;
+  } else if (biome === 'relayforest') {
+    foundation(20);
+    for (let i = 0; i < 3; i++) {
+      const x = (i - 1) * 16, height = 49 - Math.abs(i - 1) * 12;
+      pillar(2.7, height, dark, x, height / 2, 0, 1.5);
+      for (let j = 0; j < 3; j++) {
+        const crown = add(new THREE.ConeGeometry(12 - j * 3, 14, 8), stone, x, height - 16 + j * 9);
+        crown.rotation.y = i + j * .3;
+      }
+      const halo = ring(8, .55, light, height + 2); halo.position.x = x; halo.rotation.x = Math.PI / 2;
+      pillar(.45, 9, light, x, height + 10);
+    }
+  } else if (biome === 'crownridge') {
+    foundation(25);
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4, x = Math.cos(angle) * 17, z = Math.sin(angle) * 17;
+      pillar(4, 35 + i % 2 * 12, stone, x, 20, z, 1.2, 5);
+      branch([[x, 34, z], [x * .7, 48, z * .7], [0, 58, 0]], .8, light);
+    }
+    for (const y of [14, 30]) { const rim = ring(18, 2, dark, y); rim.rotation.x = Math.PI / 2; }
+    add(new THREE.OctahedronGeometry(5), light, 0, 60);
   }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;

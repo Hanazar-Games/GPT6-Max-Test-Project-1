@@ -9,7 +9,8 @@ import './delivery.css';
 import './cruise.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
-import { MISSION_CATEGORIES, filterMissions, filterCrafts } from './catalogue.js';
+import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveMinutes } from './catalogue.js';
+import { BRIDGE_NAMES, bridgeAt } from './bridges.js';
 import { craftIcon } from './craft-icons.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
 import { RACERS, buildField } from './pilots.js';
@@ -199,6 +200,7 @@ function updateLoadout() {
     hazard: '本航线没有加速带，密集岩障之间留有交替缺口，跟随蓝色核心横移避让；F 可跃过障碍，注意陨石红圈并为跃升保留能量。',
     garden: '本航线无障碍与陨石。沿中央收集核心、通过导航门，绿色加速带提供短时免费冲刺；航道边缘仍会损伤艇体。',
   }[mission.special] ?? '绿色加速带提供免费超频，F 可跃过障碍；留意岩石、巡逻机和陨石预警。';
+  if (mission.bridges.length) $('route-guide').textContent += ` 本航线长 ${mission.length / 1000} 公里，沿途有 ${mission.bridges.length} 座斜拉桥、悬索桥与峡谷高架桥；上下山与桥面均需主动驾驶，桥上保留障碍与导航门。`;
   const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
   $('guide').querySelector('.environment-guide').hidden = !meteors && !gravity;
   $('meteor-help').hidden = !meteors;
@@ -209,7 +211,7 @@ function updateLoadout() {
     const minX = Math.min(...xs), minZ = Math.min(...zs);
     const scale = Math.min(85 / (Math.max(...xs) - minX), 45 / (Math.max(...zs) - minZ));
     const points = preview.map(({ x, z }) => `${5 + (x - minX) * scale},${5 + (z - minZ) * scale}`).join(' ');
-    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ' <i>·</i> ≥3 分钟' : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
+    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ` <i>·</i> ≥${minimumDriveMinutes(option)} 分钟` : ''}${option.bridges.length ? ` <i>·</i> ${option.bridges.length} 座桥` : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
   document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
   $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
@@ -615,7 +617,9 @@ function updateHUD() {
   document.querySelector('.mission-heading .eyebrow').textContent = cup ? `CUP / ${cup.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : `OPERATION / ${game.mission.number} · ${game.craft.model}`;
   if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}`;
   document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
-  refs.sector.innerHTML = game.gates === 6 ? '最后一程<span class="sector-stage">返回基地</span>' : `${game.mission.name}<span class="sector-stage">第 ${String(game.gates + 1).padStart(2, '0')} 区段</span>`;
+  const bridge = bridgeAt(game.mission, game.distance);
+  const sectorName = bridge ? `${BRIDGE_NAMES[bridge.kind]} ${String(bridge.id + 1).padStart(2, '0')}` : game.gates === 6 ? '最后一程' : game.mission.name;
+  refs.sector.innerHTML = `${sectorName}<span class="sector-stage">${game.gates === 6 ? '返回基地' : `第 ${String(game.gates + 1).padStart(2, '0')} 区段`}</span>`;
   refs.objective.textContent = delivery.needed ? `还需 ${delivery.needed} 枚核心 · 前方剩余 ${delivery.remaining} 枚` : game.gates < 6 ? `核心已装载 · 还需 ${6 - game.gates} 座导航门` : '能量已装载 · 沿航线返回基地';
   refs['next-distance'].textContent = formatDistance((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance);
   refs['next-label'].textContent = `${game.gates < 6 ? '下一座导航门' : '返航基地'}${delivery.shortfall ? ' · 前方核心不足' : ''}`;

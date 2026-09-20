@@ -145,6 +145,38 @@ export function makeCraftModel(materials) {
     plate([[s(0.95), 1.7], [s(3.6), 4.75], [s(3.15), -2.3], [s(1.4), -3.4]], 0.1, materials.orange, 0.22, variants.nova);
     tube([[s(3.48), 0.43, 4.1], [s(3.1), 0.43, 0], [s(2.5), 0.43, -2.5]], 0.055, materials.cyan, variants.nova);
     box([0.12, 0.07, 0.7], materials.cyan, [s(0.75), 0.55, 2.4]);
+    for (const level of [0, 1]) {
+      plate([[s(1.05), 2.2 - level], [s(4.1), .4 - level], [s(3.6), -1.5 - level], [s(1.15), -.6 - level]], .1, materials.orange, .25 + level * .6, variants.kestrel);
+      const tip = box([.12, .9, 1.1], materials.metal, [s(3.7), .65 + level * .6, -.2 - level], variants.kestrel);
+      tip.rotation.z = -side * .4;
+    }
+    tube([[s(1.1), .3, 2.8], [s(4.5), .5, 1.5], [s(4.4), .5, -2.6], [s(1.1), .3, -3]], .25, materials.orange, variants.albatross);
+    plate([[s(1), .8], [s(4.5), .1], [s(4.4), -.5], [s(1.2), -.7]], .12, materials.metal, .3, variants.albatross);
+    for (const z of [2, -2]) {
+      box([2.2, .22, .3], materials.metal, [s(2.6), .35, z], variants.lynx);
+      const duct = add(new THREE.TorusGeometry(.8, .22, 8, 24), materials.orange, [s(3.8), .35, z], variants.lynx);
+      duct.rotation.x = Math.PI / 2;
+      const lift = add(new THREE.TorusGeometry(.55, .08, 6, 20), materials.cyan, [s(3.8), .4, z], variants.lynx);
+      lift.rotation.x = Math.PI / 2;
+      box([1.3, .1, .14], materials.dark, [s(3.8), .35, z], variants.lynx);
+      box([.14, .1, 1.3], materials.dark, [s(3.8), .35, z], variants.lynx);
+    }
+    plate([[s(2), 3], [s(4), 2.2], [s(4), -3.2], [s(2), -3.4]], .85, materials.dark, .1, variants.tortoise);
+    for (let i = 0; i < 7; i++) {
+      box([1.8, .17, .42], materials.orange, [s(3.05), 1.1, 2.1 - i * .75], variants.tortoise);
+      box([.12, .7, .22], materials.metal, [s(4), .75, 2.1 - i * .75], variants.tortoise);
+    }
+    tube([[s(1.2), .5, 1.8], [s(2), 1.8, 1.2], [s(2.2), 1.8, -2.3], [s(1.3), .6, -3]], .14, materials.metal, variants.tortoise);
+    plate([[s(.85), .8], [s(3.2), 4.6], [s(3.85), 4.2], [s(2.8), -2.8], [s(1.2), -3.3]], .12, materials.orange, .36, variants.arrow);
+    plate([[s(2.9), 3.7], [s(3.5), 4.2], [s(3.05), .1]], .04, materials.cyan, .59, variants.arrow);
+    const tail = box([.12, 1.8, 1.6], materials.metal, [s(1.4), 1.2, -2.8], variants.arrow);
+    tail.rotation.z = side * -.22;
+    for (const y of [.4, 1.05]) {
+      box([1.5, .46, 3.6], materials.orange, [s(3.35), y, -.4], variants.atlas);
+      for (const z of [-1.8, 1]) box([1.7, .08, .2], materials.dark, [s(3.35), y + .3, z], variants.atlas);
+    }
+    const cell = add(new THREE.TorusGeometry(.65, .13, 8, 24), capacitor, [s(3.35), 1.65, -.4], variants.atlas);
+    cell.rotation.x = Math.PI / 2;
   }
   const pulseRing = add(new THREE.TorusGeometry(1.18, 0.17, 10, 40), materials.metal, [0, 0.9, -1.8], variants.pulse);
   pulseRing.rotation.x = -Math.PI / 2;
