@@ -11,7 +11,7 @@ import './rewards.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, getJumpRingCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } from './catalogue.js';
-import { POWERUPS } from './route-rewards.js';
+import { POWERUPS, getRewardProgress, getSpeedRingCue } from './route-rewards.js';
 import { BRIDGE_NAMES, bridgeAt } from './bridges.js';
 import { craftIcon } from './craft-icons.js';
 import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
@@ -90,7 +90,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 const $ = (id) => document.getElementById(id);
-document.querySelector('.resource-panel').insertAdjacentHTML('afterbegin', '<div id="route-tools" class="route-tools" hidden><span id="power-status"></span><span id="challenge-status"></span></div>');
+document.querySelector('.resource-panel').insertAdjacentHTML('afterbegin', `<div id="route-tools" class="route-tools" hidden><div id="power-effects" class="power-effects">${['shield', 'magnet'].map(kind => `<div id="effect-${kind}" class="power-effect" style="--effect:${POWERUPS[kind].color}" hidden><span>${POWERUPS[kind].name}</span><b id="${kind}-time"></b><i aria-hidden="true"></i></div>`).join('')}</div><span id="power-status"></span><span id="challenge-status"></span></div>`);
 mountReleases();
 $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
@@ -601,6 +601,23 @@ function formatDistance(distance) {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} KM` : `${meters} M`;
 }
 
+function updateRouteTools() {
+  $('route-tools').hidden = !game.mission.tour;
+  $('hud').classList.toggle('has-route-tools', !!game.mission.tour);
+  if (!game.mission.tour) return;
+  $('power-effects').hidden = game.shieldTime <= 0 && game.magnetTime <= 0;
+  for (const kind of ['shield', 'magnet']) {
+    const remaining = game[`${kind}Time`], effect = $(`effect-${kind}`);
+    effect.hidden = remaining <= 0;
+    effect.dataset.expiring = String(remaining > 0 && remaining <= 3);
+    effect.style.setProperty('--remaining', `${Math.min(1, remaining / POWERUPS[kind].duration) * 100}%`);
+    $(`${kind}-time`).textContent = `${Math.ceil(remaining)}s`;
+  }
+  const rewards = getRewardProgress(game);
+  $('power-status').textContent = rewards.nextPowerup ? `前方补给 ${rewards.powerupsAhead} · ${formatDistance(rewards.nextPowerup.distance - game.distance)}` : game.powerupsTaken.size === game.course.powerups.length ? '补给已收齐' : '前方无补给';
+  $('challenge-status').textContent = `命中 ${game.challengeHits}/${game.course.challenges.length} · 余 ${rewards.challengesAhead} · 连锁 ${game.challengeChain}`;
+}
+
 function updateHUD() {
   const delivery = getDeliveryStatus(game);
   const seconds = Math.floor(game.time);
@@ -646,7 +663,7 @@ function updateHUD() {
   } else if (cue.kind === 'powerup' || cue.kind === 'challenge') {
     const title = cue.kind === 'powerup' ? POWERUPS[cue.reward].name : cue.reward === 'jump' ? '跃升环' : '极速环';
     $('cue-action').textContent = `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`;
-    $('cue-detail').textContent = cue.kind === 'powerup' ? '可选补给 · 低空接近自动拾取' : cue.reward === 'speed' ? `可选挑战 · 低空 ≥${Math.ceil(game.craft.speed * .9 * 3.6)} km/h` : `${getJumpRingCue(game, cue.distance).text} · 环内 2.8–6.2m`;
+    $('cue-detail').textContent = cue.kind === 'powerup' ? game.height >= 2.3 ? '先回低空 · 高度需低于 2.3m' : '可选补给 · 低空接近自动拾取' : cue.reward === 'speed' ? getSpeedRingCue(game).text : `${getJumpRingCue(game, cue.distance).text} · 环内 2.8–6.2m`;
   } else if (cue.kind === 'gate') {
     $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
@@ -661,9 +678,7 @@ function updateHUD() {
   $('combo-value').textContent = game.combo;
   $('combo-multiplier').textContent = `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`;
   $('combo-panel').classList.toggle('active', game.combo >= 3);
-  $('route-tools').hidden = !game.mission.tour;
-  $('power-status').textContent = [game.shieldTime > 0 ? `护盾 ${Math.ceil(game.shieldTime)}s` : '', game.magnetTime > 0 ? `磁吸 ${Math.ceil(game.magnetTime)}s` : ''].filter(Boolean).join(' · ') || '道具待拾取';
-  $('challenge-status').textContent = `挑战 ${game.challengeHits}/${game.course.challenges.length} · 连锁 ${game.challengeChain}`;
+  updateRouteTools();
   $('jump-status').textContent = game.height > 0 ? `低空跃升 ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪';
   if (lowGravity && game.height > 0) $('jump-status').textContent = `低重力滑翔 ${game.height.toFixed(1)}m`;
   document.querySelector('[data-control="jump"]').setAttribute('aria-disabled', String(!isJumpReady(game)));

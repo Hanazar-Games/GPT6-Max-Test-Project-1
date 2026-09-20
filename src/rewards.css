@@ -1,6 +1,15 @@
-.route-tools { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; font: 10px var(--mono); color: #d8c5ef; }
+.route-tools { display: grid; gap: 4px; margin-bottom: 8px; padding: 6px 7px; border: 1px solid #b5d4e42b; background: #081b29eb; font: 10px var(--mono); color: #b4c8d6; }
 .route-tools[hidden] { display: none; }
 .route-tools span { white-space: nowrap; }
+.power-effects { display: flex; gap: 8px; }
+.power-effect { position: relative; display: flex; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; color: var(--effect); padding: 5px 7px 9px; background: #081b29dc; border: 1px solid #b5d4e42b; }
+.power-effect[hidden] { display: none; }
+.power-effect b { font-weight: 500; }
+.power-effect i { position: absolute; left: 0; bottom: 0; width: var(--remaining); height: 2px; background: currentColor; }
+.power-effect[data-expiring="true"] { color: #ffd18c; }
+#challenge-status { color: #d8c5ef; }
+.hud.has-route-tools .jump-indicator { margin-bottom: 48px; }
+@media (max-height: 600px) { .hud.has-route-tools .jump-indicator { margin-bottom: 0; } }
 .result-details { flex-wrap: wrap; }
 .result-details > span { white-space: nowrap; }
 @media (max-width: 600px), (max-height: 650px) {

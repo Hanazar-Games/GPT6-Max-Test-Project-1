@@ -1,10 +1,22 @@
 export const POWERUPS = Object.freeze({
-  shield: { name: '护盾', color: '#89cfff', description: '12 秒内抵挡一次碰撞' },
-  magnet: { name: '磁吸', color: '#ddabff', description: '8 秒内核心吸附范围至少 9 米' },
+  shield: { name: '护盾', color: '#89cfff', duration: 12, description: '12 秒内抵挡一次碰撞' },
+  magnet: { name: '磁吸', color: '#ddabff', duration: 8, description: '8 秒内核心吸附范围至少 9 米' },
   repair: { name: '维修', color: '#99f2b0', description: '恢复 35 装甲与 30 能量' },
 });
 
 export const pickupRange = game => game.magnetTime > 0 ? Math.max(9, game.craft.pickupRange) : game.craft.pickupRange;
+
+export function getRewardProgress(game) {
+  const supplies = game.course.powerups.filter(item => item.distance >= game.distance - 3 && !game.powerupsTaken.has(item.id));
+  const challengesAhead = game.course.challenges.filter(item => item.distance >= game.distance && !game.challengesResolved.has(item.id)).length;
+  return { powerupsAhead: supplies.length, nextPowerup: supplies[0] ?? null, challengesAhead };
+}
+
+export function getSpeedRingCue(game) {
+  if (game.height >= 2.3) return { action: 'descend', text: '先回低空 · 高度需低于 2.3m' };
+  const missing = game.craft.speed * .9 - game.speed;
+  return missing > 0 ? { action: 'accelerate', text: `继续加速 · 还差 ${Math.ceil(missing * 3.6)} km/h` } : { action: 'ready', text: '速度达标 · 保持低空对准环心' };
+}
 
 export function rewardCue(game) {
   const candidates = [

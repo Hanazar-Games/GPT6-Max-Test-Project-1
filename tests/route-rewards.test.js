@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS, makeCourse } from '../src/missions.js';
 import { createGame, startGame, updateGame, togglePause, getFlightCue } from '../src/game.js';
-import { pickupRange } from '../src/route-rewards.js';
+import { pickupRange, getRewardProgress, getSpeedRingCue } from '../src/route-rewards.js';
 
 function running() {
   const game = createGame();
@@ -10,6 +10,57 @@ function running() {
   for (const key of Object.keys(game.course)) game.course[key] = [];
   return game;
 }
+
+test('reward progress excludes missed and collected supplies while preserving the pickup contact window', () => {
+  const game = running();
+  game.course.powerups = [
+    { id: 0, kind: 'shield', distance: 100, lane: 0 },
+    { id: 1, kind: 'repair', distance: 200, lane: 0 },
+    { id: 2, kind: 'magnet', distance: 300, lane: 0 },
+  ];
+  game.distance = 103;
+  assert.equal(getRewardProgress(game).powerupsAhead, 3);
+  game.distance = 103.01;
+  assert.equal(getRewardProgress(game).powerupsAhead, 2);
+  assert.equal(getRewardProgress(game).nextPowerup.id, 1);
+  game.powerupsTaken.add(1);
+  assert.equal(getRewardProgress(game).nextPowerup.id, 2);
+  game.distance = 304;
+  assert.equal(getRewardProgress(game).powerupsAhead, 0);
+  assert.equal(getRewardProgress(game).nextPowerup, null);
+  game.distance = 0;
+  assert.equal(getRewardProgress(game).powerupsAhead, 2);
+  assert.equal(game.powerupsTaken.size, 1);
+});
+
+test('remaining rings follow unresolved forward crossings through misses, rewinds and restarts', () => {
+  const game = createGame('cascade');
+  game.course.challenges = [{ id: 0, kind: 'speed', distance: 100, lane: 0 }, { id: 1, kind: 'jump', distance: 200, lane: 0 }];
+  game.challengesResolved.add(0); game.distance = 150;
+  assert.equal(getRewardProgress(game).challengesAhead, 1);
+  game.distance = 250;
+  assert.equal(getRewardProgress(game).challengesAhead, 0);
+  game.distance = 0;
+  assert.equal(getRewardProgress(game).challengesAhead, 1);
+  startGame(game);
+  assert.equal(getRewardProgress(game).challengesAhead, game.course.challenges.length);
+  assert.equal(getRewardProgress(game).powerupsAhead, game.course.powerups.length);
+});
+
+test('speed-ring guidance distinguishes airborne, under-speed and ready craft using the current upgrades', () => {
+  for (const levels of [{}, { engine: 2 }]) {
+    const game = createGame('cascade', 'scout', levels);
+    game.speed = game.craft.speed * .9;
+    assert.equal(getSpeedRingCue(game).action, 'ready');
+    game.height = 2.3;
+    assert.equal(getSpeedRingCue(game).action, 'descend');
+    game.speed -= .1;
+    assert.equal(getSpeedRingCue(game).action, 'descend');
+    game.height = 0;
+    assert.equal(getSpeedRingCue(game).action, 'accelerate');
+    assert.match(getSpeedRingCue(game).text, /1 km\/h/);
+  }
+});
 
 test('the original rally routes retain their distances and rewards stay ordered across the atlas', () => {
   assert.equal(MISSIONS.length, 54); assert.equal(CRAFTS.length, 36);

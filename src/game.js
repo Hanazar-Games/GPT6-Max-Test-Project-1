@@ -1,7 +1,7 @@
 import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
-import { firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
+import { POWERUPS, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
 
 export const PHYSICS = Object.freeze({ width: 15, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 const STEERING_RESPONSE = 9;
@@ -242,8 +242,8 @@ export function updateGame(game, input, delta) {
     const item = game.course.powerups[i];
     if (game.powerupsTaken.has(item.id) || !(courseContact(item, previous, game, 3, 4)?.height < 2.3)) continue;
     game.powerupsTaken.add(item.id);
-    if (item.kind === 'shield') game.shieldTime = 12;
-    if (item.kind === 'magnet') game.magnetTime = 8;
+    if (item.kind === 'shield') game.shieldTime = POWERUPS.shield.duration;
+    if (item.kind === 'magnet') game.magnetTime = POWERUPS.magnet.duration;
     if (item.kind === 'repair') { game.hull = Math.min(game.craft.hull, game.hull + 35); game.energy = Math.min(100, game.energy + 30); }
     game.events.push({ type: 'powerup', kind: item.kind });
   }

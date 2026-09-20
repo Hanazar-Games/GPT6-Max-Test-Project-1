@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 航程精修</h2>
+      <h2 id="release-title">v${version} · 补给领航</h2>
+      <p>补给还有多远，护盾还能撑多久，一眼看清。</p>
+      <ul class="release-list">
+        <li><strong>下一份补给心中有数</strong>道具仪表显示前方补给数量与下一份距离，区分全部收齐和前方已无补给；漏门回退后按实际位置重新计算。</li>
+        <li><strong>护盾与磁吸独立计时</strong>蓝色护盾、紫色磁吸各有倒计时条，最后三秒转为暖色提示；暂停冻结，消耗或到期自动收起，重飞清空。</li>
+        <li><strong>极速环提示当前差距</strong>速度不足时显示还差多少 km/h，高度过高时提醒回落，达标后提示对准环心；改装后的速度要求同步更新，腾空接近补给也会提示高度要求。</li>
+        <li><strong>剩余挑战更明确</strong>同时显示命中数、剩余环数和当前连锁，已判定的挑战不会在回退后重新计入。调整道具航线的跃升提示间距，避免与计时条重叠；1.13.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>26 个版本</span></summary>
+      <article><h3>v1.13.1 · 航程精修</h3>
       <p>找准想去的航线，听清沿途的补给，把握跃升时机。</p>
       <ul class="release-list">
         <li><strong>按里程直达航线</strong>星图支持 20km、20 km、20公里等写法，也可组合星球和分类筛选；精确匹配长度，20 公里不会混入 120 公里路线。</li>
@@ -16,7 +25,8 @@ export function mountReleases() {
         <li><strong>三种补给，三种声音</strong>护盾、磁吸与维修采用不同音型，并为音效预留播放容量，减少密集配乐挤掉警告声的情况。</li>
         <li><strong>结算更快找到下一步</strong>大奖赛与远征默认收起完整 54 站航程，显示完成进度，可点击或用键盘展开；本站成绩与补给改装更靠前。1.13.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>25 个版本</span></summary>
+      </article>
+
       <article><h3>v1.13.0 · 群星远行</h3>
       <p>换上新的飞翼，沿星冠山路驶向更远的群湾。</p>
       <ul class="release-list">
