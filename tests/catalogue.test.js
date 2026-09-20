@@ -70,3 +70,14 @@ test('filtered performance results retain their order without modifying the sour
   assert.deepEqual(CRAFTS, original);
   assert.deepEqual(filterCrafts('not-a-craft', 'boostSpeed'), []);
 });
+
+test('distance searches accept unit and spacing variants without matching longer routes', () => {
+  for (const query of ['20km', '20 km', '20公里', '20 千米', '２０ ＫＭ', '20.0km']) {
+    assert.deepEqual(ids(filterMissions(query)), ['cascade', 'regatta', 'lantern'], query);
+  }
+  assert.deepEqual(ids(filterMissions('50km 山桥', 'bridges')), ['marathon']);
+  assert.deepEqual(ids(filterMissions('7.4公里', 'short')), ['glacier']);
+  assert.deepEqual(ids(filterMissions('120 km')), ['terrace']);
+  assert.deepEqual(ids(filterMissions('20km', 'short')), []);
+  assert.deepEqual(ids(filterMissions('84 km 铸火', 'tour')), ['emberforge']);
+});

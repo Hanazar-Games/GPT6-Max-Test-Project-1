@@ -33,3 +33,11 @@ test('Earth uses a major harmony and a calmer tempo than the accelerator route',
   const pads = composeBeat(0, earth, 0, true).filter(note => note.kind === 'pad');
   assert.ok(Math.abs(pads[1].frequency / pads[0].frequency - 2 ** (4 / 12)) < 1e-8);
 });
+
+test('every planet keeps tonal instruments in a comfortable register across the full phrase', () => {
+  for (const mission of MISSIONS) for (const menu of [false, true]) {
+    const pitched = Array.from({ length: 128 }, (_, beat) => composeBeat(beat, mission.music, 1, menu)).flat().filter(note => !['kick', 'snare', 'hat'].includes(note.kind));
+    assert.ok(pitched.every(note => note.frequency >= 40 && note.frequency <= 1800), mission.id);
+    assert.ok(pitched.some(note => note.frequency <= 180), `${mission.id}: bass register`);
+  }
+});

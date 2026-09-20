@@ -129,3 +129,29 @@ test('high-speed percussion is stopped by pause and music mute without silencing
   audio.setState('paused');
   assert.equal(audio.voices.size, 0);
 });
+
+test('shield, magnet and repair sounds have distinct cues and respect the effects volume', async () => {
+  const audio = await setup(), cues = new Set();
+  for (const kind of ['shield', 'magnet', 'repair']) {
+    const before = audio.context.oscillators.length;
+    audio.event('powerup', kind);
+    const notes = audio.context.oscillators.slice(before);
+    assert.ok(notes.length > 0);
+    cues.add(JSON.stringify(notes.map(note => [note.frequency.value, note.type])));
+    audio.stopVoices();
+  }
+  assert.equal(cues.size, 3);
+  audio.setVolume('sfx', 0);
+  for (const kind of ['shield', 'magnet', 'repair']) audio.event('powerup', kind);
+  assert.equal(audio.voices.size, 0);
+});
+
+test('dense music leaves headroom for immediate warning and impact sounds', async () => {
+  const audio = await setup();
+  for (let i = 0; i < 60; i++) audio.tone(440, 2, 0, 'sine', 'music');
+  assert.ok(audio.voices.size <= 36);
+  const before = audio.context.oscillators.length;
+  audio.event('meteor-warning'); audio.event('impact');
+  assert.equal(audio.context.oscillators.length - before, 4);
+  assert.ok(audio.voices.size <= 48);
+});

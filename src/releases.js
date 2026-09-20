@@ -7,7 +7,17 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 群星远行</h2>
+      <h2 id="release-title">v${version} · 航程精修</h2>
+      <p>找准想去的航线，听清沿途的补给，把握跃升时机。</p>
+      <ul class="release-list">
+        <li><strong>按里程直达航线</strong>星图支持 20km、20 km、20公里等写法，也可组合星球和分类筛选；精确匹配长度，20 公里不会混入 120 公里路线。</li>
+        <li><strong>跃升提示跟上实际高度</strong>稳速时提前给出起跳窗口，起步与冲刺提速时先提示稳住速度；距离过近、能量不足、冷却与已经腾空时分别提示，避免来不及起跳仍显示“现在跃升”。</li>
+        <li><strong>星球配乐保持舒适音区</strong>修正后续星球旋律与低音不断升高的问题，保留各星球旋律、和声和随速度变化的编排。</li>
+        <li><strong>三种补给，三种声音</strong>护盾、磁吸与维修采用不同音型，并为音效预留播放容量，减少密集配乐挤掉警告声的情况。</li>
+        <li><strong>结算更快找到下一步</strong>大奖赛与远征默认收起完整 54 站航程，显示完成进度，可点击或用键盘展开；本站成绩与补给改装更靠前。1.13.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>25 个版本</span></summary>
+      <article><h3>v1.13.0 · 群星远行</h3>
       <p>换上新的飞翼，沿星冠山路驶向更远的群湾。</p>
       <ul class="release-list">
         <li><strong>六款新艇，三十六种选择</strong>狐蝠、螳螂、海燕、犀甲、蜂鸟与水母加入机库，采用膜翼、折臂长矛、双层翼、分段重甲、竖置双环与发光穹舱，按机动、装甲和续航各展所长。</li>
@@ -16,7 +26,8 @@ export function mountReleases() {
         <li><strong>沿途风景各有面貌</strong>镜面穹顶、钟架、浮礁光珠、立体星仪、芦苇塔和熔炉建筑构成六类新地标，配套星球色调与程序配乐。</li>
         <li><strong>全星图同步扩展</strong>54 条航线合计 3244.3 公里、122 座跨谷桥；大奖赛与远征扩至 54 站。检查新模型取景、道路净空、全部载具通关与道具布局，1.12.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>24 个版本</span></summary>
+      </article>
+
       <article><h3>v1.12.0 · 道具拉力</h3>
       <p>拾起沿途补给，穿过挑战光环，跑完属于你的山海马拉松。</p>
       <ul class="release-list">

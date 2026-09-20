@@ -8,7 +8,7 @@ import './compact.css';
 import './delivery.css';
 import './cruise.css';
 import './rewards.css';
-import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, isJumpReady, PHYSICS } from './game.js';
+import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, getJumpRingCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } from './catalogue.js';
 import { POWERUPS } from './route-rewards.js';
@@ -111,11 +111,11 @@ $('hangar-summary').insertAdjacentHTML('afterend', `${ghostSetting('')}<p id="gh
 $('guide-ready').insertAdjacentHTML('beforebegin', ghostSetting('-guide'));
 $('result-rating').insertAdjacentHTML('beforebegin', '<div id="result-challenge" class="result-challenge"></div><details id="split-review" class="split-review"><summary>分段飞行报告 <span>展开查看 ↓</span></summary><table><thead><tr><th scope="col">航标</th><th scope="col">累计用时</th><th scope="col">累计差距</th><th scope="col">本段差距</th></tr></thead><tbody id="result-splits"></tbody></table><p>对比本次起飞前的个人最快航程；负值表示更快。</p></details>');
 $('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="mode-options" aria-label="飞行模式"><button data-mode="delivery" aria-pressed="true"><span>自由速递<small>自由选择航线 · 挑战个人幽灵</small></span><b>↗</b></button><button data-mode="cup" aria-pressed="false"><span>月环大奖赛<small>${MISSIONS.length} 站连赛 · 四艇竞速 · 争夺月环杯</small></span>${icon('trophy')}</button></div><div id="cup-brief" class="cup-brief" hidden><strong>一款飞船，${MISSIONS.length} 站征途。</strong><p>从${MISSIONS[0].planet}到${MISSIONS.at(-1).planet}，依次挑战 ${MISSIONS.length} 颗星球。每站须完成交付，四艇按用时排名，依次获得 12 / 9 / 6 / 3 积分。失败可重试本站，晋级后恢复装甲与能量。</p><div class="cup-entrants">${RACERS.map(racer => `<span style="--racer:${racer.color}"><i></i>${racer.name}<small>${racer.style}</small></span>`).join('')}</div><small>电脑对手使用相同飞船与规则；投影互不碰撞。中途返回基地或刷新会结束赛事。</small></div>`);
-$('result-details').insertAdjacentHTML('beforebegin', '<section id="cup-result" class="cup-result" aria-label="赛事积分榜" hidden><div id="cup-stage-strip" class="cup-stage-strip"></div><div class="cup-table-title"><strong id="cup-board-title">赛事总积分</strong><span>四艇计时赛</span></div><table><thead><tr><th scope="col">名次</th><th scope="col">领航员</th><th scope="col">积分</th><th scope="col">累计用时</th></tr></thead><tbody id="cup-standings"></tbody></table><p id="cup-standing-note"></p></section>');
+$('result-details').insertAdjacentHTML('beforebegin', '<section id="cup-result" class="cup-result" aria-label="赛事积分榜" hidden><details id="cup-route-review" class="route-review"><summary id="cup-route-summary"></summary><div id="cup-stage-strip" class="cup-stage-strip"></div></details><div class="cup-table-title"><strong id="cup-board-title">赛事总积分</strong><span>四艇计时赛</span></div><table><thead><tr><th scope="col">名次</th><th scope="col">领航员</th><th scope="col">积分</th><th scope="col">累计用时</th></tr></thead><tbody id="cup-standings"></tbody></table><p id="cup-standing-note"></p></section>');
 $('retry').insertAdjacentHTML('beforebegin', `<button id="continue-cup" class="primary-button" hidden><span>前往下一站</span>${icon('arrow')}</button>`);
 mountExpeditionUI();
 $('mission-options').insertAdjacentHTML('beforebegin', `
-  <label class="catalogue-field">探索星图<input id="mission-search" type="search" placeholder="星球、航线、类型 · 空格组合搜索" autocomplete="off" maxlength="60" aria-controls="mission-options" aria-describedby="mission-count"></label>
+  <label class="catalogue-field">探索星图<input id="mission-search" type="search" placeholder="星球、航线、里程 · 如 20km" autocomplete="off" maxlength="60" aria-controls="mission-options" aria-describedby="mission-count"></label>
   <div id="mission-categories" class="catalogue-filters" role="group" aria-label="航线分类">${MISSION_CATEGORIES.map(category => `<button type="button" data-category="${category.id}" aria-pressed="${category.id === 'all'}">${category.label}<span>${filterMissions('', category.id).length}</span></button>`).join('')}</div>
   <div class="catalogue-meta"><p id="mission-count" class="catalogue-count" role="status"></p><button id="reset-missions" class="catalogue-reset" hidden>重置筛选</button></div>
   <p id="mission-empty" class="catalogue-empty" hidden>没有匹配的航线。<br>试试其他关键词或重置筛选。</p>
@@ -519,6 +519,8 @@ function renderCupResult(won) {
     $('result-copy').textContent = `${game.mission.name}交付完成。下一站：${MISSIONS[cup.stage + 1].name}，装甲与能量已准备补满。`;
   } else $('result-copy').textContent += ` 已完成的 ${cup.legs.length} 站积分保留，重试本站后继续争冠。`;
   $('cup-board-title').textContent = trophy ? '月环大奖赛 · 最终总榜' : cup.legs.length ? '月环大奖赛 · 当前总榜' : '月环大奖赛 · 等待首站成绩';
+  $('cup-route-review').open = false;
+  $('cup-route-summary').textContent = `完整航程 · 已完成 ${cup.legs.length} / ${MISSIONS.length} 站`;
   $('cup-stage-strip').innerHTML = MISSIONS.map((mission, index) => `<span data-state="${index < cup.legs.length ? 'done' : index === cup.stage ? 'current' : 'pending'}"><b>${index < cup.legs.length ? '✓' : mission.number}</b>${mission.name}</span>`).join('');
   $('cup-standings').innerHTML = standings.map(row => `<tr class="${row.id === 'player' ? 'player-row' : ''}"><td>${cup.legs.length ? String(row.place).padStart(2, '0') : '—'}</td><th scope="row"><i style="--racer:${row.color}"></i>${row.name}<small>${row.id === 'player' ? '领航员' : '电脑'}</small></th><td><strong>${row.points}</strong></td><td>${cup.legs.length ? `${row.time.toFixed(2)}s` : '—'}</td></tr>`).join('');
   $('cup-standing-note').textContent = '积分相同时，按完赛站数、累计用时排序。每站 12 / 9 / 6 / 3 分；任务得分单独统计。';
@@ -644,8 +646,7 @@ function updateHUD() {
   } else if (cue.kind === 'powerup' || cue.kind === 'challenge') {
     const title = cue.kind === 'powerup' ? POWERUPS[cue.reward].name : cue.reward === 'jump' ? '跃升环' : '极速环';
     $('cue-action').textContent = `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`;
-    const jumpNow = game.speed > 0 && cue.distance / game.speed >= .3 && cue.distance / game.speed <= .65;
-    $('cue-detail').textContent = cue.kind === 'powerup' ? '可选补给 · 低空接近自动拾取' : cue.reward === 'speed' ? `可选挑战 · 低空 ≥${Math.ceil(game.craft.speed * .9 * 3.6)} km/h` : `${jumpNow && isJumpReady(game) ? '现在按 F 跃升' : '接近后按 F 跃升'} · 环内高度 2.8–6.2m`;
+    $('cue-detail').textContent = cue.kind === 'powerup' ? '可选补给 · 低空接近自动拾取' : cue.reward === 'speed' ? `可选挑战 · 低空 ≥${Math.ceil(game.craft.speed * .9 * 3.6)} km/h` : `${getJumpRingCue(game, cue.distance).text} · 环内 2.8–6.2m`;
   } else if (cue.kind === 'gate') {
     $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
@@ -674,7 +675,7 @@ function updateHUD() {
 function processEvents() {
   for (const event of game.events) {
     if (controls.cruise && ['impact', 'miss'].includes(event.type)) { controls.cruise = false; syncControls(); }
-    if (!event.chained) audio.event(event.type);
+    if (!event.chained) audio.event(event.type, event.kind);
     world.event(event, game);
     if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '出发！按住 W / ↑ 加速，或按 C 开启巡航油门');
     if (event.type === 'powerup') toast(`${POWERUPS[event.kind].name} · ${POWERUPS[event.kind].description}`, 'cyan');

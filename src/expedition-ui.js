@@ -9,7 +9,7 @@ export function mountExpeditionUI() {
   $('mode-options').insertAdjacentHTML('beforeend', `<button data-mode="expedition" aria-pressed="false"><span>远征补给<small>沿途委托 · 改装成长 · ${MISSIONS.length} 站远征</small></span><b>◎</b></button>`);
   $('cup-brief').insertAdjacentHTML('afterend', `<div id="expedition-brief" class="expedition-brief" hidden><strong>把沿途的收获，变成下一程的底气。</strong><p>依次穿越 ${MISSIONS.length} 颗星球的山路。每站交付获 2 补给点；额外核心、精准过门与勘探委托每项再获 2 点。委托可自由取舍，交付成功才结算。</p><div><span>01 / 完成委托</span><span>02 / 补给改装</span><span>03 / 穿越星海</span></div><small>${MISSIONS.length - 1} 次中途补给，可升级引擎、充能、装甲或吸附范围，每项最多两级。失败可重试；返回基地或刷新结束远征。远征不计入个人幽灵纪录。</small></div>`);
   $('hud').insertAdjacentHTML('beforeend', '<aside id="expedition-hud" class="expedition-hud" aria-label="远征委托" hidden><div class="expedition-heading"><span id="expedition-stage">远征 / 01</span><b id="expedition-wallet">0 补给</b></div><ul id="flight-contracts" class="contract-list"></ul><small id="expedition-build"></small></aside>');
-  $('result-details').insertAdjacentHTML('beforebegin', '<section id="expedition-result" class="expedition-result" aria-label="远征补给站" hidden><div id="expedition-route" class="cup-stage-strip"></div><div class="supply-heading"><span><small id="supply-caption">本次交付</small><strong id="supply-earned"></strong></span><span><small>可用补给</small><strong id="supply-balance"></strong></span></div><ul id="settled-contracts" class="contract-list"></ul><div id="supply-shop"><h3>下一程，由你改装。</h3><p>升级立即装配，下一站生效。也可保留补给，直接出发。</p><div id="upgrade-options" class="upgrade-options"></div></div><div id="expedition-summary"></div><p id="supply-build" class="supply-build" aria-live="polite"></p></section>');
+  $('result-details').insertAdjacentHTML('beforebegin', '<section id="expedition-result" class="expedition-result" aria-label="远征补给站" hidden><details id="expedition-route-review" class="route-review"><summary id="expedition-route-summary"></summary><div id="expedition-route" class="cup-stage-strip"></div></details><div class="supply-heading"><span><small id="supply-caption">本次交付</small><strong id="supply-earned"></strong></span><span><small>可用补给</small><strong id="supply-balance"></strong></span></div><ul id="settled-contracts" class="contract-list"></ul><div id="supply-shop"><h3>下一程，由你改装。</h3><p>升级立即装配，下一站生效。也可保留补给，直接出发。</p><div id="upgrade-options" class="upgrade-options"></div></div><div id="expedition-summary"></div><p id="supply-build" class="supply-build" aria-live="polite"></p></section>');
   $('retry').insertAdjacentHTML('beforebegin', '<button id="continue-expedition" class="primary-button" hidden><span>继续远征</span><b>→</b></button>');
 }
 
@@ -37,6 +37,8 @@ export function renderExpeditionResult(run, game) {
   const won = game.status === 'won';
   const complete = run.status === 'complete';
   const leg = won ? run.legs.at(-1) : null;
+  $('expedition-route-review').open = false;
+  $('expedition-route-summary').textContent = `完整航程 · 已完成 ${run.legs.length} / ${MISSIONS.length} 站`;
   $('expedition-route').innerHTML = MISSIONS.map((mission, index) => `<span data-state="${index < run.legs.length ? 'done' : index === run.stage ? 'current' : 'pending'}"><b>${index < run.legs.length ? '✓' : mission.number}</b>${mission.name}</span>`).join('');
   $('supply-caption').textContent = won ? '本次交付与委托' : '本次未结算';
   $('supply-earned').textContent = `+${leg?.earned ?? 0} 补给`;

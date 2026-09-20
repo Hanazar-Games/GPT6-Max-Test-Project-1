@@ -15,15 +15,17 @@ export const MISSION_CATEGORIES = [
   { id: 'hazard', label: '障碍密集', matches: mission => mission.special === 'hazard' },
 ];
 
-const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\u2010-\u2015\u2212]/g, '-');
+const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\u2010-\u2015\u2212]/g, '-').replace(/(\d+(?:\.\d+)?)\s*(?:km|公里|千米)/g, (_, distance) => `${Number(distance)}km`);
 const terms = query => normalize(query).split(/\s+/).filter(Boolean);
 const matches = (text, queryTerms) => queryTerms.every(term => normalize(text).includes(term));
 
 export function filterMissions(query = '', category = 'all') {
   const queryTerms = terms(query);
+  const distances = queryTerms.filter(term => /^\d+(?:\.\d+)?km$/.test(term));
+  const words = queryTerms.filter(term => !distances.includes(term));
   const group = MISSION_CATEGORIES.find(item => item.id === category);
-  return MISSIONS.filter(mission => group.matches(mission) && matches(
-    `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.tour ? '道具挑战' : ''} ${mission.endurance ? `长途 ${minimumDriveLabel(mission).replace(/\s/g, '')}` : '短途'}`, queryTerms,
+  return MISSIONS.filter(mission => group.matches(mission) && distances.every(term => Number(term.slice(0, -2)) * 1000 === mission.length) && matches(
+    `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.tour ? '道具挑战' : ''} ${mission.endurance ? `长途 ${minimumDriveLabel(mission).replace(/\s/g, '')}` : '短途'}`, words,
   ));
 }
 

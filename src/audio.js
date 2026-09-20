@@ -105,7 +105,7 @@ export class AudioEngine {
   }
 
   tone(frequency, duration = 0.15, offset = 0, type = 'sine', bus = 'sfx', volume = 0.3, kind = 'tone') {
-    if (!this.context || this.context.state !== 'running' || !this.enabled || this.background || this.state === 'paused' || !this.volumes[bus] || this.voices.size >= 48) return;
+    if (!this.context || this.context.state !== 'running' || !this.enabled || this.background || this.state === 'paused' || !this.volumes[bus] || this.voices.size >= (bus === 'music' ? 36 : 48)) return;
     const start = this.context.currentTime + offset;
     const noise = kind === 'hat' || kind === 'snare';
     const oscillator = noise ? this.context.createBufferSource() : this.context.createOscillator();
@@ -135,8 +135,11 @@ export class AudioEngine {
     oscillator.onended = () => { oscillator.disconnect(); filter?.disconnect(); gain.disconnect(); this.voices.delete(voice); };
   }
 
-  event(type) {
-    if (type === 'powerup') [520, 780, 1040].forEach((note, i) => this.tone(note, .18, i * .07));
+  event(type, kind) {
+    if (type === 'powerup') {
+      const notes = { shield: [392, 523, 784], magnet: [523, 659, 988], repair: [440, 554, 659] }[kind];
+      if (notes) notes.forEach((note, i) => this.tone(note, .18, i * .07, kind === 'magnet' ? 'sine' : 'triangle'));
+    }
     if (type === 'shield-block') { this.tone(260, .25, 0, 'triangle'); this.tone(520, .2, .06); }
     if (type === 'challenge') [880, 1100, 1320].forEach((note, i) => this.tone(note, .2, i * .06));
     if (type === 'pickup') { this.tone(780); this.tone(1170, 0.22, 0.08); }

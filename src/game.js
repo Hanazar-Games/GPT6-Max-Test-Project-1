@@ -10,6 +10,16 @@ export function isJumpReady(game) {
   return game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost;
 }
 
+export function getJumpRingCue(game, distance) {
+  if (game.height > 0) return { action: 'airborne', text: game.height > 6.2 ? '高度偏高 · 等待回落' : '跃升中 · 对准环心' };
+  if (game.jumpCooldown > 0) return { action: 'cooldown', text: `跃升冷却 ${game.jumpCooldown.toFixed(1)}s` };
+  if (game.energy < PHYSICS.jumpCost) return { action: 'energy', text: '能量不足 · 本环可略过' };
+  if (game.speed < 1) return { action: 'accelerate', text: '先加速接近，再跃升' };
+  if (game.speed < (game.boosting ? game.craft.boostSpeed : game.craft.speed)) return { action: 'accelerate', text: '保持加速 · 稳速后再跃升' };
+  if (distance < game.speed * .4) return { action: 'late', text: '距离过近 · 本环可略过' };
+  return distance <= game.speed * .65 ? { action: 'jump', text: '现在跃升 · F / 跃升键' } : { action: 'approach', text: '接近后准备跃升' };
+}
+
 export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}) {
   const mission = MISSIONS.find(item => item.id === missionId);
   const base = CRAFTS.find(item => item.id === craftId);

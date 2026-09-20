@@ -14,7 +14,7 @@ export function rewardCue(game) {
   const next = candidates.sort((a, b) => a.distance - b.distance)[0];
   if (!next) return null;
   const offset = next.lane - game.lane;
-  return { ...next, distance: Math.ceil(next.distance - game.distance), direction: Math.abs(offset) < 3 ? 'center' : offset < 0 ? 'left' : 'right' };
+  return { ...next, distance: next.distance - game.distance, direction: Math.abs(offset) < 3 ? 'center' : offset < 0 ? 'left' : 'right' };
 }
 
 export function addRouteRewards(course, mission) {
