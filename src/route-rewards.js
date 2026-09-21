@@ -1,3 +1,5 @@
+import { coastingLane } from './flight-motion.js';
+
 export const POWERUPS = Object.freeze({
   shield: { name: '护盾', color: '#89cfff', duration: 12, description: '12 秒内抵挡一次碰撞' },
   magnet: { name: '磁吸', color: '#ddabff', duration: 8, description: '8 秒内核心吸附范围至少 9 米' },
@@ -27,14 +29,24 @@ export function getSpeedRingCue(game) {
 }
 
 export function rewardCue(game) {
-  const candidates = [
-    ...game.course.powerups.filter(item => !game.powerupsTaken.has(item.id)).map(item => ({ ...item, kind: 'powerup', reward: item.kind })),
-    ...game.course.challenges.filter(item => !game.challengesResolved.has(item.id)).map(item => ({ ...item, kind: 'challenge', reward: item.kind })),
-  ].filter(item => item.distance >= game.distance && item.distance - game.distance <= Math.max(180, game.speed * 2));
-  const next = candidates.sort((a, b) => a.distance - b.distance)[0];
+  const limit = game.distance + Math.max(180, game.speed * 2);
+  let next = null, kind;
+  for (const [items, resolved, type] of [[game.course.powerups, game.powerupsTaken, 'powerup'], [game.course.challenges, game.challengesResolved, 'challenge']]) {
+    for (let i = firstAtOrAfter(items, game.distance); i < items.length; i++) {
+      const item = items[i];
+      if (item.distance > limit || next && item.distance >= next.distance) break;
+      if (!resolved.has(item.id)) { next = item; kind = type; break; }
+    }
+  }
   if (!next) return null;
-  const offset = next.lane - game.lane;
-  return { ...next, distance: next.distance - game.distance, direction: Math.abs(offset) < (next.reward === 'precision' ? CHALLENGES.precision.width : 3) ? 'center' : offset < 0 ? 'left' : 'right' };
+  const distance = next.distance - game.distance;
+  const projected = kind === 'challenge' && game.speed > 0 && distance <= Math.max(45, game.speed * .8);
+  const offset = next.lane - (projected ? coastingLane(game, distance / game.speed) : game.lane);
+  const width = kind === 'challenge' ? CHALLENGES[next.kind].width : 3;
+  const aligned = Math.abs(offset) < width;
+  return { ...next, kind, reward: next.kind, distance, offset, aligned, projected,
+    direction: aligned ? 'center' : offset < 0 ? 'left' : 'right',
+    drifting: projected && Math.abs(next.lane - game.lane) < width && !aligned };
 }
 
 export function addRouteRewards(course, mission) {

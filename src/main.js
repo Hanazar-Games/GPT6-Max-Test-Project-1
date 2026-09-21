@@ -207,6 +207,7 @@ function updateLoadout() {
   if (mission.bridges.length) $('route-guide').textContent += ` 本航线长 ${mission.length / 1000} 公里，沿途有 ${mission.bridges.length} 座斜拉桥、悬索桥与峡谷高架桥；上下山与桥面均需主动驾驶，桥上保留障碍与导航门。`;
   if (mission.tour) $('route-guide').textContent += ' 本线道具自动拾取：蓝色护盾 12 秒内挡一次撞击；紫色磁吸持续 8 秒；绿色维修恢复 35 装甲、30 能量。金色极速环需低空达到巡航速度的 90%，紫色跃升环需在 F 跃升后以 2.8–6.2 米高度穿过；左右容差 3.5 米。挑战环只奖分与能量，连续命中加分，漏环或受撞中断连锁，不影响交付晋级。';
   if (mission.advanced) $('route-guide').textContent += ' 进阶补给：黄色电池恢复 60 能量，橙色超频提供 5 秒免费冲刺，可制动，受损或漏门解除。青色精准环需低于 2.3 米、达到巡航速度的 90%，偏离环心小于 1.5 米；命中奖励 450 分，成功交付且命中三次可获「定心领航」。';
+  if (mission.tour) $('route-guide').textContent += ' 临近挑战环时，方向提示按当前速度与松开转向后的惯性预估横向位置；加速、制动或继续转向会改变结果，高度与速度仍需满足穿环要求。';
   const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
   $('guide').querySelector('.environment-guide').hidden = !meteors && !gravity;
   $('meteor-help').hidden = !meteors;
@@ -578,7 +579,7 @@ function updateRouteTools() {
     $(`${kind}-time`).textContent = `${Math.ceil(remaining)}s`;
   }
   const rewards = getRewardProgress(game);
-  $('power-status').textContent = rewards.nextPowerup ? `前方补给 ${rewards.powerupsAhead} · ${formatDistance(rewards.nextPowerup.distance - game.distance)}` : game.powerupsTaken.size === game.course.powerups.length ? '补给已收齐' : '前方无补给';
+  $('power-status').textContent = rewards.nextPowerup ? `补给 ${rewards.powerupsAhead} · ${POWERUPS[rewards.nextPowerup.kind].name} ${formatDistance(rewards.nextPowerup.distance - game.distance)}` : game.powerupsTaken.size === game.course.powerups.length ? '补给已收齐' : '前方无补给';
   $('challenge-status').textContent = `命中 ${game.challengeHits}/${game.course.challenges.length} · 余 ${rewards.challengesAhead} · 连锁 ${game.challengeChain}`;
 }
 
@@ -627,7 +628,13 @@ function updateHUD() {
   } else if (cue.kind === 'powerup' || cue.kind === 'challenge') {
     const title = cue.kind === 'powerup' ? POWERUPS[cue.reward].name : CHALLENGES[cue.reward].name;
     $('cue-action').textContent = `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`;
-    $('cue-detail').textContent = cue.kind === 'powerup' ? game.height >= 2.3 ? '先回低空 · 高度需低于 2.3m' : '可选补给 · 低空接近自动拾取' : cue.reward === 'jump' ? `${getJumpRingCue(game, cue.distance).text} · 环内 2.8–6.2m` : `${getSpeedRingCue(game).text}${cue.reward === 'precision' ? ' · 偏差 <1.5m' : ''}`;
+    if (cue.kind === 'powerup') $('cue-detail').textContent = game.height >= 2.3 ? '先回低空 · 高度需低于 2.3m' : '可选补给 · 低空接近自动拾取';
+    else {
+      const alignment = cue.drifting ? `惯性将滑出 · 向${cue.direction === 'left' ? '左' : '右'}修正` : cue.aligned ? cue.projected ? '松开转向 · 预计横向对准' : '横向已对准' : `${cue.projected ? '预计' : '当前'}偏离环心 ${Math.abs(cue.offset).toFixed(1)}m`;
+      const speedCue = getSpeedRingCue(game);
+      const requirement = cue.reward === 'jump' ? `${getJumpRingCue(game, cue.distance).text}\n高度 2.8–6.2m` : `${speedCue.action === 'ready' ? '速度达标 · 保持低空' : speedCue.text} · 偏差 <${CHALLENGES[cue.reward].width}m`;
+      $('cue-detail').textContent = `${alignment}\n${requirement}`;
+    }
   } else if (cue.kind === 'gate') {
     $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;

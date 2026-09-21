@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 虹界拉力</h2>
+      <h2 id="release-title">v${version} · 穿环领航</h2>
+      <p>看清侧滑去向，更从容地穿过下一道光环。</p>
+      <ul class="release-list">
+        <li><strong>穿环之前，预判惯性</strong>临近精准环、极速环与跃升环时，按当前速度和松开转向后的惯性判断横向位置；已经居中但将滑出时提醒反向修正，预计回到环内时提示松开转向。</li>
+        <li><strong>对准与穿环条件分开看</strong>提示卡分别说明横向对准、速度和高度要求；精准环保留小于 1.5 米的容差说明，侧滑风险用暖色突出，手机横竖屏均可阅读。</li>
+        <li><strong>提前知道下一份补给</strong>道具仪表同时显示数量、种类与距离，便于判断前方是电池、维修还是超频。</li>
+        <li><strong>长线导航减少开销</strong>补给与挑战提示只查询附近区间，保留危险和临近导航门优先级；对照全部 40 款飞船的实际穿环位置。1.14.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>30 个版本</span></summary>
+      <article><h3>v1.14.0 · 虹界拉力</h3>
       <p>穿过七重云岭，驾着新翼追逐精准光环。</p>
       <ul class="release-list">
         <li><strong>四款新艇，四十种选择</strong>云鹤的上扬羽翼、天蝎的双钳弯尾、金龟的双穹重甲与蝶翼的四瓣光翼加入机库，分别适合巡岭、竞速、续航与精准操控。</li>
@@ -16,7 +25,8 @@ export function mountReleases() {
         <li><strong>精准环与新奖章</strong>低空达到巡航速度的 90%，偏离青色环心小于 1.5 米即可获得 450 基础分及连锁奖励；成功交付且命中三次可获「定心领航」。机库新增进阶拉力分类。</li>
         <li><strong>风景与声音同步扩展</strong>贝壳光拱、巨型兰花、引水拱廊与棱镜灯塔配上新星球音乐，电池、超频和精准穿环各有提示音。星图共 58 条路线、3556.3 公里、149 座桥，大赛与远征扩至 58 站；1.13.4 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>29 个版本</span></summary>
+      </article>
+
       <article><h3>v1.13.4 · 险情预警</h3>
       <p>看懂侧滑惯性，及时发现真正接近的危险。</p>
       <ul class="release-list">
