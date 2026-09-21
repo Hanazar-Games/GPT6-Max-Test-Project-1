@@ -112,7 +112,13 @@
   body[data-mode="expedition"] .map-panel { display: none; }
 }
 
-@media (max-width: 600px) and (max-height: 600px) and (orientation: portrait) {
+@media (pointer: coarse) and (min-width: 601px) and (max-width: 800px) and (min-height: 651px) and (max-height: 750px) {
+  .hud.has-route-tools .jump-indicator { top: calc(29% + 60px); bottom: auto; left: 5.2%; transform: none; }
+  .expedition-hud .contract-list li { padding-block: 5px; }
+  .expedition-hud .contract-list small, #expedition-build { display: none; }
+}
+
+@media (max-width: 600px) and (max-height: 650px) and (orientation: portrait) {
   .header { height: 64px; }
   .hero { top: 66px; }
   .hero h1 { font-size: 34px; margin: 10px 0; }
