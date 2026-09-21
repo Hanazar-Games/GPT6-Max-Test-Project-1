@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 穿环领航</h2>
+      <h2 id="release-title">v${version} · 视听与横屏修复</h2>
+      <p>小屏看清驾驶信息，高速听清关键警告。</p>
+      <ul class="release-list">
+        <li><strong>矮横屏仪表不再相互遮挡</strong>调整补给、三种效果计时与跃升状态的位置，修复它们遮住对手、委托或穿环提示的问题；自由速递、大赛和远征均已检查。</li>
+        <li><strong>速度刻度留在仪表内</strong>横屏下刻度随仪表宽度收缩，减少伸入驾驶画面的情况；触控按钮、暂停和声音设置保持可操作。</li>
+        <li><strong>关键警告留有声音余量</strong>奖励音效密集时仍为陨石、碰撞与漏门警告预留播放容量；警告期间配乐短暂降至所选音量的 40%，随后平滑恢复。</li>
+        <li><strong>声音设置恢复准确</strong>暂停、静音或切出页面清理临时压低效果，中途关闭音效也会恢复音乐音量；检查五种补给声音、暂停恢复、重飞与结算。1.14.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>31 个版本</span></summary>
+      <article><h3>v1.14.1 · 穿环领航</h3>
       <p>看清侧滑去向，更从容地穿过下一道光环。</p>
       <ul class="release-list">
         <li><strong>穿环之前，预判惯性</strong>临近精准环、极速环与跃升环时，按当前速度和松开转向后的惯性判断横向位置；已经居中但将滑出时提醒反向修正，预计回到环内时提示松开转向。</li>
@@ -15,7 +24,8 @@ export function mountReleases() {
         <li><strong>提前知道下一份补给</strong>道具仪表同时显示数量、种类与距离，便于判断前方是电池、维修还是超频。</li>
         <li><strong>长线导航减少开销</strong>补给与挑战提示只查询附近区间，保留危险和临近导航门优先级；对照全部 40 款飞船的实际穿环位置。1.14.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>30 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.0 · 虹界拉力</h3>
       <p>穿过七重云岭，驾着新翼追逐精准光环。</p>
       <ul class="release-list">

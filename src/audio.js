@@ -10,6 +10,7 @@ export class AudioEngine {
     this.voices = new Set();
     this.beat = 0;
     this.nextBeat = 0;
+    this.alertUntil = 0;
   }
 
   async unlock() {
@@ -60,7 +61,8 @@ export class AudioEngine {
     if (!(bus in this.volumes) || !Number.isFinite(value)) return;
     this.volumes[bus] = Math.max(0, Math.min(1, value));
     if (!this.volumes[bus]) this.stopVoices(bus);
-    if (this[bus]) this.target(this[bus].gain, this.volumes[bus]);
+    if (bus === 'music') this.mixMusic();
+    else if (this[bus]) this.target(this[bus].gain, this.volumes[bus]);
   }
 
   target(parameter, value, fade = 0.025) {
@@ -71,6 +73,10 @@ export class AudioEngine {
 
   mix() {
     if (this.master) this.target(this.master.gain, this.enabled && !this.background ? 0.22 : 0, 0.01);
+  }
+
+  mixMusic() {
+    if (this.music) this.target(this.music.gain, this.volumes.music * (this.context.currentTime < this.alertUntil ? .4 : 1), .05);
   }
 
   setBackground(background) {
@@ -102,10 +108,11 @@ export class AudioEngine {
       this.voices.delete(voice);
     }
     if (!bus || bus === 'music') this.nextBeat = 0;
+    if (!bus || bus === 'sfx') { this.alertUntil = 0; this.mixMusic(); }
   }
 
   tone(frequency, duration = 0.15, offset = 0, type = 'sine', bus = 'sfx', volume = 0.3, kind = 'tone') {
-    if (!this.context || this.context.state !== 'running' || !this.enabled || this.background || this.state === 'paused' || !this.volumes[bus] || this.voices.size >= (bus === 'music' ? 36 : 48)) return;
+    if (!this.context || this.context.state !== 'running' || !this.enabled || this.background || this.state === 'paused' || !this.volumes[bus] || this.voices.size >= (bus === 'music' ? 36 : kind === 'alert' ? 48 : 44)) return;
     const start = this.context.currentTime + offset;
     const noise = kind === 'hat' || kind === 'snare';
     const oscillator = noise ? this.context.createBufferSource() : this.context.createOscillator();
@@ -132,10 +139,15 @@ export class AudioEngine {
     oscillator.stop(start + duration + 0.02);
     const voice = { oscillator, gain, bus, start };
     this.voices.add(voice);
+    if (kind === 'alert') {
+      this.alertUntil = Math.max(this.alertUntil, start + duration + .12);
+      this.mixMusic();
+    }
     oscillator.onended = () => { oscillator.disconnect(); filter?.disconnect(); gain.disconnect(); this.voices.delete(voice); };
   }
 
   event(type, kind) {
+    const alertTone = (frequency, duration, offset = 0, wave = 'triangle') => this.tone(frequency, duration, offset, wave, 'sfx', .3, 'alert');
     if (type === 'powerup') {
       const notes = { shield: [392, 523, 784], magnet: [523, 659, 988], repair: [440, 554, 659], battery: [660, 1320], overdrive: [220, 440, 660, 880] }[kind];
       if (notes) notes.forEach((note, i) => this.tone(note, .18, i * .07, kind === 'magnet' ? 'sine' : 'triangle'));
@@ -144,14 +156,14 @@ export class AudioEngine {
     if (type === 'challenge') (kind === 'precision' ? [659, 880, 1100, 1320] : [880, 1100, 1320]).forEach((note, i) => this.tone(note, .2, i * .06));
     if (type === 'pickup') { this.tone(780); this.tone(1170, 0.22, 0.08); }
     if (type === 'gate') [440, 660, 880].forEach((note, i) => this.tone(note, 0.25, i * 0.09));
-    if (type === 'impact' || type === 'miss') { this.tone(75, 0.3, 0, 'triangle'); this.tone(48, 0.3, 0.06, 'sawtooth'); }
+    if (type === 'impact' || type === 'miss') { alertTone(75, .3); alertTone(48, .3, .06, 'sawtooth'); }
     if (type === 'launch') { this.tone(440); this.tone(880, 0.4, 0.12); }
     if (type === 'jump') { this.tone(180, 0.16, 0, 'triangle'); this.tone(540, 0.25, 0.08); }
     if (type === 'land') this.tone(65, 0.12, 0, 'triangle');
     if (type === 'pad') { this.tone(330, 0.15); this.tone(660, 0.2, 0.08); this.tone(990, 0.25, 0.16); }
     if (type === 'dodge') { this.tone(1040, 0.2); this.tone(1560, 0.3, 0.07); }
-    if (type === 'meteor-warning') { this.tone(520, 0.11, 0, 'triangle'); this.tone(520, 0.11, 0.2, 'triangle'); }
-    if (type === 'meteor-strike') { this.tone(42, 0.45, 0, 'sawtooth'); this.tone(68, 0.25, 0.04, 'triangle'); }
+    if (type === 'meteor-warning') { alertTone(520, .11); alertTone(520, .11, .2); }
+    if (type === 'meteor-strike') { alertTone(42, .45, 0, 'sawtooth'); alertTone(68, .25, .04); }
     if (type === 'low-gravity') { this.tone(220, 0.3); this.tone(330, 0.4, 0.1); }
     if (type === 'glide' || type === 'meteor-dodge') [660, 990, 1320].forEach((note, i) => this.tone(note, 0.25, i * 0.07));
     if (type === 'won') [440, 554, 660, 880].forEach((note, i) => this.tone(note, 0.5, i * 0.13));
@@ -167,6 +179,7 @@ export class AudioEngine {
       this.beat = 0;
     }
     if (!this.engine || this.context.state !== 'running' || this.background) return;
+    this.mixMusic();
     const now = this.context.currentTime;
     const intensity = Math.max(0, Math.min(1, game.speed / 420));
     this.target(this.engine.frequency, 35 + intensity * 190, 0.08);

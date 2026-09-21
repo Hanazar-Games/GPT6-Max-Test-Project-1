@@ -155,3 +155,66 @@ test('dense music leaves headroom for immediate warning and impact sounds', asyn
   assert.equal(audio.context.oscillators.length - before, 4);
   assert.ok(audio.voices.size <= 48);
 });
+
+test('reward bursts leave four voices available for warnings and impacts', async () => {
+  const audio = await setup();
+  audio.update(running);
+  for (let i = 0; i < 30; i++) audio.event('challenge', 'precision');
+  assert.ok(audio.voices.size <= 44);
+  const before = audio.context.oscillators.length;
+  audio.event('meteor-warning'); audio.event('impact');
+  assert.equal(audio.context.oscillators.length - before, 4);
+  assert.ok(audio.voices.size <= 48);
+});
+
+test('alerts briefly lower music, honor volume changes and restore the selected level', async () => {
+  const audio = await setup();
+  audio.update(running);
+  audio.event('meteor-warning');
+  assert.equal(audio.music.gain.value, .45 * .4);
+  assert.equal(audio.volumes.music, .45);
+  assert.equal(audio.sfx.gain.value, .8);
+  audio.setVolume('music', .3);
+  assert.equal(audio.music.gain.value, .3 * .4);
+  audio.context.currentTime = .3;
+  audio.update(running);
+  assert.equal(audio.music.gain.value, .3 * .4);
+  audio.context.currentTime = 1;
+  audio.update(running);
+  assert.equal(audio.music.gain.value, .3);
+});
+
+test('muting effects ends music reduction while music mute preserves independent alerts', async () => {
+  const audio = await setup();
+  audio.update(running); audio.event('impact');
+  audio.setVolume('sfx', 0);
+  assert.equal(audio.music.gain.value, .45);
+  audio.setVolume('sfx', .8); audio.event('meteor-warning');
+  audio.setVolume('music', 0);
+  assert.equal(audio.music.gain.value, 0);
+  assert.ok([...audio.voices].every(voice => voice.bus === 'sfx'));
+  assert.equal(audio.voices.size, 2);
+  audio.setVolume('music', .3);
+  assert.equal(audio.music.gain.value, .3 * .4);
+  audio.setVolume('sfx', 0);
+  assert.equal(audio.music.gain.value, .3);
+});
+
+test('muted alerts cannot lower music, and pausing or leaving cancels the temporary reduction', async () => {
+  const audio = await setup();
+  audio.update(running);
+  audio.setVolume('sfx', 0);
+  audio.event('impact');
+  assert.equal(audio.music.gain.value, .45);
+  audio.setVolume('sfx', .8);
+  for (const stop of [() => audio.setState('paused'), () => audio.setBackground(true), () => audio.toggle()]) {
+    audio.event('impact');
+    assert.equal(audio.music.gain.value, .45 * .4);
+    stop();
+    assert.equal(audio.voices.size, 0);
+    assert.equal(audio.music.gain.value, .45);
+    audio.setState('running'); audio.setBackground(false);
+    if (!audio.enabled) audio.toggle();
+    audio.update(running);
+  }
+});
