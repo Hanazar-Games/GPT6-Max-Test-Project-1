@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 补给领航</h2>
+      <h2 id="release-title">v${version} · 航图精修</h2>
+      <p>看清前方弯道，跟着航向驶向下一座导航门。</p>
+      <ul class="release-list">
+        <li><strong>长途雷达减轻负担</strong>减少航图重复计算，暂停或横屏隐藏时停止绘制，让长线飞行少一些额外开销。</li>
+        <li><strong>弯道轮廓更加细致</strong>细化全部 54 条路线的航图，已飞轨迹沿道路稳定延伸，复杂山桥长线也能清楚查看。</li>
+        <li><strong>航向与下一目标一眼可见</strong>白色箭头指示航向，亮色菱形突出下一座导航门；全部过门后指向返航基地，读屏标签同步更新。</li>
+        <li><strong>回退重飞，航图同步</strong>换图和重飞及时刷新，漏门回退后显示实际航程；检查幽灵显示、暂停和手机横竖屏。1.13.2 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>27 个版本</span></summary>
+      <article><h3>v1.13.2 · 补给领航</h3>
       <p>补给还有多远，护盾还能撑多久，一眼看清。</p>
       <ul class="release-list">
         <li><strong>下一份补给心中有数</strong>道具仪表显示前方补给数量与下一份距离，区分全部收齐和前方已无补给；漏门回退后按实际位置重新计算。</li>
@@ -15,7 +24,8 @@ export function mountReleases() {
         <li><strong>极速环提示当前差距</strong>速度不足时显示还差多少 km/h，高度过高时提醒回落，达标后提示对准环心；改装后的速度要求同步更新，腾空接近补给也会提示高度要求。</li>
         <li><strong>剩余挑战更明确</strong>同时显示命中数、剩余环数和当前连锁，已判定的挑战不会在回退后重新计入。调整道具航线的跃升提示间距，避免与计时条重叠；1.13.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>26 个版本</span></summary>
+      </article>
+
       <article><h3>v1.13.1 · 航程精修</h3>
       <p>找准想去的航线，听清沿途的补给，把握跃升时机。</p>
       <ul class="release-list">

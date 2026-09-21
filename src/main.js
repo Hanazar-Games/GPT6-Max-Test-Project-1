@@ -22,7 +22,8 @@ import { mountExpeditionUI, renderExpeditionHUD, renderExpeditionResult, renderS
 import { World } from './world.js';
 import { createRoute } from './route.js';
 import { AudioEngine } from './audio.js';
-import { ENVIRONMENT, gravityAt, meteorState } from './environment.js';
+import { ENVIRONMENT, gravityAt } from './environment.js';
+import { RouteRadar } from './radar.js';
 import { mountReleases } from './releases.js';
 import { FlightInput, KEY_ACTIONS } from './input.js';
 import { getDriveStatus } from './drive-status.js';
@@ -147,7 +148,7 @@ const audio = new AudioEngine();
 const controls = new FlightInput();
 const panels = ['menu', 'hud', 'countdown', 'pause', 'result'].map($);
 const refs = Object.fromEntries(['sector', 'objective', 'timer', 'timer-fill', 'cargo', 'gates', 'speed', 'energy-value', 'energy-fill', 'hull-value', 'hull-fill', 'next-distance', 'next-label', 'progress', 'score', 'throttle-hint', 'countdown-number'].map((id) => [id, $(id)]));
-const map = $('minimap').getContext('2d');
+const radar = new RouteRadar($('minimap'));
 let world;
 let lastStatus = '';
 let lastCountdown = 4;
@@ -557,45 +558,6 @@ function updateRival() {
   $('split-flash').hidden = game.elapsed >= splitFlashUntil;
 }
 
-function drawMap() {
-  map.clearRect(0, 0, 360, 200);
-  const project = (distance) => {
-    const { point } = world.frame(distance);
-    const { min, max } = world.routeBounds;
-    const scale = Math.min(320 / (max.x - min.x), 165 / (max.z - min.z));
-    return [180 + (point.x - (min.x + max.x) / 2) * scale, 99 + (point.z - (min.z + max.z) / 2) * scale];
-  };
-  map.strokeStyle = '#ffffff0b'; map.lineWidth = 1;
-  for (let x = 0; x < 360; x += 30) { map.beginPath(); map.moveTo(x, 0); map.lineTo(x, 200); map.stroke(); }
-  for (let y = 10; y < 200; y += 30) { map.beginPath(); map.moveTo(0, y); map.lineTo(360, y); map.stroke(); }
-  map.beginPath();
-  for (let i = 0; i <= 100; i++) { const [x, y] = project(i / 100 * game.mission.length); i ? map.lineTo(x, y) : map.moveTo(x, y); }
-  map.strokeStyle = '#63808d'; map.lineWidth = 2; map.stroke();
-  for (const zone of game.course.gravityZones) {
-    map.beginPath();
-    for (let i = 0; i <= 20; i++) { const [x, y] = project(zone.start + (zone.end - zone.start) * i / 20); i ? map.lineTo(x, y) : map.moveTo(x, y); }
-    map.strokeStyle = '#bda6ff'; map.lineWidth = 4; map.stroke();
-  }
-  map.beginPath();
-  for (let i = 0; i <= 100; i++) { const [x, y] = project(i / 100 * game.distance); i ? map.lineTo(x, y) : map.moveTo(x, y); }
-  map.strokeStyle = '#ff945f'; map.lineWidth = 3; map.stroke();
-  game.course.gates.forEach((gate, i) => { const [x, y] = project(gate.distance); map.fillStyle = i < game.gates ? '#8cf0ce' : '#ffac7d'; map.fillRect(x - 3, y - 3, 6, 6); });
-  for (const meteor of game.course.meteors) {
-    const [x, y] = project(meteor.distance);
-    const active = ['warning', 'impact'].includes(meteorState(meteor, game.elapsed).phase);
-    map.beginPath(); map.arc(x, y, active ? 6 : 3, 0, Math.PI * 2);
-    map.strokeStyle = active ? '#ff7759' : '#a36d59'; map.lineWidth = 2; map.stroke();
-  }
-  for (const projection of ghostEnabled ? projections : []) {
-    const [gx, gy] = project(projection.pose.distance);
-    map.beginPath(); map.moveTo(gx, gy - 7); map.lineTo(gx + 7, gy); map.lineTo(gx, gy + 7); map.lineTo(gx - 7, gy); map.closePath();
-    map.strokeStyle = projection.color; map.lineWidth = 2; map.stroke();
-  }
-  const [x, y] = project(game.distance);
-  map.beginPath(); map.arc(x, y, 6, 0, Math.PI * 2); map.fillStyle = '#fff'; map.fill();
-  map.beginPath(); map.arc(x, y, 11, 0, Math.PI * 2); map.strokeStyle = '#ffffff55'; map.lineWidth = 1; map.stroke();
-}
-
 function formatDistance(distance) {
   const meters = Math.max(0, Math.ceil(distance));
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} KM` : `${meters} M`;
@@ -684,7 +646,7 @@ function updateHUD() {
   document.querySelector('[data-control="jump"]').setAttribute('aria-disabled', String(!isJumpReady(game)));
   document.querySelectorAll('.speed-ticks i').forEach((tick, i) => tick.classList.toggle('active', i < game.speed / game.craft.boostSpeed * 24));
   updateRival();
-  drawMap();
+  radar.draw(game, world.samples, ghostEnabled ? projections : []);
 }
 
 function processEvents() {
