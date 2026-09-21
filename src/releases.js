@@ -7,7 +7,15 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 视听与横屏修复</h2>
+      <h2 id="release-title">v${version} · 长线性能优化</h2>
+      <p>让超长山桥航线少一些重复计算，保留一路的细节。</p>
+      <ul class="release-list">
+        <li><strong>山体与桥梁减少重复更新</strong>固定景物复用已计算的位置与朝向，长路线的每帧场景开销降低；道路、桥梁和飞船模型保留原有细节。</li>
+        <li><strong>远处陨石按视野更新</strong>视野外暂停落点外观计算，进入画面立即显示当前预警、冲击或余辉；覆盖山路弯坡与下落拖尾，碰撞和声音规则保持一致。</li>
+        <li><strong>飞行动画逐项核对</strong>检查尾焰、护盾、磁吸、超频、补给和三艘对手的姿态，以及暂停、重飞、换船和换图。1.14.2 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>32 个版本</span></summary>
+      <article><h3>v1.14.2 · 视听与横屏修复</h3>
       <p>小屏看清驾驶信息，高速听清关键警告。</p>
       <ul class="release-list">
         <li><strong>矮横屏仪表不再相互遮挡</strong>调整补给、三种效果计时与跃升状态的位置，修复它们遮住对手、委托或穿环提示的问题；自由速递、大赛和远征均已检查。</li>
@@ -15,7 +23,8 @@ export function mountReleases() {
         <li><strong>关键警告留有声音余量</strong>奖励音效密集时仍为陨石、碰撞与漏门警告预留播放容量；警告期间配乐短暂降至所选音量的 40%，随后平滑恢复。</li>
         <li><strong>声音设置恢复准确</strong>暂停、静音或切出页面清理临时压低效果，中途关闭音效也会恢复音乐音量；检查五种补给声音、暂停恢复、重飞与结算。1.14.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>31 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.1 · 穿环领航</h3>
       <p>看清侧滑去向，更从容地穿过下一道光环。</p>
       <ul class="release-list">

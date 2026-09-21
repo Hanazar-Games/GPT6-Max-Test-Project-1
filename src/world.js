@@ -111,6 +111,20 @@ export class World {
     this.makeDust();
     this.makeSpeedLines();
     this.makeEffects();
+    this.viewFrustum = new THREE.Frustum();
+    this.viewProjection = new THREE.Matrix4();
+    this.prepareTransforms();
+  }
+
+  prepareTransforms() {
+    this.scene.traverse(object => { object.updateMatrix(); object.matrixAutoUpdate = false; });
+    // Moving parents still update their static children's world matrices.
+    const animated = [this.sky, this.craft, this.craftBody, this.shadow, this.magnetRing, this.overdriveHalo,
+      this.followLight, this.followLight.target, this.dust, this.speedLines, ...this.flames,
+      ...this.ghosts.flatMap(ghost => [ghost.group, ghost.body]), ...this.drones.map(drone => drone.group),
+      ...this.pickups.flatMap(pickup => [pickup.core, pickup.ring]),
+      ...this.rewards.items.map(({ group }) => group.children[0]), ...this.environment.meteors.map(({ rock }) => rock)];
+    for (const object of animated) object.matrixAutoUpdate = true;
   }
 
   frame(distance, lane = 0, height = 0) {
@@ -548,7 +562,6 @@ export class World {
     const animated = ['menu', 'running', 'countdown'].includes(game.status);
     if (animated) this.clock += dt;
     const motionTime = game.status === 'menu' ? this.clock : game.elapsed;
-    this.environment.render(game.status === 'menu' ? 0 : game.elapsed);
     this.rewards.render(game);
     const menu = game.status === 'menu';
     const frame = this.frame(game.distance, game.lane, 1.9 + game.height);
@@ -648,6 +661,9 @@ export class World {
     this.camera.lookAt(look);
     this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, fov, animated ? 1 - Math.exp(-dt * 4) : 0);
     this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld();
+    this.viewFrustum.setFromProjectionMatrix(this.viewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
+    this.environment.render(menu ? 0 : game.elapsed, this.viewFrustum);
     const intensity = THREE.MathUtils.clamp((game.speed - 100) / 320, 0, 1);
     this.speedLines.visible = game.status === 'running' && intensity > 0;
     this.speedLines.position.copy(this.camera.position);

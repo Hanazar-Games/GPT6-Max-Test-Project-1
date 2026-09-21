@@ -62,7 +62,9 @@ export class EnvironmentView {
       const tail = world.mesh(tailGeometry, glow('#ff8b50', 0.55), rock, [0, 4.8, 0]);
       tail.rotation.z = 0.13;
       world.place(group, meteor.distance, meteor.lane);
-      return { meteor, group, disc, ring, pulse, rock };
+      // Enclose the falling rock, its tail and the banked road footprint.
+      const bounds = new THREE.Sphere(group.position.clone(), Math.max(52, Math.abs(meteor.lane) * 2 + (meteor.radius + ENVIRONMENT.craftRadius) * 2 + 1));
+      return { meteor, group, disc, ring, pulse, rock, bounds };
     });
   }
 
@@ -83,9 +85,11 @@ export class EnvironmentView {
     world.mesh(geometry, material, this.ribbons);
   }
 
-  render(elapsed) {
+  render(elapsed, frustum) {
     this.zoneSurface.opacity = 0.075 + Math.sin(elapsed * 1.5) * 0.02;
-    for (const { meteor, disc, ring, pulse, rock } of this.meteors) {
+    for (const { meteor, group, disc, ring, pulse, rock, bounds } of this.meteors) {
+      group.visible = ring.visible = frustum.intersectsSphere(bounds);
+      if (!group.visible) { disc.visible = pulse.visible = false; continue; }
       const state = meteorState(meteor, elapsed);
       const warning = state.phase === 'warning';
       const impact = state.phase === 'impact';
