@@ -7,7 +7,16 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 航图精修</h2>
+      <h2 id="release-title">v${version} · 险情预警</h2>
+      <p>看懂侧滑惯性，及时发现真正接近的危险。</p>
+      <ul class="release-list">
+        <li><strong>侧滑风险提前看见</strong>岩石、巡逻机与陨石预警考虑松开转向后的惯性，滑向危险时及时提醒，已经滑离碰撞路线时解除警报。</li>
+        <li><strong>紧迫危险优先显示</strong>前方无威胁的陨石落点不再遮住后续风险，多处危险按预计接触时间选择，帮助判断眼前最需要处理的一处。</li>
+        <li><strong>横移修正更有依据</strong>提示卡说明惯性侧滑与滑向落点的风险，临近碰撞仍提醒立即避让；手机横竖屏均能完整阅读。</li>
+        <li><strong>长线查询继续减负</strong>障碍预警只检查附近区间，验证全部 36 款飞船的实际飞行与预警结果。1.13.3 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>28 个版本</span></summary>
+      <article><h3>v1.13.3 · 航图精修</h3>
       <p>看清前方弯道，跟着航向驶向下一座导航门。</p>
       <ul class="release-list">
         <li><strong>长途雷达减轻负担</strong>减少航图重复计算，暂停或横屏隐藏时停止绘制，让长线飞行少一些额外开销。</li>
@@ -15,7 +24,8 @@ export function mountReleases() {
         <li><strong>航向与下一目标一眼可见</strong>白色箭头指示航向，亮色菱形突出下一座导航门；全部过门后指向返航基地，读屏标签同步更新。</li>
         <li><strong>回退重飞，航图同步</strong>换图和重飞及时刷新，漏门回退后显示实际航程；检查幽灵显示、暂停和手机横竖屏。1.13.2 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>27 个版本</span></summary>
+      </article>
+
       <article><h3>v1.13.2 · 补给领航</h3>
       <p>补给还有多远，护盾还能撑多久，一眼看清。</p>
       <ul class="release-list">

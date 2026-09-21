@@ -1,3 +1,5 @@
+import { coastingLane } from './flight-motion.js';
+
 export const ENVIRONMENT = Object.freeze({ gravity: 17, lowGravity: 8, warning: 2.6, blast: 1, damage: 22, clearance: 3.2, craftRadius: 1.1 });
 
 export function makeEnvironment(mission) {
@@ -52,28 +54,34 @@ export function meteorContact(meteor, before, after) {
 }
 
 export function getMeteorCue(game) {
+  let next = null;
   for (const meteor of game.course.meteors) {
     const distance = meteor.distance - game.distance;
     if (distance < -meteor.radius - ENVIRONMENT.craftRadius || distance > Math.max(140, game.speed * 2.6)) continue;
     const state = meteorState(meteor, game.elapsed);
     const arrival = Math.max(0, distance) / Math.max(1, game.speed);
     if (!['warning', 'impact'].includes(state.phase) && (arrival > 6 || meteorState(meteor, game.elapsed + arrival).phase !== 'impact')) continue;
-    let danger = false;
-    if (Math.abs(game.lane - meteor.lane) < meteor.radius + ENVIRONMENT.craftRadius) {
+    let timeToImpact = Infinity;
+    const radius = meteor.radius + ENVIRONMENT.craftRadius;
+    const horizon = game.speed > 0 ? Math.min(6, Math.max(0, distance + radius) / game.speed) : ENVIRONMENT.warning + ENVIRONMENT.blast;
+    const finalLane = coastingLane(game, horizon);
+    if (Math.min(game.lane, finalLane) < meteor.lane + radius && Math.max(game.lane, finalLane) > meteor.lane - radius) {
       let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
       let verticalSpeed = game.verticalSpeed;
-      const horizon = game.speed > 0 ? Math.min(6, Math.max(0, distance + meteor.radius + ENVIRONMENT.craftRadius) / game.speed) : ENVIRONMENT.warning + ENVIRONMENT.blast;
       for (let time = 0; time < horizon; time += 1 / 60) {
         const dt = Math.min(1 / 60, horizon - time);
         verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) * dt : 0;
-        const after = { ...before, elapsed: before.elapsed + dt, distance: before.distance + game.speed * dt, height: Math.max(0, before.height + verticalSpeed * dt) };
+        const after = { elapsed: before.elapsed + dt, distance: before.distance + game.speed * dt,
+          lane: coastingLane(game, time + dt), height: Math.max(0, before.height + verticalSpeed * dt) };
         const contact = meteorContact(meteor, before, after);
-        if (contact && contact.height < ENVIRONMENT.clearance) { danger = true; break; }
+        if (contact && contact.height < ENVIRONMENT.clearance) { timeToImpact = contact.elapsed - game.elapsed; break; }
         before = after;
       }
     }
-    return { kind: 'meteor', distance: Math.max(0, Math.ceil(distance)), remaining: state.remaining, phase: state.phase,
-      danger };
+    const danger = Number.isFinite(timeToImpact);
+    const cue = { kind: 'meteor', distance: Math.max(0, Math.ceil(distance)), remaining: state.remaining, phase: state.phase,
+      danger, timeToImpact, drifting: danger && Math.abs(game.lane - meteor.lane) >= radius };
+    if (!next || danger && !next.danger || danger === next.danger && (danger ? timeToImpact < next.timeToImpact : cue.distance < next.distance)) next = cue;
   }
-  return null;
+  return next;
 }

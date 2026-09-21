@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MISSIONS, makeCourse } from '../src/missions.js';
+import { MISSIONS, CRAFTS, makeCourse } from '../src/missions.js';
 import { createGame, startGame, updateGame, togglePause, getFlightCue } from '../src/game.js';
-import { ENVIRONMENT, gravityAt, meteorState, meteorContact } from '../src/environment.js';
+import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from '../src/environment.js';
 import { pilotInput } from '../src/pilots.js';
 
 const meteor = { id: 0, distance: 100, lane: 0, radius: 5, first: 4, period: 10 };
@@ -166,6 +166,44 @@ test('meteor cues warn about nearby strikes without hiding a closer rock collisi
   game.course.obstacles = [];
   game.elapsed = 7;
   assert.equal(getFlightCue(game).kind, 'gate');
+});
+
+test('meteor warnings include lateral inertia and agree with actual coasting impacts', () => {
+  for (const craft of CRAFTS) for (const side of [-1, 1]) for (const approaching of [false, true]) {
+    const game = createGame('tranquility', craft.id);
+    Object.assign(game, { status: 'running', distance: 100, speed: craft.boostSpeed,
+      lane: side * (approaching ? 6.5 : 5), lateralSpeed: side * craft.handling * (approaching ? -1 : 1) });
+    for (const key of ['gates', 'pickups', 'pads', 'obstacles', 'gravityZones']) game.course[key] = [];
+    game.course.meteors = [{ ...meteor, distance: game.distance + game.speed * .3, first: .1 }];
+    const before = structuredClone(game), cue = getMeteorCue(game);
+    assert.deepEqual(game, before);
+    let impactAt = null;
+    for (let frame = 0; frame < 36; frame++) {
+      updateGame(game, { boost: true }, 1 / 60);
+      if (game.events.some(event => event.type === 'impact')) { impactAt = game.elapsed; break; }
+    }
+    const label = `${craft.id}/${side}/${approaching}`;
+    assert.equal(cue?.danger, impactAt !== null, label);
+    if (impactAt !== null) assert.ok(Math.abs(cue.timeToImpact - impactAt) <= 1 / 60 + 1e-8, label);
+  }
+});
+
+test('a harmless meteor cannot hide a later dangerous site and the earliest impact wins', () => {
+  const game = flight();
+  Object.assign(game, { distance: 100, speed: 240 });
+  game.course.meteors = [
+    { ...meteor, id: 0, distance: 130, lane: -8, first: .1 },
+    { ...meteor, id: 1, distance: 180, lane: 0, first: .1 },
+    { ...meteor, id: 2, distance: 220, lane: 0, first: .1 },
+  ];
+  assert.equal(getMeteorCue(game).danger, true);
+  assert.equal(getMeteorCue(game).distance, 80);
+  game.course.meteors.reverse();
+  assert.equal(getMeteorCue(game).distance, 80);
+  game.course.obstacles = [{ id: 0, distance: 176, lane: 0, kind: 'rock', radius: 2.8 }];
+  assert.equal(getFlightCue(game).kind, 'hazard');
+  game.course.obstacles[0].distance = 179;
+  assert.equal(getFlightCue(game).kind, 'meteor');
 });
 
 test('retry resets weather clocks, warning history, cleared sites and skill statistics', () => {

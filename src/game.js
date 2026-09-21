@@ -2,9 +2,9 @@ import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
 import { POWERUPS, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
+import { STEERING_RESPONSE, ROAD_HALF_WIDTH, coastingLane } from './flight-motion.js';
 
-export const PHYSICS = Object.freeze({ width: 15, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
-const STEERING_RESPONSE = 9;
+export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 
 export function isJumpReady(game) {
   return game.height === 0 && game.jumpCooldown === 0 && game.energy >= PHYSICS.jumpCost;
@@ -97,7 +97,7 @@ function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.
     if (entry >= exit) return null;
   }
   const time = after.height >= before.height ? entry : exit;
-  return { height: before.height + (after.height - before.height) * time };
+  return { height: before.height + (after.height - before.height) * time, elapsed: before.elapsed + (after.elapsed - before.elapsed) * time };
 }
 
 export function getDeliveryStatus(game) {
@@ -112,25 +112,30 @@ export function getDeliveryStatus(game) {
 }
 
 export function getFlightCue(game) {
-  let timeToImpact;
-  const hazard = game.course.obstacles.find(obstacle => {
-    const distance = obstacle.distance - game.distance;
-    if (distance < -3 || distance > game.speed * 1.6 + 3) return false;
+  let hazard = null, timeToImpact = Infinity;
+  const obstacles = game.course.obstacles;
+  for (let i = firstAtOrAfter(obstacles, game.distance - 3); i < obstacles.length && obstacles[i].distance <= game.distance + game.speed * 1.6 + 3; i++) {
+    const obstacle = obstacles[i];
     let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
     let verticalSpeed = game.verticalSpeed;
     for (let step = 0; step < 96; step++) {
       verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) / 60 : 0;
-      const after = { ...before, elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60, height: Math.max(0, before.height + verticalSpeed / 60) };
+      const after = { elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60,
+        lane: coastingLane(game, (step + 1) / 60), height: Math.max(0, before.height + verticalSpeed / 60) };
       const contact = courseContact(obstacle, before, after);
-      if (contact && contact.height < 2.5) { timeToImpact = (step + 1) / 60; return true; }
+      if (contact && contact.height < 2.5) {
+        const time = contact.elapsed - game.elapsed;
+        if (time < timeToImpact) { timeToImpact = time; hazard = obstacle; }
+        break;
+      }
       if (after.distance > obstacle.distance + 3) break;
       before = after;
     }
-    return false;
-  });
+  }
   const meteor = getMeteorCue(game);
-  if (meteor && (!hazard || meteor.danger && meteor.distance < hazard.distance - game.distance)) return meteor;
-  if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind, timeToImpact };
+  if (meteor && (!hazard || meteor.danger && meteor.timeToImpact < timeToImpact)) return meteor;
+  if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind, timeToImpact,
+    drifting: Math.abs(game.lane - obstacleLane(hazard, game.elapsed + timeToImpact)) >= hazard.radius + 1.1 };
   const gate = game.course.gates[game.gates];
   const delivery = getDeliveryStatus(game);
   const gateDistance = gate ? gate.distance - game.distance : Infinity;
@@ -146,14 +151,7 @@ export function getFlightCue(game) {
   if (reward) return reward;
   if (!gate) return { kind: 'finish', distance: Math.ceil(game.mission.length - game.distance) };
   const projected = game.speed > 0 && gateDistance <= Math.max(45, game.speed * 0.8);
-  let lane = game.lane;
-  if (projected) {
-    const frames = Math.max(0, gateDistance) / game.speed * 60;
-    const whole = Math.floor(frames), decay = 1 - STEERING_RESPONSE / 60;
-    // Sum neutral steering decay, then interpolate the frame that crosses the gate.
-    lane += game.lateralSpeed / 60 * decay * ((1 - decay ** whole) / (1 - decay) + (frames - whole) * decay ** whole);
-    lane = Math.max(-PHYSICS.width, Math.min(PHYSICS.width, lane));
-  }
+  const lane = projected ? coastingLane(game, gateDistance / game.speed) : game.lane;
   const offset = gate.lane - lane;
   const aligned = Math.abs(offset) < gate.width;
   return { kind: 'gate', direction: Math.abs(offset) < 2.5 ? 'center' : offset < 0 ? 'left' : 'right', aligned, offset, projected,

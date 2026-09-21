@@ -618,7 +618,7 @@ function updateHUD() {
   $('flight-cue').dataset.danger = String(cue.danger ?? cue.drifting ?? false);
   if (cue.kind === 'meteor') {
     $('cue-action').textContent = `☄ ${cue.phase === 'impact' ? '冲击波' : '陨石落点'} ${cue.distance}m`;
-    $('cue-detail').textContent = cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
+    $('cue-detail').textContent = cue.drifting ? '惯性正滑向落点 · 横移避让' : cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
   } else if (cue.kind === 'cargo') {
     $('cue-action').textContent = { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction];
     $('cue-detail').textContent = `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`;
@@ -631,7 +631,7 @@ function updateHUD() {
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   } else {
     $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : '◇ 返回基地';
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
+    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${cue.drifting ? '惯性侧滑，横移修正' : isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
   }
   const drive = getDriveStatus(game, { brake: controls.held('brake'), cruise: controls.cruise, lowGravity });
   refs['throttle-hint'].textContent = drive.text;

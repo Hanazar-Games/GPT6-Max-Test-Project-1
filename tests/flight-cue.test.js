@@ -51,6 +51,26 @@ test('hazard guidance reports time to contact at the current speed', () => {
   assert.ok(getFlightCue(game).timeToImpact <= 1 / 60);
 });
 
+test('obstacle warnings match coasting collisions and safe escapes for every craft', () => {
+  for (const craft of CRAFTS) for (const boost of [false, true]) for (const side of [-1, 1]) for (const approaching of [false, true]) for (const kind of ['rock', 'drone']) {
+    const game = createGame('tranquility', craft.id);
+    Object.assign(game, { status: 'running', distance: 100, speed: boost ? craft.boostSpeed : craft.speed,
+      lane: side * (approaching ? 4.5 : 3), lateralSpeed: side * craft.handling * (approaching ? -1 : 1) });
+    for (const key of ['gates', 'pickups', 'pads', 'meteors', 'gravityZones']) game.course[key] = [];
+    game.course.obstacles = [{ id: 0, distance: game.distance + game.speed * .3, lane: 0, kind, radius: 2.8, phase: -.3, frequency: 1 }];
+    const before = structuredClone(game), cue = getFlightCue(game);
+    assert.deepEqual(game, before);
+    let contact = null;
+    for (let frame = 0; frame < 36; frame++) {
+      updateGame(game, { accelerate: true, boost }, 1 / 60);
+      if (game.events.some(event => event.type === 'impact')) { contact = game.elapsed; break; }
+    }
+    const label = `${craft.id}/${kind}/${boost}/${side}/${approaching}`;
+    assert.equal(cue.kind === 'hazard', contact !== null, label);
+    if (contact !== null) assert.ok(Math.abs(cue.timeToImpact - contact) <= 1 / 60 + 1e-8, label);
+  }
+});
+
 function gateApproach(craft = 'nova') {
   const game = createGame('frontier', craft);
   const index = game.course.gates.findIndex(gate => gate.lane === 0);
