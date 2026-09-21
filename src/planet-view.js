@@ -5,43 +5,61 @@ import { batchMeshes } from './model-utils.js';
 import { bridgeAt } from './bridges.js';
 import { makeBridges } from './bridge-view.js';
 
-function ribbon(world, left, right, material, height = -0.38, depth = 0) {
-  const positions = [], indices = [], uvs = [];
+function makeRoadStrips(world, strips) {
   const steps = Math.max(1000, Math.ceil(world.mission.length / 8));
-  for (let i = 0; i <= steps; i++) {
-    positions.push(...world.frame(i / steps * world.mission.length, left, height).point.toArray());
-    positions.push(...world.frame(i / steps * world.mission.length, right, height + depth).point.toArray());
-    uvs.push(0, i / steps * world.mission.length / 8, Math.max(1, Math.abs(right - left) / 8), i / steps * world.mission.length / 8);
-    if (i < steps) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  const vertices = (steps + 1) * 2;
+  const indices = new (vertices > 65535 ? Uint32Array : Uint16Array)(steps * 6);
+  for (const strip of strips) {
+    strip.positions = new Float32Array(vertices * 3);
+    strip.uvs = new Float32Array(vertices * 2);
   }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  const mesh = world.mesh(geometry, material, world.scene);
-  mesh.receiveShadow = true;
-  return mesh;
+  const point = new THREE.Vector3();
+  for (let i = 0; i <= steps; i++) {
+    const distance = i / steps * world.mission.length, frame = world.frame(distance);
+    for (const { left, right, height = -.38, depth = 0, positions, uvs } of strips) {
+      point.copy(frame.point).addScaledVector(frame.right, left).addScaledVector(frame.up, height).toArray(positions, i * 6);
+      point.copy(frame.point).addScaledVector(frame.right, right).addScaledVector(frame.up, height + depth).toArray(positions, i * 6 + 3);
+      uvs[i * 4 + 1] = uvs[i * 4 + 3] = distance / 8;
+      uvs[i * 4 + 2] = Math.max(1, Math.abs(right - left) / 8);
+    }
+    if (i < steps) {
+      const a = i * 2, offset = i * 6;
+      indices[offset] = a; indices[offset + 1] = a + 2; indices[offset + 2] = a + 1;
+      indices[offset + 3] = a + 1; indices[offset + 4] = a + 2; indices[offset + 5] = a + 3;
+    }
+  }
+  const index = new THREE.BufferAttribute(indices, 1);
+  for (const { positions, uvs, material, name = '' } of strips) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geometry.setIndex(index);
+    geometry.computeVertexNormals();
+    const mesh = world.mesh(geometry, material, world.scene);
+    mesh.receiveShadow = true;
+    mesh.name = name;
+  }
 }
 
 export function makeMountainRoad(world) {
   const asphalt = new THREE.MeshStandardMaterial({ color: '#27313c', map: makeSurfaceTexture(), roughness: 0.93, metalness: 0.1, side: THREE.DoubleSide });
   const edge = new THREE.MeshStandardMaterial({ color: world.mission.color, emissive: world.mission.color, emissiveIntensity: 0.4, side: THREE.DoubleSide });
   const rail = new THREE.MeshStandardMaterial({ color: '#728797', roughness: 0.55, metalness: 0.7, side: THREE.DoubleSide });
-  ribbon(world, -17, 17, asphalt);
+  const strips = [{ left: -17, right: 17, material: asphalt }];
   if (world.mission.special === 'boost') {
     const energy = new THREE.MeshBasicMaterial({ color: '#63f7c5', side: THREE.DoubleSide });
     const surface = new THREE.MeshBasicMaterial({ color: '#4ed9ae', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
-    ribbon(world, -16, 16, surface, -0.29).name = 'accelerator-surface';
-    for (const side of [-1, 1]) ribbon(world, side * 10, side * 10.45, energy, -0.25);
+    strips.push({ left: -16, right: 16, material: surface, height: -.29, name: 'accelerator-surface' });
+    for (const side of [-1, 1]) strips.push({ left: side * 10, right: side * 10.45, material: energy, height: -.25 });
   }
   for (const side of [-1, 1]) {
-    ribbon(world, side * 17, side * 17, asphalt, -0.38, -4);
-    ribbon(world, side * 12.8, side * 12.8, rail, -1.2, -2.4);
-    ribbon(world, side * 16.6, side * 17, edge, -0.28);
-    ribbon(world, side * 18.2, side * 18.2, rail, 0.65, 0.5);
-    ribbon(world, side * 18.2, side * 18.2, edge, 1.16, 0.08);
+    strips.push({ left: side * 17, right: side * 17, material: asphalt, depth: -4 },
+      { left: side * 12.8, right: side * 12.8, material: rail, height: -1.2, depth: -2.4 },
+      { left: side * 16.6, right: side * 17, material: edge, height: -.28 },
+      { left: side * 18.2, right: side * 18.2, material: rail, height: .65, depth: .5 },
+      { left: side * 18.2, right: side * 18.2, material: edge, height: 1.16, depth: .08 });
   }
+  makeRoadStrips(world, strips);
   const count = Math.ceil(world.mission.length / 14);
   const markers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.08, 3), new THREE.MeshBasicMaterial({ color: '#bed3dc' }), count);
   const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 1.6, 0.2), rail, count * 2);
@@ -49,16 +67,16 @@ export function makeMountainRoad(world) {
   const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     const distance = i / count * world.mission.length;
+    const frame = world.frame(distance);
+    world.orient(dummy, frame);
     for (const side of [-1, 0, 1]) {
-      const frame = world.frame(distance, side * 18.2, side ? 0.35 : -0.25);
-      dummy.position.copy(frame.point);
-      world.orient(dummy, frame);
+      dummy.position.copy(frame.point).addScaledVector(frame.right, side * 18.2).addScaledVector(frame.up, side ? .35 : -.25);
       dummy.updateMatrix();
       if (!side) markers.setMatrixAt(i, dummy.matrix);
       else {
         const index = i * 2 + (side > 0 ? 1 : 0);
         posts.setMatrixAt(index, dummy.matrix);
-        dummy.position.copy(world.frame(distance, side * 16.1, -0.24).point);
+        dummy.position.copy(frame.point).addScaledVector(frame.right, side * 16.1).addScaledVector(frame.up, -.24);
         dummy.updateMatrix();
         curbs.setMatrixAt(index, dummy.matrix);
       }

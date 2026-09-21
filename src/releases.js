@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 长途绘制优化</h2>
+      <h2 id="release-title">v${version} · 航线加载提速</h2>
+      <p>切换长途航线时少等一会，继续驶向远方的山桥。</p>
+      <ul class="release-list">
+        <li><strong>长路线生成更快</strong>路面、侧梁和护栏共用每段路线的位置与朝向，路标和路缘也减少重复计算；本机对照中，二百四十公里路线的场景生成时间约减半。</li>
+        <li><strong>道路细节完整保留</strong>保留全部五十八条路线的弯道倾斜、道路精度、纹理和护栏位置，核对短线、地球、全加速与万峰云桥的实际画面。</li>
+        <li><strong>加载时减少临时分配</strong>道路几何直接写入缓冲，共用重复索引；检查换图、换船和重新起飞。1.14.4 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>34 个版本</span></summary>
+      <article><h3>v1.14.4 · 长途绘制优化</h3>
       <p>驶过绿野与极速长廊，让远处的景物少占一些绘制开销。</p>
       <ul class="release-list">
         <li><strong>十九条长线补齐绘制优化</strong>地球、全加速、末日和长途道具路线加入场景分块，三十三条长路线都能按视野裁剪固定景物，保留山体、道路与森林细节。</li>
         <li><strong>透明加速路面保持完整</strong>保留能量路面的叠加顺序与光效，核对精致画质下的阴影和辉光；加速带激活变色、重飞恢复与补给正常显示。</li>
         <li><strong>长途绘制量明显减少</strong>地球、全加速和一百二十三公里航线中段对照，提交的三角形约减少九成；实际流畅度取决于设备。同时减少分块准备时的临时分配，1.14.3 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>33 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.3 · 长线性能优化</h3>
       <p>让超长山桥航线少一些重复计算，保留一路的细节。</p>
       <ul class="release-list">
