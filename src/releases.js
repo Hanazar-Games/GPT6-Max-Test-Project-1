@@ -7,7 +7,17 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 险情预警</h2>
+      <h2 id="release-title">v${version} · 虹界拉力</h2>
+      <p>穿过七重云岭，驾着新翼追逐精准光环。</p>
+      <ul class="release-list">
+        <li><strong>四款新艇，四十种选择</strong>云鹤的上扬羽翼、天蝎的双钳弯尾、金龟的双穹重甲与蝶翼的四瓣光翼加入机库，分别适合巡岭、竞速、续航与精准操控。</li>
+        <li><strong>四颗新星球，32–128 公里拉力</strong>虹潮环岭 32 公里、兰庭双脊 56 公里、水镜长渠 96 公里与灯塔远征 128 公里开放；云环叠岭和双脊悬桥串起二十七座新桥。</li>
+        <li><strong>电池与超频加入补给</strong>电池立即补充 60 能量，超频提供 5 秒免费冲刺，制动优先、受损或漏门解除。护盾、磁吸与超频独立计时，暂停冻结，重飞清空。</li>
+        <li><strong>精准环与新奖章</strong>低空达到巡航速度的 90%，偏离青色环心小于 1.5 米即可获得 450 基础分及连锁奖励；成功交付且命中三次可获「定心领航」。机库新增进阶拉力分类。</li>
+        <li><strong>风景与声音同步扩展</strong>贝壳光拱、巨型兰花、引水拱廊与棱镜灯塔配上新星球音乐，电池、超频和精准穿环各有提示音。星图共 58 条路线、3556.3 公里、149 座桥，大赛与远征扩至 58 站；1.13.4 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>29 个版本</span></summary>
+      <article><h3>v1.13.4 · 险情预警</h3>
       <p>看懂侧滑惯性，及时发现真正接近的危险。</p>
       <ul class="release-list">
         <li><strong>侧滑风险提前看见</strong>岩石、巡逻机与陨石预警考虑松开转向后的惯性，滑向危险时及时提醒，已经滑离碰撞路线时解除警报。</li>
@@ -15,7 +25,8 @@ export function mountReleases() {
         <li><strong>横移修正更有依据</strong>提示卡说明惯性侧滑与滑向落点的风险，临近碰撞仍提醒立即避让；手机横竖屏均能完整阅读。</li>
         <li><strong>长线查询继续减负</strong>障碍预警只检查附近区间，验证全部 36 款飞船的实际飞行与预警结果。1.13.3 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>28 个版本</span></summary>
+      </article>
+
       <article><h3>v1.13.3 · 航图精修</h3>
       <p>看清前方弯道，跟着航向驶向下一座导航门。</p>
       <ul class="release-list">

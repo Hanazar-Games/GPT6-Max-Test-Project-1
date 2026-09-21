@@ -6,8 +6,8 @@ import { createRoute } from '../src/route.js';
 import { World } from '../src/world.js';
 import { RewardView } from '../src/reward-view.js';
 
-test('route reward models follow the course, disappear when resolved, return on retry and release their resources', () => {
-  const game = createGame('marathon');
+for (const mission of ['marathon', 'opalreach']) test(`${mission}: reward models follow the course, reset on retry and release their resources`, () => {
+  const game = createGame(mission);
   const world = Object.assign(Object.create(World.prototype), { mission: game.mission, course: game.course, curve: createRoute(game.mission), scene: new THREE.Scene(), materials: { dark: new THREE.MeshBasicMaterial() }, renderer: { renderLists: { dispose() {} } } });
   const view = new RewardView(world);
   for (const { item, group } of [...view.items, ...view.rings]) {

@@ -10,6 +10,7 @@ export const MISSION_CATEGORIES = [
   { id: 'short', label: '短途', matches: mission => !mission.endurance },
   { id: 'long', label: '长途', matches: mission => mission.endurance },
   { id: 'tour', label: '道具挑战', matches: mission => mission.tour },
+  { id: 'advanced', label: '进阶拉力', matches: mission => mission.advanced },
   { id: 'bridges', label: '山桥长线', matches: mission => mission.bridges.length > 0 },
   { id: 'clear', label: '无障碍', matches: mission => ['boost', 'garden'].includes(mission.special) },
   { id: 'hazard', label: '障碍密集', matches: mission => mission.special === 'hazard' },
@@ -25,7 +26,7 @@ export function filterMissions(query = '', category = 'all') {
   const words = queryTerms.filter(term => !distances.includes(term));
   const group = MISSION_CATEGORIES.find(item => item.id === category);
   return MISSIONS.filter(mission => group.matches(mission) && distances.every(term => Number(term.slice(0, -2)) * 1000 === mission.length) && matches(
-    `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.tour ? '道具挑战' : ''} ${mission.endurance ? `长途 ${minimumDriveLabel(mission).replace(/\s/g, '')}` : '短途'}`, words,
+    `${mission.planet} ${mission.name} ${mission.layout} ${mission.label} ${mission.description} ${mission.tour ? '道具挑战' : ''} ${mission.advanced ? '进阶拉力 电池 超频 精准' : ''} ${mission.endurance ? `长途 ${minimumDriveLabel(mission).replace(/\s/g, '')}` : '短途'}`, words,
   ));
 }
 

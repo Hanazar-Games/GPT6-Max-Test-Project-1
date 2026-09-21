@@ -137,11 +137,11 @@ export class AudioEngine {
 
   event(type, kind) {
     if (type === 'powerup') {
-      const notes = { shield: [392, 523, 784], magnet: [523, 659, 988], repair: [440, 554, 659] }[kind];
+      const notes = { shield: [392, 523, 784], magnet: [523, 659, 988], repair: [440, 554, 659], battery: [660, 1320], overdrive: [220, 440, 660, 880] }[kind];
       if (notes) notes.forEach((note, i) => this.tone(note, .18, i * .07, kind === 'magnet' ? 'sine' : 'triangle'));
     }
     if (type === 'shield-block') { this.tone(260, .25, 0, 'triangle'); this.tone(520, .2, .06); }
-    if (type === 'challenge') [880, 1100, 1320].forEach((note, i) => this.tone(note, .2, i * .06));
+    if (type === 'challenge') (kind === 'precision' ? [659, 880, 1100, 1320] : [880, 1100, 1320]).forEach((note, i) => this.tone(note, .2, i * .06));
     if (type === 'pickup') { this.tone(780); this.tone(1170, 0.22, 0.08); }
     if (type === 'gate') [440, 660, 880].forEach((note, i) => this.tone(note, 0.25, i * 0.09));
     if (type === 'impact' || type === 'miss') { this.tone(75, 0.3, 0, 'triangle'); this.tone(48, 0.3, 0.06, 'sawtooth'); }

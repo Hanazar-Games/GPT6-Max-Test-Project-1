@@ -437,6 +437,9 @@ export class World {
     this.shieldBubble = this.mesh(new THREE.SphereGeometry(5.1, 18, 12), new THREE.MeshBasicMaterial({ color: '#89cfff', wireframe: true, transparent: true, opacity: .14, depthWrite: false }), this.craft);
     this.shieldBubble.scale.set(1, .55, 1.2);
     this.shieldBubble.visible = false;
+    this.overdriveHalo = this.mesh(new THREE.TorusGeometry(4.5, .05, 6, 48), new THREE.MeshBasicMaterial({ color: '#ffb184', transparent: true, opacity: .65, depthWrite: false }), this.craft, [0, -.5, 0]);
+    this.overdriveHalo.rotation.x = Math.PI / 2;
+    this.overdriveHalo.visible = false;
     this.engineLight = new THREE.PointLight('#67dafb', 15, 12, 2);
     this.engineLight.position.set(0, 0, -1.5);
     this.craft.add(this.engineLight);
@@ -557,6 +560,8 @@ export class World {
     this.magnetRing.visible = pickupRange(game) > 3.7 && game.height < 2.3;
     this.magnetRing.scale.setScalar(pickupRange(game));
     this.shieldBubble.visible = game.shieldTime > 0;
+    this.overdriveHalo.visible = game.overdriveTime > 0;
+    this.overdriveHalo.scale.setScalar(1 + Math.sin(game.elapsed * 9) * .04);
     this.magnetRing.material.opacity = 0.25 + Math.sin(this.clock * 2) * 0.08;
     this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * 0.009, Math.min(1, dt * 7));
     this.craftBody.rotation.x = -game.speed * 0.0004 + game.verticalSpeed * 0.013;

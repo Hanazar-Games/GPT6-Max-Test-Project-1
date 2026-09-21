@@ -5,8 +5,8 @@ import { createRoute, routeFrame, speedFov } from '../src/route.js';
 import { createGame, updateGame } from '../src/game.js';
 import { upgradeCraft } from '../src/upgrades.js';
 
-test('fifty-four different planets have closed mountain roads at their actual advertised lengths', () => {
-  assert.equal(MISSIONS.length, 54);
+test('fifty-eight different planets have closed mountain roads at their actual advertised lengths', () => {
+  assert.equal(MISSIONS.length, 58);
   assert.equal(new Set(MISSIONS.map(mission => mission.id)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => mission.planet)).size, MISSIONS.length);
   assert.equal(new Set(MISSIONS.map(mission => JSON.stringify(mission.points))).size, MISSIONS.length);
@@ -60,7 +60,7 @@ test('hairpin road edges and guardrails never fold back across the driving surfa
 });
 
 test('all ships exceed 1100 km/h under boost and can brake from the new top speeds', () => {
-  assert.equal(CRAFTS.length, 36);
+  assert.equal(CRAFTS.length, 40);
   assert.equal(new Set(CRAFTS.map(craft => craft.id)).size, CRAFTS.length);
   assert.equal(new Set(CRAFTS.map(craft => [craft.speed, craft.boostSpeed, craft.handling, craft.hull, craft.recharge].join('/'))).size, CRAFTS.length);
   for (const craft of CRAFTS) {
@@ -78,8 +78,8 @@ test('all ships exceed 1100 km/h under boost and can brake from the new top spee
   }
 });
 
-test('the expanded atlas has thirteen route families and distinct driving layouts', () => {
-  assert.equal(new Set(MISSIONS.map(mission => mission.layout)).size, 13);
+test('the expanded atlas has fifteen route families and distinct driving layouts', () => {
+  assert.equal(new Set(MISSIONS.map(mission => mission.layout)).size, 15);
   assert.equal(new Set(MISSIONS.map(mission => mission.biome)).size, MISSIONS.length);
   const shapes = new Set();
   for (const mission of MISSIONS) {
@@ -92,7 +92,7 @@ test('the expanded atlas has thirteen route families and distinct driving layout
 
 test('all routes of at least 90 km require three minutes even at uninterrupted fully upgraded boost', () => {
   const missions = MISSIONS.filter(mission => mission.length >= 90000);
-  assert.equal(missions.length, 19);
+  assert.equal(missions.length, 21);
   const fastest = Math.max(...CRAFTS.map(craft => upgradeCraft(craft, { engine: 2 }).boostSpeed));
   for (const mission of missions) {
     assert.ok(mission.length / fastest >= 180, `${mission.id}: shorter than three minutes`);

@@ -63,12 +63,12 @@ test('speed-ring guidance distinguishes airborne, under-speed and ready craft us
 });
 
 test('the original rally routes retain their distances and rewards stay ordered across the atlas', () => {
-  assert.equal(MISSIONS.length, 54); assert.equal(CRAFTS.length, 36);
+  assert.equal(MISSIONS.length, 58); assert.equal(CRAFTS.length, 40);
   assert.deepEqual(MISSIONS.slice(44, 48).map(m => m.length), [20000, 20000, 20000, 50000]);
   for (const mission of MISSIONS) {
     const course = makeCourse(mission);
-    assert.equal(new Set(course.powerups.map(item => item.kind)).size, mission.tour ? 3 : 0);
-    assert.equal(new Set(course.challenges.map(item => item.kind)).size, mission.tour ? 2 : 0);
+    assert.equal(new Set(course.powerups.map(item => item.kind)).size, mission.advanced ? 5 : mission.tour ? 3 : 0);
+    assert.equal(new Set(course.challenges.map(item => item.kind)).size, mission.advanced ? 3 : mission.tour ? 2 : 0);
     for (const list of [course.pickups, course.obstacles, course.pads, course.meteors, course.powerups, course.challenges]) {
       assert.ok(list.every((item, i) => !i || item.distance >= list[i - 1].distance), mission.id);
     }

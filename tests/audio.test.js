@@ -130,9 +130,9 @@ test('high-speed percussion is stopped by pause and music mute without silencing
   assert.equal(audio.voices.size, 0);
 });
 
-test('shield, magnet and repair sounds have distinct cues and respect the effects volume', async () => {
+test('all five powerups have distinct sounds and respect the effects volume', async () => {
   const audio = await setup(), cues = new Set();
-  for (const kind of ['shield', 'magnet', 'repair']) {
+  for (const kind of ['shield', 'magnet', 'repair', 'battery', 'overdrive']) {
     const before = audio.context.oscillators.length;
     audio.event('powerup', kind);
     const notes = audio.context.oscillators.slice(before);
@@ -140,9 +140,9 @@ test('shield, magnet and repair sounds have distinct cues and respect the effect
     cues.add(JSON.stringify(notes.map(note => [note.frequency.value, note.type])));
     audio.stopVoices();
   }
-  assert.equal(cues.size, 3);
+  assert.equal(cues.size, 5);
   audio.setVolume('sfx', 0);
-  for (const kind of ['shield', 'magnet', 'repair']) audio.event('powerup', kind);
+  for (const kind of ['shield', 'magnet', 'repair', 'battery', 'overdrive']) audio.event('powerup', kind);
   assert.equal(audio.voices.size, 0);
 });
 

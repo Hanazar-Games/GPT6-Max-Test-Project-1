@@ -11,7 +11,7 @@ test('route categories expose every route and classify special routes by their r
   const short = filterMissions('', 'short');
   const long = filterMissions('', 'long');
   assert.equal(short.length, 25);
-  assert.equal(long.length, 29);
+  assert.equal(long.length, 33);
   assert.deepEqual([...short, ...long], MISSIONS);
   assert.deepEqual(ids(filterMissions('', 'clear')), ['overdrive', 'earth']);
   assert.deepEqual(ids(filterMissions('', 'hazard')), ['apocalypse']);
@@ -38,7 +38,7 @@ test('craft search recognizes names, roles and typed model dash variants', () =>
 });
 
 test('performance ordering ranks the full fleet and preserves catalogue order on ties', () => {
-  for (const [sort, winner] of [['boostSpeed', 'nova'], ['handling', 'dragonfly'], ['hull', 'tortoise'], ['recharge', 'atlas']]) {
+  for (const [sort, winner] of [['boostSpeed', 'nova'], ['handling', 'butterfly'], ['hull', 'tortoise'], ['recharge', 'atlas']]) {
     const result = filterCrafts('', sort);
     assert.equal(result[0].id, winner);
     assert.equal(result.length, CRAFTS.length);

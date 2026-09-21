@@ -4,7 +4,7 @@ import { batchMeshes } from './model-utils.js';
 export function makeLandmarks(world, random) {
   const { biome, color } = world.mission;
   const model = new THREE.Group();
-  const polished = ['crystal', 'ice', 'prism', 'salt', 'solar', 'observatory', 'glassworks', 'orrery'].includes(biome);
+  const polished = ['crystal', 'ice', 'prism', 'salt', 'solar', 'observatory', 'glassworks', 'orrery', 'tidalglass', 'aqueduct'].includes(biome);
   const stone = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).lerp(new THREE.Color('#a6acae'), 0.35), roughness: polished ? 0.24 : 0.82, metalness: biome === 'industrial' ? 0.7 : polished ? 0.3 : 0.05, side: ['fungal', 'solar'].includes(biome) ? THREE.DoubleSide : THREE.FrontSide });
   if (['ridge', 'mesa', 'sandstone', 'dunes', 'volcanic'].includes(biome)) stone.color.setHSL(world.mission.ground, world.mission.saturation, biome === 'volcanic' ? 0.16 : 0.38);
   const dark = biome === 'earth' ? new THREE.MeshStandardMaterial({ color: '#725134', roughness: 1 }) : world.materials.dark;
@@ -542,6 +542,47 @@ export function makeLandmarks(world, random) {
       branch([[x, 34, 0], [x * .5, 32, 0], [0, 26, 0]], 2, dark);
     }
     for (let i = -2; i <= 2; i++) box([1.2, 10, 1], light, i * 3, 14, -13.5);
+  } else if (biome === 'tidalglass') {
+    foundation(24);
+    for (let i = 0; i < 5; i++) {
+      const shell = ring(12 + i * 2.4, .9, i % 2 ? light : stone, 24, Math.PI * 1.3);
+      shell.rotation.set(.15 * i, i * .34, -.15);
+      pillar(1.2, 22, dark, (i - 2) * 8, 12, 0);
+    }
+    const pearl = add(new THREE.SphereGeometry(6, 16, 12), light, 0, 23);
+    pearl.scale.y = 1.2;
+  } else if (biome === 'orchid') {
+    foundation(23);
+    branch([[0, 2, 0], [3, 22, 0], [0, 43, 0]], 2.5, dark);
+    for (let i = 0; i < 5; i++) {
+      const angle = i / 5 * Math.PI * 2;
+      const petal = add(new THREE.SphereGeometry(1, 16, 10), stone, Math.cos(angle) * 12, 44 + Math.sin(angle) * 10, 0);
+      petal.scale.set(12, 7, 2); petal.rotation.z = angle;
+    }
+    add(new THREE.IcosahedronGeometry(5, 1), light, 0, 44, 4);
+    for (const side of [-1, 1]) {
+      const leaf = add(new THREE.SphereGeometry(1, 12, 8), dark, side * 10, 18, 0);
+      leaf.scale.set(14, 3, 5); leaf.rotation.z = side * .45;
+    }
+  } else if (biome === 'aqueduct') {
+    foundation(26);
+    for (const y of [19, 39]) {
+      box([46, 3, 10], stone, 0, y + 9);
+      for (const x of [-18, 0, 18]) pillar(2.5, 20, stone, x, y - 2);
+      for (const x of [-9, 9]) add(new THREE.TorusGeometry(7.5, 1.3, 6, 24, Math.PI), dark, x, y - 2);
+      box([44, .9, 5], light, 0, y + 11);
+    }
+  } else if (biome === 'beacons') {
+    foundation(23);
+    pillar(10, 42, stone, 0, 23, 0, 6, 8);
+    for (const y of [12, 26, 42]) { const collar = ring(10 - y * .075, 1.2, dark, y); collar.rotation.x = Math.PI / 2; }
+    pillar(9, 12, light, 0, 50, 0, 9, 8);
+    add(new THREE.ConeGeometry(13, 9, 8), stone, 0, 61);
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4;
+      pillar(.6, 13, dark, Math.cos(angle) * 9, 50, Math.sin(angle) * 9);
+    }
+    ring(16, .55, light, 50);
   }
   if (biome === 'prism') {
     stone.vertexColors = light.vertexColors = true;

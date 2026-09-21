@@ -1,7 +1,7 @@
 import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
-import { POWERUPS, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
+import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
 import { STEERING_RESPONSE, ROAD_HALF_WIDTH, coastingLane } from './flight-motion.js';
 
 export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
@@ -37,8 +37,8 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
     missedPickups: new Set(), passedObstacles: new Set(), pendingObstacleDodges: new Set(), activatedPads: new Set(), padBoost: 0,
     meteorDodges: 0, glides: 0, resolvedMeteors: new Set(), pendingMeteorDodges: new Set(), clearedZones: new Set(), meteorWarnings: new Set(),
     reason: '', events: [], elapsed: 0,
-    shieldTime: 0, magnetTime: 0, shieldBlocks: 0, powerupsTaken: new Set(),
-    challengesResolved: new Set(), challengeHits: 0, challengeChain: 0, maxChallengeChain: 0,
+    shieldTime: 0, magnetTime: 0, overdriveTime: 0, shieldBlocks: 0, powerupsTaken: new Set(),
+    challengesResolved: new Set(), challengeHits: 0, precisionHits: 0, challengeChain: 0, maxChallengeChain: 0,
   };
 }
 
@@ -68,6 +68,7 @@ function impact(game, damage, source = 'obstacle') {
   game.hull = Math.max(0, game.hull - damage);
   game.speed *= 0.45;
   game.padBoost = 0;
+  game.overdriveTime = 0;
   game.combo = 0;
   game.challengeChain = 0;
   game.impacts++;
@@ -170,6 +171,7 @@ export function getDebrief(game) {
     if (game.meteorDodges >= 1) medals.push({ name: '踏星而行', symbol: '☄' });
     if (game.glides >= 1) medals.push({ name: '引力旅人', symbol: '⌁' });
     if (game.maxChallengeChain >= 3) medals.push({ name: '环线达人', symbol: '◎' });
+    if (game.precisionHits >= 3) medals.push({ name: '定心领航', symbol: '⊕' });
   }
   return { medals, rank: game.status !== 'won' ? '—' : medals.length >= 4 ? 'S' : medals.length >= 2 ? 'A' : 'B' };
 }
@@ -201,6 +203,7 @@ export function updateGame(game, input, delta) {
   game.jumpCooldown = Math.max(0, game.jumpCooldown - dt);
   game.shieldTime = Math.max(0, game.shieldTime - dt);
   game.magnetTime = Math.max(0, game.magnetTime - dt);
+  game.overdriveTime = Math.max(0, game.overdriveTime - dt);
   if ((input.jumpPressed || input.jump && !game.jumpHeld) && isJumpReady(game)) {
     game.verticalSpeed = 11;
     game.energy -= PHYSICS.jumpCost;
@@ -215,8 +218,9 @@ export function updateGame(game, input, delta) {
   }
   if (!input.boost || input.boostReleased) game.boostLocked = false;
   else if (game.energy <= 1) game.boostLocked = true;
-  const manualBoost = !!input.boost && !input.brake && !game.boostLocked && game.padBoost === 0 && game.energy > 1;
-  game.boosting = !input.brake && (manualBoost || game.padBoost > 0);
+  const freeBoost = game.padBoost > 0 || game.overdriveTime > 0;
+  const manualBoost = !!input.boost && !input.brake && !game.boostLocked && !freeBoost && game.energy > 1;
+  game.boosting = !input.brake && (manualBoost || freeBoost);
   const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
   const acceleration = input.brake ? 260 : targetSpeed > game.speed ? (game.boosting ? 210 : 130) : 48;
   game.speed += Math.sign(targetSpeed - game.speed) * Math.min(Math.abs(targetSpeed - game.speed), acceleration * dt);
@@ -243,6 +247,8 @@ export function updateGame(game, input, delta) {
     if (item.kind === 'shield') game.shieldTime = POWERUPS.shield.duration;
     if (item.kind === 'magnet') game.magnetTime = POWERUPS.magnet.duration;
     if (item.kind === 'repair') { game.hull = Math.min(game.craft.hull, game.hull + 35); game.energy = Math.min(100, game.energy + 30); }
+    if (item.kind === 'battery') game.energy = Math.min(100, game.energy + 60);
+    if (item.kind === 'overdrive') game.overdriveTime = POWERUPS.overdrive.duration;
     game.events.push({ type: 'powerup', kind: item.kind });
   }
   for (let i = firstAtOrAfter(game.course.pickups, before - 4); i < game.course.pickups.length && game.course.pickups[i].distance <= game.distance + 2; i++) {
@@ -336,11 +342,13 @@ export function updateGame(game, input, delta) {
     const fraction = (ring.distance - before) / (game.distance - before);
     const lane = previous.lane + (game.lane - previous.lane) * fraction;
     const height = previous.height + (game.height - previous.height) * fraction;
-    const success = Math.abs(lane - ring.lane) < 3.5 && (ring.kind === 'speed' ? height < 2.3 && game.speed >= game.craft.speed * .9 : height >= 2.8 && height <= 6.2);
+    const challenge = CHALLENGES[ring.kind];
+    const success = Math.abs(lane - ring.lane) < challenge.width && (ring.kind === 'jump' ? height >= 2.8 && height <= 6.2 : height < 2.3 && game.speed >= game.craft.speed * .9);
     if (success) {
       game.challengeHits++; game.challengeChain++;
+      if (ring.kind === 'precision') game.precisionHits++;
       game.maxChallengeChain = Math.max(game.maxChallengeChain, game.challengeChain);
-      const points = (ring.kind === 'jump' ? 350 : 200) + Math.min(4, game.challengeChain - 1) * 50;
+      const points = challenge.points + Math.min(4, game.challengeChain - 1) * 50;
       game.score += points; game.energy = Math.min(100, game.energy + 12);
       game.events.push({ type: 'challenge', kind: ring.kind, points });
     } else game.challengeChain = 0;
@@ -364,6 +372,7 @@ export function updateGame(game, input, delta) {
       game.height = 0;
       game.verticalSpeed = 0;
       game.padBoost = 0;
+      game.overdriveTime = 0;
       game.combo = 0;
       game.challengeChain = 0;
       for (const id of game.pendingMeteorDodges) game.resolvedMeteors.add(id);

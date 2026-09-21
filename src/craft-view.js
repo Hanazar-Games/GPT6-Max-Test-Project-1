@@ -219,7 +219,27 @@ export function makeCraftModel(materials) {
     const rim = add(new THREE.TorusGeometry(1.1, .09, 6, 28), materials.orange, [s(3.25), .75, -.5], variants.medusa);
     rim.rotation.x = Math.PI / 2; rim.scale.y = 1.35;
     for (let i = 0; i < 3; i++) tube([[s(2.7 + i * .5), .7, -.8], [s(3.2 + i * .4), .4, -2.7], [s(2.4 + i * .55), .1, -4.1]], .065, capacitor, variants.medusa);
+    plate([[s(1), 1.8], [s(3), 2.5], [s(4.9), .6], [s(4.45), -.1], [s(2.8), .5], [s(1.1), -1.5]], .12, materials.orange, .6, variants.crane);
+    tube([[s(1.2), .6, 1.7], [s(3), .9, 2], [s(4.8), 1.4, .6]], .16, materials.metal, variants.crane);
+    for (let i = 0; i < 3; i++) plate([[s(2.4 + i * .65), .8], [s(3.2 + i * .55), -.7 - i * .3], [s(2.8 + i * .55), -1.1 - i * .3]], .07, materials.metal, .65, variants.crane);
+    tube([[s(1.3), .3, 0], [s(3.7), .5, 1.4], [s(3.6), .7, 4.1], [s(2.55), .5, 4.7]], .27, materials.orange, variants.scorpion);
+    plate([[s(3.2), 2.8], [s(2.9), 4.5], [s(2.1), 3.4]], .18, materials.metal, .45, variants.scorpion);
+    const armor = add(new THREE.SphereGeometry(1, 20, 14), materials.orange, [s(2.6), .65, -.3], variants.beetle);
+    armor.scale.set(1.3, .75, 2.3);
+    for (let i = 0; i < 3; i++) tube([[s(1.8), .3, 1.4 - i * 1.5], [s(3.65), .1, 1.8 - i * 1.5], [s(4.3), -.1, .7 - i * 1.5]], .16, materials.metal, variants.beetle);
+    tube([[s(2.6), 1.2, 1.65], [s(2.6), 1.4, -.3], [s(2.6), 1.15, -2.25]], .07, capacitor, variants.beetle);
+    for (const [z, width, length] of [[1.2, 1.7, 1.9], [-2, 1.4, 1.2]]) {
+      const wing = add(new THREE.SphereGeometry(1, 20, 12), materials.orange, [s(3.1), .35, z], variants.butterfly);
+      wing.scale.set(width, .09, length);
+      tube([[s(1.2), .3, z * .5], [s(3), .5, z], [s(4.3), .42, z + .35]], .045, capacitor, variants.butterfly);
+      const eye = add(new THREE.SphereGeometry(.5, 12, 8), materials.dark, [s(3.5), .45, z], variants.butterfly);
+      eye.scale.set(1, .08, 1.3);
+    }
   }
+  tube([[0, .7, -2.9], [0, 1.6, -3.4], [0, 2.7, -2.2], [0, 2.8, -.7]], .23, materials.orange, variants.scorpion);
+  for (const [y, z] of [[1.1, -3.3], [2.1, -3], [2.7, -2]]) add(new THREE.SphereGeometry(.3, 10, 8), materials.metal, [0, y, z], variants.scorpion);
+  const sting = add(new THREE.ConeGeometry(.27, 1, 6), capacitor, [0, 2.65, -.45], variants.scorpion);
+  sting.rotation.x = 2;
   const horn = add(new THREE.ConeGeometry(.42, 1.65, 6), materials.metal, [0, 1, 3.3], variants.rhino);
   horn.rotation.x = .65;
   const medusaCore = add(new THREE.SphereGeometry(.75, 16, 10), capacitor, [0, 1.15, -2], variants.medusa);

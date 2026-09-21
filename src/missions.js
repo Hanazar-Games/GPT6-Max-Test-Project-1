@@ -3,7 +3,7 @@ import { makeSpecialCourse } from './special-courses.js';
 import { makeBridgeSpans } from './bridges.js';
 import { addRouteRewards } from './route-rewards.js';
 
-const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊', '星冠盘山', '叠湾天路'];
+const LAYOUTS = ['连环山脊', '环形天坑', '双峰回旋', '海岸长弯', '高原阶梯', '花瓣回湾', '锯齿群峰', '洲际连峰', '环陆群湾', '通天山桥', '峡湾悬廊', '星冠盘山', '叠湾天路', '云环叠岭', '双脊悬桥'];
 
 function mountainRoad(index, family) {
   const count = 6 + index % 3;
@@ -37,15 +37,17 @@ function mountainRoad(index, family) {
       if (family === 10) radius = 2600 + 580 * Math.sin(8 * a + phase) + 260 * Math.cos(3 * a);
       if (family === 11) radius = 2000 + 430 * Math.cos(6 * a + phase) + 170 * Math.sin(3 * a);
       if (family === 12) radius = 2150 + 410 * Math.sin(5 * a + phase) + 180 * Math.cos(2 * a);
+      if (family === 13) radius = 2100 + 320 * Math.cos(7 * a + phase) + 130 * Math.sin(2 * a);
+      if (family === 14) radius = 2350 + 380 * Math.sin(6 * a + phase) + 170 * Math.cos(3 * a);
       if (family === 4) {
         radius = 1 + 0.17 * Math.cos(6 * a + phase);
         x = Math.sign(Math.cos(a)) * Math.abs(Math.cos(a)) ** 0.65 * 450 * radius;
         z = Math.sign(Math.sin(a)) * Math.abs(Math.sin(a)) ** 0.65 * 360 * radius;
       } else {
-        x = Math.cos(a) * radius * (family === 3 ? 0.75 : family === 12 ? .85 : 1);
-        z = Math.sin(a) * radius * (family === 3 ? 1.4 : family === 12 ? 1.2 : 1);
+        x = Math.cos(a) * radius * (family === 3 ? 0.75 : family === 12 ? .85 : family === 14 ? 1.2 : 1);
+        z = Math.sin(a) * radius * (family === 3 ? 1.4 : family === 12 ? 1.2 : family === 14 ? .85 : 1);
       }
-      const climbs = family === 11 ? 3 : family === 12 ? 2 : family >= 7 ? 4 : family === 2 || family === 6 ? 2 : 1;
+      const climbs = family === 11 || family === 13 ? 3 : family === 12 || family === 14 ? 2 : family >= 7 ? 4 : family === 2 || family === 6 ? 2 : 1;
       const y = 30 + peak * (0.42 * (1 - Math.cos(a * climbs)) + 0.12 * (1 - Math.cos(a * 3)));
       points.push([x, y, z]);
     }
@@ -112,18 +114,22 @@ const planets = [
   ['astrolabe', '星仪星', '星冠天桥', '60 km 星冠盘山 · 六瓣峰湾环抱三重高岭，巨型星仪与跨谷桥指向山顶。', 'orrery', '#cdb7ff', '#221c3f', '#6b608e', .72, .3, 60000, 1, 82, 11],
   ['bluefen', '蓝泽星', '湿地悬廊', '72 km 叠湾天路 · 蓝绿色芦苇塔环绕双峰长湾，悬索与高架连接开阔高原。', 'reedbed', '#acecca', '#173e3c', '#5b8b7e', .42, .35, 72000, 1, 83, 12],
   ['emberforge', '铸火星', '炉心远征', '84 km 高山拉力 · 巨型熔炉与散热烟囱照亮星冠群峰，七座跨谷桥串起耐力交付。', 'forge', '#ffac81', '#3b202a', '#8d605d', .025, .35, 84000, 2, 84, 11],
+  ['opalreach', '虹潮星', '虹潮环岭', '32 km 进阶拉力 · 贝壳光拱围绕七重云岭，收集电池与超频，练习精准穿环。', 'tidalglass', '#93efe6', '#163745', '#649296', .48, .3, 32000, 1, 85, 13, null, { advanced: true, mode: 'major', voice: 'triangle' }],
+  ['orchidia', '兰庭星', '兰庭双脊', '56 km 花海山桥 · 巨型兰花与叶穹守护双峰，沿绿意悬桥完成花园拉力。', 'orchid', '#f6b6e0', '#203b38', '#73967c', .34, .42, 56000, 1, 86, 14, null, { advanced: true, mode: 'major' }],
+  ['aqueduct', '澄渠星', '水镜长渠', '96 km 超长拉力 · 多层引水拱廊与水晶槽连接高岭，管理超频补给，挑战精准连锁。', 'aqueduct', '#9fd8ff', '#163248', '#627f98', .56, .27, 96000, 2, 87, 13, null, { advanced: true, voice: 'triangle' }],
+  ['beacon', '烽航星', '灯塔远征', '128 km 灯塔马拉松 · 棱镜灯塔照亮双脊悬桥，沿漫长峰湾追逐终点信标。', 'beacons', '#ffd29b', '#2d2541', '#7b6c89', .72, .27, 128000, 2, 88, 14, null, { advanced: true }],
 ];
 
-export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special], index) => Object.freeze({
-  id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, special,
+export const MISSIONS = Object.freeze(planets.map(([id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, root, family, special, features = {}], index) => Object.freeze({
+  id, planet, name, description, biome, color, sky, fog, ground, saturation, length, difficulty, special, advanced: !!features.advanced,
   number: String(index + 1).padStart(2, '0'), region: `${planet} · ${name}`, layout: LAYOUTS[family ?? index % 5], label: ({ boost: '全程加速', hazard: '障碍密集', garden: '无障碍观光' })[special] ?? ['入门', '进阶', '极限'][difficulty], variant: index,
   endurance: length >= 20000,
-  tour: length >= 20000 && length < 90000,
+  tour: !!features.advanced || length >= 20000 && length < 90000,
   bridges: family >= 9 ? makeBridgeSpans(length, index) : Object.freeze([]),
   duration: length >= 20000 ? Math.ceil(length / 120) + 45 : 95 + difficulty * 10 + Math.floor(index / 3) * 5,
   cargo: length >= 150000 ? 42 + difficulty * 6 : length >= 90000 ? 24 + difficulty * 6 : length >= 20000 ? 18 + difficulty * 6 : 6 + difficulty * 2,
   par: Math.round(length / 180 + 7), gateWidth: 10.5 - difficulty, seed: 4517 + index * 4274,
-  music: { root, bpm: special === 'garden' ? 112 : special === 'boost' ? 148 : 124 + index % 4 * 6, mode: special === 'garden' ? 'major' : 'minor' }, points: mountainRoad(index, family ?? index % 5),
+  music: { root, bpm: special === 'garden' ? 112 : special === 'boost' ? 148 : 124 + index % 4 * 6, mode: features.mode ?? (special === 'garden' ? 'major' : 'minor'), voice: features.voice ?? 'sine' }, points: mountainRoad(index, family ?? index % 5),
 })));
 
 export const CRAFTS = Object.freeze([
@@ -163,6 +169,10 @@ export const CRAFTS = Object.freeze([
   { id: 'rhino', model: 'LC–102', name: '犀甲', role: '护航型', description: '分段楔甲与前置防撞犀角，1296 km/h、205 装甲护航山桥。', speed: 174, boostSpeed: 360, handling: 37, hull: 205, recharge: 19, color: '#d9b899', scale: [1.02, 1, .98] },
   { id: 'hummingbird', model: 'LC–105', name: '蜂鸟', role: '轻旋型', description: '竖置双环与短矢量翼，1451 km/h、53 机动迅捷拾取道具。', speed: 190, boostSpeed: 403, handling: 53, hull: 84, recharge: 16, color: '#f4bcce', scale: [.9, .9, .98] },
   { id: 'medusa', model: 'LC–108', name: '水母', role: '电容型', description: '发光穹舱与弧形导能须，1447 km/h、21/s 充能适合长途。', speed: 193, boostSpeed: 402, handling: 44, hull: 130, recharge: 21, color: '#99e6d5', scale: [.98, .94, 1.01] },
+  { id: 'crane', model: 'LC–111', name: '云鹤', role: '巡岭型', description: '上扬长翼与羽状导流片，1591 km/h 平稳飞越云岭。', speed: 212, boostSpeed: 442, handling: 46, hull: 115, recharge: 18, color: '#d7eaff', scale: [.96, .93, 1.04] },
+  { id: 'scorpion', model: 'LC–114', name: '天蝎', role: '锐锋型', description: '双钳前翼与分段弯尾，1685 km/h 追逐精准光环。', speed: 225, boostSpeed: 468, handling: 40, hull: 90, recharge: 11, color: '#ffac8e', scale: [.92, .9, 1.06] },
+  { id: 'beetle', model: 'LC–117', name: '金龟', role: '储备型', description: '双穹装甲与六足侧架，1354 km/h、22/s 充能守护耐力航程。', speed: 180, boostSpeed: 376, handling: 38, hull: 195, recharge: 22, color: '#e6d28a', scale: [1, .96, 1] },
+  { id: 'butterfly', model: 'LC–120', name: '蝶翼', role: '精控型', description: '四瓣弧翼与发光翼脉，1469 km/h、56 机动灵巧对准环心。', speed: 196, boostSpeed: 408, handling: 56, hull: 90, recharge: 17, color: '#ccafff', scale: [.93, .9, 1] },
 ]);
 
 export function makeCourse(mission) {

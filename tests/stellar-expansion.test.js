@@ -5,8 +5,8 @@ import { filterCrafts, filterMissions } from '../src/catalogue.js';
 import { createRoute } from '../src/route.js';
 
 test('six rally destinations add distinct 24–84 km journeys with two new mountain layouts', () => {
-  const routes = MISSIONS.slice(48);
-  assert.equal(MISSIONS.length, 54);
+  const routes = MISSIONS.slice(48, 54);
+  assert.equal(MISSIONS.length, 58);
   assert.deepEqual(routes.map(m => m.length), [24000, 32000, 40000, 60000, 72000, 84000]);
   assert.equal(new Set(routes.map(m => m.biome)).size, 6);
   assert.deepEqual([...new Set(routes.slice(3).map(m => m.layout))].sort(), ['叠湾天路', '星冠盘山']);
@@ -26,8 +26,8 @@ test('six rally destinations add distinct 24–84 km journeys with two new mount
 });
 
 test('six new craft are searchable and offer distinct high-speed handling and endurance tradeoffs', () => {
-  assert.equal(CRAFTS.length, 36);
-  const crafts = CRAFTS.slice(30);
+  assert.equal(CRAFTS.length, 40);
+  const crafts = CRAFTS.slice(30, 36);
   assert.deepEqual(crafts.map(c => c.id), ['bat', 'mantis', 'petrel', 'rhino', 'hummingbird', 'medusa']);
   for (const craft of crafts) {
     assert.deepEqual(filterCrafts(craft.model.replace('–', '-')), [craft]);
