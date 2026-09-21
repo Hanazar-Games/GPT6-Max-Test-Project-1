@@ -346,8 +346,11 @@ export class World {
         fan.rotation.x = Math.PI / 2;
         this.box([1.5, 0.1, 0.12], this.materials.cyan, drone, [side * 2.4, 2, 0]);
       }
-      this.place(drone, obstacle.distance, obstacleLane(obstacle, 0));
-      this.drones.push({ group: drone, obstacle });
+      const frame = this.frame(obstacle.distance);
+      drone.position.copy(frame.point).addScaledVector(frame.right, obstacleLane(obstacle, 0));
+      this.orient(drone, frame);
+      this.scene.add(drone);
+      this.drones.push({ group: drone, obstacle, frame, orientation: drone.quaternion.clone() });
     }
   }
 
@@ -386,7 +389,9 @@ export class World {
       const base = this.mesh(new THREE.RingGeometry(1.2, 2.1, 24), new THREE.MeshBasicMaterial({ color: '#67dcef', transparent: true, opacity: 0.25, side: THREE.DoubleSide }), group, [0, 0.03, 0]);
       base.rotation.x = -Math.PI / 2;
       this.place(group, pickup.distance, pickup.lane);
-      this.pickups.push({ group, core, ring });
+      // Enclose the spinning ring, bobbing core and ground footprint.
+      const bounds = new THREE.Sphere(group.position.clone(), 5);
+      this.pickups.push({ group, core, ring, bounds });
     }
   }
 
@@ -607,11 +612,10 @@ export class World {
       flame.scale.set(1, power * (0.9 + Math.sin(this.clock * 47) * 0.1), 1);
     }
     this.engineLight.intensity = game.boosting ? 35 : 12;
-    for (const drone of this.drones) {
-      const frame = this.frame(drone.obstacle.distance, obstacleLane(drone.obstacle, motionTime));
-      drone.group.position.copy(frame.point);
-      this.orient(drone.group, frame);
-      drone.group.rotateZ(Math.cos(motionTime * drone.obstacle.frequency + drone.obstacle.phase) * -0.12);
+    for (const { group, obstacle, frame, orientation } of this.drones) {
+      group.position.copy(frame.point).addScaledVector(frame.right, obstacleLane(obstacle, motionTime));
+      group.quaternion.copy(orientation);
+      group.rotateZ(Math.cos(motionTime * obstacle.frequency + obstacle.phase) * -0.12);
     }
     this.updatePads(game);
     if (animated) {
@@ -625,13 +629,6 @@ export class World {
       });
       this.effects.geometry.attributes.position.needsUpdate = true;
       this.effects.geometry.attributes.color.needsUpdate = true;
-    }
-    for (let i = 0; i < this.pickups.length; i++) {
-      const pickup = this.pickups[i];
-      pickup.group.visible = !game.collected.has(i);
-      pickup.core.rotation.y = this.clock * 1.1 + i;
-      pickup.core.position.y = 2.6 + Math.sin(this.clock * 2 + i) * 0.35;
-      pickup.ring.rotation.y = -this.clock * 0.65;
     }
     this.gates.forEach(({ light }, i) => {
       light.emissive.set(i < game.gates ? '#43d9ad' : '#ff672d');
@@ -663,6 +660,15 @@ export class World {
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
     this.viewFrustum.setFromProjectionMatrix(this.viewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
+    for (let i = 0; i < this.pickups.length; i++) {
+      const { group, core, ring, bounds } = this.pickups[i];
+      group.visible = !game.collected.has(i) && this.viewFrustum.intersectsSphere(bounds);
+      core.matrixAutoUpdate = ring.matrixAutoUpdate = group.visible;
+      if (!group.visible) continue;
+      core.rotation.y = this.clock * 1.1 + i;
+      core.position.y = 2.6 + Math.sin(this.clock * 2 + i) * 0.35;
+      ring.rotation.y = -this.clock * 0.65;
+    }
     this.environment.render(menu ? 0 : game.elapsed, this.viewFrustum);
     const intensity = THREE.MathUtils.clamp((game.speed - 100) / 320, 0, 1);
     this.speedLines.visible = game.status === 'running' && intensity > 0;
