@@ -10,9 +10,10 @@ import { makePlanetScenery } from '../src/planet-view.js';
 
 const triangles = mesh => (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3 * (mesh.isInstancedMesh ? mesh.count : 1);
 
-test('landscape tiles preserve geometry attributes, transforms and instance colors with local bounds', () => {
+for (const indexed of [true, false]) test(`${indexed ? 'indexed' : 'non-indexed'} landscape tiles preserve geometry, transforms and instance colors with local bounds`, () => {
   const scene = new THREE.Scene(), material = new THREE.MeshBasicMaterial();
-  const terrain = new THREE.PlaneGeometry(12000, 12000, 120, 120).rotateX(-Math.PI / 2);
+  let terrain = new THREE.PlaneGeometry(12000, 12000, 120, 120).rotateX(-Math.PI / 2);
+  if (!indexed) { const source = terrain; terrain = source.toNonIndexed(); source.dispose(); }
   const surface = new THREE.Mesh(terrain, material);
   surface.position.y = 37;
   scene.add(surface);
@@ -42,6 +43,27 @@ test('landscape tiles preserve geometry attributes, transforms and instance colo
     }
   }
   assert.equal(instances, 100);
+  const faces = geometry => Array.from({ length: (geometry.index?.count ?? geometry.attributes.position.count) / 3 }, (_, i) => [0, 1, 2].map(offset => geometry.index ? geometry.index.getX(i * 3 + offset) : i * 3 + offset).join(',')).sort();
+  assert.deepEqual(scene.children.filter(mesh => !mesh.isInstancedMesh).flatMap(mesh => faces(mesh.geometry)).sort(), faces(terrain));
+});
+
+test('transparent road surfaces retain their original geometry and drawing order', () => {
+  const scene = new THREE.Scene();
+  const geometry = new THREE.PlaneGeometry(12000, 12000, 120, 120);
+  const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: .12, depthWrite: false });
+  const surface = new THREE.Mesh(geometry, material);
+  surface.rotation.x = -Math.PI / 2;
+  surface.renderOrder = 3;
+  scene.add(surface);
+  let disposed = 0;
+  geometry.addEventListener('dispose', () => disposed++);
+  partitionLandscape(scene);
+  assert.equal(scene.children.length, 1);
+  assert.equal(scene.children[0], surface);
+  assert.equal(surface.geometry, geometry);
+  assert.equal(surface.renderOrder, 3);
+  assert.equal(disposed, 0);
+  geometry.dispose(); material.dispose();
 });
 
 test('the largest mountain route renders nearby tiles with a bounded visible triangle count and frees all resources', () => {

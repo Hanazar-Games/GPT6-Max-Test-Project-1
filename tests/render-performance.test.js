@@ -5,7 +5,7 @@ import { World } from '../src/world.js';
 import { createGame } from '../src/game.js';
 import { CRAFTS } from '../src/missions.js';
 
-test('long-route transforms stay within budget while every animated object keeps its correct pose', t => {
+function makeWorld(t) {
   const document = globalThis.document;
   globalThis.document = { createElement: () => ({ getContext: () => ({ createRadialGradient: () => ({ addColorStop() {} }), fillRect() {}, fillText() {} }) }) };
   t.after(() => { if (document === undefined) delete globalThis.document; else globalThis.document = document; });
@@ -15,6 +15,11 @@ test('long-route transforms stay within budget while every animated object keeps
     renderer: { renderLists: { dispose() {} }, render(scene) { scene.updateMatrixWorld(); } },
   });
   t.after(() => world.clearScene());
+  return world;
+}
+
+test('long-route transforms stay within budget while every animated object keeps its correct pose', t => {
+  const world = makeWorld(t);
   let game = createGame('summit');
   world.loadMission(game);
   world.render(game, 1 / 60);
@@ -50,4 +55,42 @@ test('long-route transforms stay within budget while every animated object keeps
     world.render(game, 1 / 60);
     verify();
   }
+});
+
+for (const id of ['earth', 'overdrive', 'apocalypse', 'odyssey', 'cascade']) test(`${id}: long routes cull distant scenery without breaking terrain sampling or accelerator colors`, t => {
+  const world = makeWorld(t), game = createGame(id);
+  world.loadMission(game);
+  const terrain = world.scene.children.filter(mesh => mesh.name === 'planet-terrain');
+  assert.ok(terrain.length > 1, 'long routes need local terrain bounds');
+  assert.ok(terrain.every(mesh => mesh.geometry.attributes.position === world.terrainGeometry.attributes.position));
+  for (const progress of [0, .25, .5, .9]) {
+    Object.assign(game, { status: progress ? 'running' : 'menu', distance: game.mission.length * progress, speed: progress ? 350 : 0, elapsed: progress * game.mission.length / 200 });
+    world.cameraReady = false;
+    world.render(game, 0);
+    let triangles = 0, total = 0;
+    world.scene.traverseVisible(mesh => {
+      if (!mesh.isMesh) return;
+      const count = (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3 * (mesh.isInstancedMesh ? mesh.count : 1);
+      total += count;
+      if (world.viewFrustum.intersectsObject(mesh)) triangles += count;
+    });
+    assert.ok(triangles < 650000, `${id}/${progress}: ${triangles}/${total} triangles`);
+    const point = world.frame(game.distance).point;
+    assert.ok(Number.isFinite(world.groundInfo(point.x, point.z).y));
+  }
+  if (game.course.pads.length) {
+    assert.equal(world.scene.children.filter(mesh => mesh.name === 'pad-arrows').length, 1);
+    const color = new THREE.Color(), initial = new THREE.Color();
+    world.padLights.getColorAt(0, initial);
+    game.activatedPads.add(game.course.pads[0].id); world.updatePads(game);
+    world.padLights.getColorAt(0, color); assert.notEqual(color.getHex(), initial.getHex());
+    game.activatedPads.clear(); world.updatePads(game);
+    world.padLights.getColorAt(0, color); assert.equal(color.getHex(), initial.getHex());
+  }
+  const resources = new Set([world.terrainGeometry]);
+  world.scene.traverse(mesh => { if (mesh.geometry) resources.add(mesh.geometry); });
+  const disposed = new Map([...resources].map(resource => [resource, 0]));
+  for (const resource of resources) resource.addEventListener('dispose', () => disposed.set(resource, disposed.get(resource) + 1));
+  world.clearScene();
+  assert.ok([...disposed.values()].every(count => count === 1));
 });

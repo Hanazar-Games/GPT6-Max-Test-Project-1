@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 长线性能优化</h2>
+      <h2 id="release-title">v${version} · 长途绘制优化</h2>
+      <p>驶过绿野与极速长廊，让远处的景物少占一些绘制开销。</p>
+      <ul class="release-list">
+        <li><strong>十九条长线补齐绘制优化</strong>地球、全加速、末日和长途道具路线加入场景分块，三十三条长路线都能按视野裁剪固定景物，保留山体、道路与森林细节。</li>
+        <li><strong>透明加速路面保持完整</strong>保留能量路面的叠加顺序与光效，核对精致画质下的阴影和辉光；加速带激活变色、重飞恢复与补给正常显示。</li>
+        <li><strong>长途绘制量明显减少</strong>地球、全加速和一百二十三公里航线中段对照，提交的三角形约减少九成；实际流畅度取决于设备。同时减少分块准备时的临时分配，1.14.3 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>33 个版本</span></summary>
+      <article><h3>v1.14.3 · 长线性能优化</h3>
       <p>让超长山桥航线少一些重复计算，保留一路的细节。</p>
       <ul class="release-list">
         <li><strong>山体与桥梁减少重复更新</strong>固定景物复用已计算的位置与朝向，长路线的每帧场景开销降低；道路、桥梁和飞船模型保留原有细节。</li>
         <li><strong>远处陨石按视野更新</strong>视野外暂停落点外观计算，进入画面立即显示当前预警、冲击或余辉；覆盖山路弯坡与下落拖尾，碰撞和声音规则保持一致。</li>
         <li><strong>飞行动画逐项核对</strong>检查尾焰、护盾、磁吸、超频、补给和三艘对手的姿态，以及暂停、重飞、换船和换图。1.14.2 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>32 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.2 · 视听与横屏修复</h3>
       <p>小屏看清驾驶信息，高速听清关键警告。</p>
       <ul class="release-list">

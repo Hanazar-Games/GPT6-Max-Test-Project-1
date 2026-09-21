@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
 // Only call before creating animated objects and mutable instance buffers.
-export function partitionLandscape(scene, retainedGeometry) {
-  const cell = (x, z) => `${Math.floor(x / 1200)},${Math.floor(z / 1200)}`;
+export function partitionLandscape(scene, retainedGeometry, cellSize = 1200) {
+  const cell = (x, z) => `${Math.floor(x / cellSize)},${Math.floor(z / cellSize)}`;
   const matrix = new THREE.Matrix4(), point = new THREE.Vector3(), color = new THREE.Color();
   for (const source of [...scene.children]) {
-    if (!source.isMesh || Array.isArray(source.material)) continue;
+    if (!source.isMesh || Array.isArray(source.material) || source.material.transparent) continue;
     const instanced = source.isInstancedMesh;
     if (instanced ? source.count < 32 : source.geometry.attributes.position.count < 10000) continue;
     const groups = new Map();
@@ -20,12 +20,13 @@ export function partitionLandscape(scene, retainedGeometry) {
         add(cell(matrix.elements[12], matrix.elements[14]), i);
       }
     } else {
-      const count = geometry.index?.count ?? positions.count;
+      const index = geometry.index, count = index?.count ?? positions.count;
       for (let i = 0; i < count; i += 3) {
-        const indices = [0, 1, 2].map(offset => geometry.index ? geometry.index.getX(i + offset) : i + offset);
-        const x = indices.reduce((sum, index) => sum + positions.getX(index), 0) / 3;
-        const z = indices.reduce((sum, index) => sum + positions.getZ(index), 0) / 3;
-        for (const index of indices) add(cell(x, z), index);
+        const a = index ? index.getX(i) : i, b = index ? index.getX(i + 1) : i + 1, c = index ? index.getX(i + 2) : i + 2;
+        const key = cell((positions.getX(a) + positions.getX(b) + positions.getX(c)) / 3, (positions.getZ(a) + positions.getZ(b) + positions.getZ(c)) / 3);
+        const group = groups.get(key);
+        if (group) group.push(a, b, c);
+        else groups.set(key, [a, b, c]);
       }
     }
     if (groups.size < 2) continue;
