@@ -408,7 +408,7 @@ function pause() {
   togglePause(game);
   if (game.status !== 'paused') unlockAudio();
   syncPanels();
-  if (game.status !== 'paused') $('pause-button').focus({ preventScroll: true });
+  if (['running', 'countdown'].includes(game.status)) $('pause-button').focus({ preventScroll: true });
 }
 
 function failureAdvice() {
