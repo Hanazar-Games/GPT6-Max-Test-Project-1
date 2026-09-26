@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 返回焦点修复</h2>
+      <h2 id="release-title">v${version} · 暂停恢复焦点修复</h2>
+      <p>恢复飞行后，键盘焦点会回到仍可操作的顶部暂停按钮。</p>
+      <ul class="release-list">
+        <li><strong>继续飞行焦点明确</strong>点击「继续飞行」或按 Esc/P 恢复后，焦点回到顶部暂停按钮，不会落在已经隐藏的暂停层按钮上。</li>
+        <li><strong>倒计时恢复保持一致</strong>从准备离港阶段暂停再恢复，焦点与飞行阶段一样回到可见暂停按钮，倒计时和音频状态保持原有流程。</li>
+        <li><strong>交互可访问性复查</strong>检查暂停、指南、结算、返回基地的焦点流转，以及小屏布局。1.14.8 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>38 个版本</span></summary>
+      <article><h3>v1.14.8 · 返回焦点修复</h3>
       <p>结束航程回到基地后，键盘焦点会回到下一次出发的位置。</p>
       <ul class="release-list">
         <li><strong>返回基地焦点明确</strong>从暂停或结算结束航程后，焦点回到首页「开始飞行」，不会落在已经隐藏的对话框按钮上。</li>
         <li><strong>保留错误恢复焦点</strong>返回过程中若图形连接中断，重新连接按钮仍会获得焦点，不被首页切换覆盖。</li>
         <li><strong>交互可访问性复查</strong>检查指南、机库、暂停、结算的关闭回退、Tab 循环及 ARIA 标题与描述目标。1.14.7 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>37 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.7 · 小屏仪表修复</h3>
       <p>小屏驾驶时，让导航、跃升和补给信息各自清楚可见。</p>
       <ul class="release-list">
