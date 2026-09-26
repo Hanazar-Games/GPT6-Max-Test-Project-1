@@ -382,6 +382,7 @@ function home() {
   $('toast').classList.remove('visible');
   updateLoadout();
   syncPanels();
+  if ($('error').hidden) $('start').focus({ preventScroll: true });
 }
 
 function continueCup() {

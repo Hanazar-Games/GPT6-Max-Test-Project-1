@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 小屏仪表修复</h2>
+      <h2 id="release-title">v${version} · 返回焦点修复</h2>
+      <p>结束航程回到基地后，键盘焦点会回到下一次出发的位置。</p>
+      <ul class="release-list">
+        <li><strong>返回基地焦点明确</strong>从暂停或结算结束航程后，焦点回到首页「开始飞行」，不会落在已经隐藏的对话框按钮上。</li>
+        <li><strong>保留错误恢复焦点</strong>返回过程中若图形连接中断，重新连接按钮仍会获得焦点，不被首页切换覆盖。</li>
+        <li><strong>交互可访问性复查</strong>检查指南、机库、暂停、结算的关闭回退、Tab 循环及 ARIA 标题与描述目标。1.14.7 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>37 个版本</span></summary>
+      <article><h3>v1.14.7 · 小屏仪表修复</h3>
       <p>小屏驾驶时，让导航、跃升和补给信息各自清楚可见。</p>
       <ul class="release-list">
         <li><strong>竖屏仪表不再互相遮挡</strong>道具航线的跃升提示移到触控区上方，较矮屏幕提前启用紧凑布局，保留能量与效果倒计时。</li>
         <li><strong>平板导航与委托分开显示</strong>触屏平板的跃升提示移到左侧，高度不足时精简委托说明，名称、进度和奖励继续显示。</li>
         <li><strong>声音与流程自查</strong>检查五十八张地图的配乐、二十五种音效，以及暂停、静音、重飞、赛事晋级和键盘改装。1.14.6 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>36 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.6 · 飞行动画优化</h3>
       <p>减少长途飞行中的重复计算，让性能更多留给眼前的航路。</p>
       <ul class="release-list">
