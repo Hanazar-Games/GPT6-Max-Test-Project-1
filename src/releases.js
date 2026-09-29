@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 快捷键状态边界修复</h2>
+      <h2 id="release-title">v${version} · 快捷键音频边界修复</h2>
+      <p>无效的 P 键不会在基地或结算页启动声音，飞行中的暂停操作保持不变。</p>
+      <ul class="release-list">
+        <li><strong>无效 P 键不再激活音频</strong>首页与结算页按 P 不会启动 Web Audio 或菜单配乐，也不会调用暂停流程。</li>
+        <li><strong>飞行暂停保持原有操作</strong>飞行中按 Esc/P 仍可暂停，暂停后再次按下可恢复并聚焦顶部暂停按钮；进入指南时声音状态保持一致。</li>
+        <li><strong>交互可访问性复查</strong>检查首页、暂停、结算、声音提示和小屏焦点流转。1.14.11 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>41 个版本</span></summary>
+      <article><h3>v1.14.11 · 快捷键状态边界修复</h3>
       <p>Esc/P 只在飞行流程中控制暂停，不会在基地或结算页触发隐藏操作。</p>
       <ul class="release-list">
         <li><strong>快捷键只在飞行状态生效</strong>首页与结算页按 Esc/P 不再调用暂停流程、清空输入或尝试解锁声音。</li>
         <li><strong>飞行与倒计时保持原有操作</strong>飞行中按 Esc/P 仍可暂停，暂停后再次按下可恢复并聚焦顶部暂停按钮。</li>
         <li><strong>交互可访问性复查</strong>检查首页、暂停、结算和小屏焦点流转。1.14.10 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>40 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.10 · 暂停焦点边界修复</h3>
       <p>只有恢复飞行后，键盘焦点才会回到可操作的顶部暂停按钮。</p>
       <ul class="release-list">

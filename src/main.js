@@ -831,7 +831,10 @@ const activateAudio = event => {
 };
 window.addEventListener('pointerdown', activateAudio, { passive: true });
 window.addEventListener('keydown', event => {
-  if (!event.repeat && (event.key.length === 1 || event.code === 'Enter')) activateAudio(event);
+  if (!event.repeat && (event.key.length === 1 || event.code === 'Enter')) {
+    if (event.code === 'KeyP' && !['running', 'countdown', 'paused'].includes(game.status)) return;
+    activateAudio(event);
+  }
 });
 const toggleAudio = () => {
   unlockAudio();
