@@ -891,7 +891,7 @@ window.addEventListener('keydown', (event) => {
     else if (cup && game.status === 'won') continueCup();
     else launch();
   }
-  if ((event.code === 'Escape' || event.code === 'KeyP') && !event.repeat) { event.preventDefault(); pause(); }
+  if ((event.code === 'Escape' || event.code === 'KeyP') && !event.repeat && ['running', 'countdown', 'paused'].includes(game.status)) { event.preventDefault(); pause(); }
   const control = event.target.closest('[data-control]');
   const action = control && ['Space', 'Enter'].includes(event.code) ? control.dataset.control : KEY_ACTIONS[event.code];
   if (action && ['running', 'countdown'].includes(game.status)) {

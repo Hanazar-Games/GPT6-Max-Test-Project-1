@@ -7,14 +7,23 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 暂停焦点边界修复</h2>
+      <h2 id="release-title">v${version} · 快捷键状态边界修复</h2>
+      <p>Esc/P 只在飞行流程中控制暂停，不会在基地或结算页触发隐藏操作。</p>
+      <ul class="release-list">
+        <li><strong>快捷键只在飞行状态生效</strong>首页与结算页按 Esc/P 不再调用暂停流程、清空输入或尝试解锁声音。</li>
+        <li><strong>飞行与倒计时保持原有操作</strong>飞行中按 Esc/P 仍可暂停，暂停后再次按下可恢复并聚焦顶部暂停按钮。</li>
+        <li><strong>交互可访问性复查</strong>检查首页、暂停、结算和小屏焦点流转。1.14.10 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>40 个版本</span></summary>
+      <article><h3>v1.14.10 · 暂停焦点边界修复</h3>
       <p>只有恢复飞行后，键盘焦点才会回到可操作的顶部暂停按钮。</p>
       <ul class="release-list">
         <li><strong>首页与结算不聚焦隐藏控件</strong>在菜单或结算页按 Esc/P 不会把焦点移到隐藏的暂停按钮，也不会改变当前状态。</li>
         <li><strong>继续飞行焦点保持明确</strong>点击「继续飞行」或按 Esc/P 恢复后，焦点回到可见暂停按钮；倒计时与音频流程保持不变。</li>
         <li><strong>交互可访问性复查</strong>检查暂停、指南、结算、返回基地与小屏焦点流转。1.14.9 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>39 个版本</span></summary>
+      </article>
+
       <article><h3>v1.14.9 · 暂停恢复焦点修复</h3>
       <p>恢复飞行后，键盘焦点会回到仍可操作的顶部暂停按钮。</p>
       <ul class="release-list">
