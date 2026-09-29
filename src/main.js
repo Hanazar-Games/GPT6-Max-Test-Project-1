@@ -83,9 +83,9 @@ document.querySelector('#app').innerHTML = `
   <div id="countdown" class="countdown" hidden><span>准备离港</span><strong id="countdown-number">3</strong><small>按住 W 或 ↑ 加速 · 航向自动跟随环线</small></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="impact-flash" class="impact-flash"></div>
-  <section id="pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden><div class="modal-card"><span class="eyebrow">FLIGHT ON HOLD</span><h2 id="pause-title">星海可以等一会。</h2><p>任务已暂停。准备好后，继续你的航程。</p><button id="resume" class="primary-button"><span>继续飞行</span>${icon('arrow')}</button><button id="restart-pause" class="secondary-button">重新挑战</button><button id="back-pause" class="text-button">返回基地</button></div></section>
-  <section id="result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden><div class="modal-card result-card"><span id="result-eyebrow" class="eyebrow">MISSION COMPLETE</span><div id="result-symbol" class="result-symbol">✦</div><h2 id="result-title">能量送达，欢迎回家。</h2><p id="result-copy"></p><div class="result-stats"><div><strong id="result-score">0</strong><span>任务得分</span></div><div><strong id="result-time">0</strong><span>飞行用时</span></div><div><strong id="result-cargo">0</strong><span>收集核心</span></div></div><div id="result-details" class="result-details"></div><div id="result-medals" class="result-medals"></div><div id="result-rating" class="result-rating"></div><button id="retry" class="primary-button"><span>再飞一次</span>${icon('arrow')}</button><button id="next-mission" class="secondary-button" hidden>下一条航线 →</button><button id="back-result" class="text-button">返回基地</button></div></section>
-  <dialog id="guide"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p>在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
+  <section id="pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" aria-describedby="pause-copy" hidden><div class="modal-card"><span class="eyebrow">FLIGHT ON HOLD</span><h2 id="pause-title">星海可以等一会。</h2><p id="pause-copy">任务已暂停。准备好后，继续你的航程。</p><button id="resume" class="primary-button"><span>继续飞行</span>${icon('arrow')}</button><button id="restart-pause" class="secondary-button">重新挑战</button><button id="back-pause" class="text-button">返回基地</button></div></section>
+  <section id="result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" aria-describedby="result-copy" hidden><div class="modal-card result-card"><span id="result-eyebrow" class="eyebrow">MISSION COMPLETE</span><div id="result-symbol" class="result-symbol">✦</div><h2 id="result-title">能量送达，欢迎回家。</h2><p id="result-copy"></p><div class="result-stats"><div><strong id="result-score">0</strong><span>任务得分</span></div><div><strong id="result-time">0</strong><span>飞行用时</span></div><div><strong id="result-cargo">0</strong><span>收集核心</span></div></div><div id="result-details" class="result-details"></div><div id="result-medals" class="result-medals"></div><div id="result-rating" class="result-rating"></div><button id="retry" class="primary-button"><span>再飞一次</span>${icon('arrow')}</button><button id="next-mission" class="secondary-button" hidden>下一条航线 →</button><button id="back-result" class="text-button">返回基地</button></div></section>
+  <dialog id="guide" aria-describedby="guide-copy"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p id="guide-copy">在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
   <div id="error" class="overlay" hidden><div class="modal-card"><span class="eyebrow">CONNECTION INTERRUPTED</span><h2>月面连接未能建立。</h2><p id="error-copy">请启用浏览器硬件加速，或换用支持 WebGL 2 的现代浏览器。</p><button id="reload" class="primary-button"><span>重新连接</span>${icon('arrow')}</button></div></div>
   <dialog id="hangar" aria-labelledby="hangar-title"><button id="close-hangar" class="icon-button dialog-close" aria-label="关闭任务机库">${icon('close')}</button><span class="eyebrow">FLIGHT DECK / 自由选择，立即出发</span><h2 id="hangar-title">每一次出发，都有新选择。</h2><div class="hangar-columns"><section><div class="hangar-section-title"><span>01</span> 选择航线</div><div id="mission-options" class="selection-list"></div></section><section><div class="hangar-section-title"><span>02</span> 选择悬浮艇</div><div id="craft-options" class="selection-list"></div></section></div><div id="hangar-summary" class="hangar-summary"></div><button id="confirm-hangar" class="primary-button"><span>确认飞行配置</span>${icon('arrow')}</button></dialog>
 `;
@@ -824,7 +824,16 @@ document.querySelector('.flight-help').innerHTML = '<span>A / D 避障</span><sp
 document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); if (game.status === 'menu') return; if (['running', 'countdown'].includes(game.status)) pause(); else home(); });
 async function unlockAudio() {
   const ready = await audio.unlock();
-  $('audio-status').textContent = ready ? '原创合成配乐 · 暂停或离开页面时停止播放。音量仅保留在当前页面。' : '浏览器尚未启用声音，可再次点击声音按钮尝试开启。';
+  syncAudioStatus(ready);
+  return ready;
+}
+
+function syncAudioStatus(ready = audio.context?.state === 'running') {
+  $('audio-status').textContent = !audio.enabled
+    ? '声音已静音。点击“恢复全部声音”重新启用。'
+    : ready
+      ? '原创合成配乐 · 暂停或离开页面时停止播放。音量仅保留在当前页面。'
+      : '浏览器尚未启用声音，可再次点击声音按钮尝试开启。';
 }
 const activateAudio = event => {
   if (event.isTrusted && audio.enabled && !audio.background && audio.context?.state !== 'running' && !event.target.closest?.('#sound, #audio-toggle')) unlockAudio();
@@ -839,6 +848,7 @@ window.addEventListener('keydown', event => {
 const toggleAudio = () => {
   unlockAudio();
   const enabled = audio.toggle();
+  syncAudioStatus();
   $('sound').innerHTML = icon(enabled ? 'sound' : 'mute');
   $('sound').setAttribute('aria-label', enabled ? '关闭声音' : '开启声音');
   $('sound').setAttribute('aria-pressed', String(!enabled));
