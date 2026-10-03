@@ -175,6 +175,18 @@ dialog h2 { font-size: 25px; }
 .quality-setting small { display: block; font-size: 9px; color: #8fa6b8; letter-spacing: 0; margin-top: 7px; }
 .setting-button { font-size: 10px; color: var(--orange); border: 1px solid #ff9a6650; background: #ff9a6608; padding: 10px 14px; }
 .setting-button span { margin-left: 12px; }
+.performance-settings { display: grid; gap: 11px; border: 0; border-top: 1px solid var(--line); padding: 18px 0 23px; margin: 0; }
+.performance-settings legend { padding: 0; color: #dceaf0; font-size: 11px; letter-spacing: 1px; }
+.performance-field { display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 12px; color: #a9bfcb; font-size: 10px; }
+.performance-field select { width: 100%; color: #e7f1f4; background: #142838; border: 1px solid #a9c6d333; padding: 8px 9px; font: 10px var(--sans); }
+.performance-range { grid-template-columns: 1fr; gap: 7px; }
+.performance-range label { display: flex; justify-content: space-between; }
+.performance-range output { color: var(--orange); font: 10px var(--mono); }
+.performance-range input { width: 100%; accent-color: var(--orange); }
+.performance-checks { display: flex; flex-wrap: wrap; gap: 12px 20px; color: #a9bfcb; font-size: 10px; }
+.performance-checks label { display: flex; align-items: center; gap: 7px; }
+.performance-checks input { accent-color: var(--orange); }
+#performance-status { color: #809aa9; font-size: 9px; line-height: 1.6; }
 dialog .primary-button { min-height: 53px; padding: 15px 20px; font-size: 12px; }
 .touch-controls { display: none; position: absolute; bottom: max(25px, env(safe-area-inset-bottom)); left: 5%; right: 5%; justify-content: space-between; pointer-events: auto; user-select: none; }
 .touch-controls > div { display: flex; gap: 10px; }

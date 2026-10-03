@@ -19,7 +19,7 @@ import { RACERS, buildField } from './pilots.js';
 import { createCup, completeStage, advanceStage, getStandings, getTrophy, getRaceView } from './cup.js';
 import { createExpedition, settleExpedition, buyUpgrade, advanceExpedition, getContracts } from './expedition.js';
 import { mountExpeditionUI, renderExpeditionHUD, renderExpeditionResult, renderSupply } from './expedition-ui.js';
-import { World } from './world.js';
+import { World, PERFORMANCE_PRESETS, PERFORMANCE_LEVELS } from './world.js';
 import { createRoute } from './route.js';
 import { AudioEngine } from './audio.js';
 import { ENVIRONMENT, gravityAt } from './environment.js';
@@ -96,6 +96,7 @@ mountReleases();
 $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
 $('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
+$('quality').closest('.quality-setting').insertAdjacentHTML('afterend', `<fieldset id="performance-settings" class="performance-settings" aria-labelledby="performance-title"><legend id="performance-title">性能参数</legend><div class="performance-field"><label for="performance-profile">性能档位</label><select id="performance-profile"><option value="custom">自定义</option>${PERFORMANCE_LEVELS.map(id => `<option value="${id}">${PERFORMANCE_PRESETS[id].label}</option>`).join('')}</select></div><div class="performance-field performance-range"><label for="performance-scale">渲染比例 <output id="performance-scale-value" for="performance-scale">150%</output></label><input id="performance-scale" type="range" min="60" max="200" step="5" value="150"></div><div class="performance-checks"><label><input id="performance-shadows" type="checkbox" checked> 动态阴影</label><label><input id="performance-bloom" type="checkbox" checked> 环境泛光</label></div><small id="performance-status" role="status">精致 · 渲染比例 150% · 阴影与泛光开启</small></fieldset>`);
 $('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">声音设置与操作指南</button>');
 $('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
 $('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">声音设置与操作指南</button>');
@@ -244,6 +245,31 @@ function updateMissionCatalogue() {
   $('mission-count').textContent = search.disabled ? `${MISSIONS.length} 条航线 · 按顺序挑战，航线筛选暂不可用` : `${visible.size} / ${MISSIONS.length} 条航线 · 已选${game.mission.planet}${visible.has(game.mission.id) ? '' : '（筛选外）'}`;
   $('mission-empty').hidden = visible.size > 0;
   $('reset-missions').hidden = search.disabled || (category === 'all' && !search.value.trim());
+}
+
+function syncPerformanceSettings() {
+  if (!world) return;
+  const settings = world.performance ?? PERFORMANCE_PRESETS.high;
+  const profile = PERFORMANCE_PRESETS[world.quality] ? world.quality : 'custom';
+  $('performance-profile').value = profile;
+  $('performance-scale').value = Math.round(settings.pixelRatio * 100);
+  $('performance-scale-value').textContent = `${Math.round(settings.pixelRatio * 100)}%`;
+  $('performance-shadows').checked = settings.shadows;
+  $('performance-bloom').checked = settings.bloom;
+  $('quality').innerHTML = `${settings.label} <span>↔</span>`;
+  $('quality').setAttribute('aria-label', `切换性能档位（当前${settings.label}）`);
+  $('performance-status').textContent = `${settings.label} · 渲染比例 ${Math.round(settings.pixelRatio * 100)}% · 阴影${settings.shadows ? '开启' : '关闭'} · 泛光${settings.bloom ? '开启' : '关闭'}`;
+}
+
+function applyCustomPerformance() {
+  if (!world) return;
+  autoQuality = false;
+  world.setPerformanceOptions({
+    pixelRatio: Number($('performance-scale').value) / 100,
+    shadows: $('performance-shadows').checked,
+    bloom: $('performance-bloom').checked,
+  });
+  syncPerformanceSettings();
 }
 
 function updateCraftCatalogue() {
@@ -719,13 +745,13 @@ function frame(now) {
   if (uiTime > 0.08 && game.status !== 'menu') { updateHUD(); uiTime = 0; }
   audio.update(game);
   world.render(game, dt, ghostEnabled ? projections : []);
-  if (autoQuality && world.quality === 'high' && ['menu', 'running'].includes(game.status)) {
+  if (autoQuality && ['ultra', 'high', 'balanced'].includes(world.quality) && ['menu', 'running'].includes(game.status)) {
     performanceFrames++;
     performanceTime += dt;
     if (performanceFrames >= 60) {
       if (performanceTime / performanceFrames > 0.045) {
         world.setQuality('low');
-        $('quality').innerHTML = '流畅 <span>↔</span>';
+        syncPerformanceSettings();
         toast('已为当前设备启用流畅画质 · 可在操作指南中调整');
       }
       performanceFrames = 0;
@@ -878,10 +904,19 @@ $('guide').addEventListener('close', () => { if (guidePaused && game.status === 
 $('quality').addEventListener('click', () => {
   if (!world) return;
   autoQuality = false;
-  const quality = world.quality === 'high' ? 'low' : 'high';
-  world.setQuality(quality);
-  $('quality').innerHTML = `${quality === 'high' ? '精致' : '流畅'} <span>↔</span>`;
+  const current = PERFORMANCE_LEVELS.indexOf(world.quality);
+  world.setQuality(PERFORMANCE_LEVELS[(current + 1) % PERFORMANCE_LEVELS.length]);
+  syncPerformanceSettings();
 });
+$('performance-profile').addEventListener('change', event => {
+  if (!world || !PERFORMANCE_PRESETS[event.target.value]) return;
+  autoQuality = false;
+  world.setQuality(event.target.value);
+  syncPerformanceSettings();
+});
+$('performance-scale').addEventListener('input', applyCustomPerformance);
+$('performance-shadows').addEventListener('change', applyCustomPerformance);
+$('performance-bloom').addEventListener('change', applyCustomPerformance);
 $('reload').addEventListener('click', () => location.reload());
 
 window.addEventListener('keydown', (event) => {
@@ -939,6 +974,7 @@ requestAnimationFrame(() => {
   try {
     world = new World($('viewport'), game);
     world.renderer.domElement.addEventListener('webglcontextlost', (event) => { event.preventDefault(); showError('图形连接已中断。请重新连接以恢复游戏。'); });
+    syncPerformanceSettings();
     $('start').disabled = false;
     $('start').innerHTML = `<span>开始飞行<small>LET’S MAKE A DELIVERY</small></span>${icon('arrow')}`;
     frameTime = performance.now();

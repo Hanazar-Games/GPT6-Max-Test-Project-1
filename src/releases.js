@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 视听与窄屏交互修复</h2>
+      <h2 id="release-title">v${version} · 多档性能参数</h2>
+      <p>画面性能从两档扩展为五档，并可独立调节渲染比例、动态阴影和环境泛光。</p>
+      <ul class="release-list">
+        <li><strong>五档性能档位</strong>省电、流畅、均衡、精致、极致覆盖更宽的设备性能范围，极致档位渲染比例上限提高到 200%。</li>
+        <li><strong>三个独立参数</strong>渲染比例支持 60%–200%，动态阴影与环境泛光可分别开关，组合后显示自定义状态。</li>
+        <li><strong>自动降档尊重手动设置</strong>帧率偏低时仍会从默认档位切到流畅，玩家手动调整后不再被自动流程覆盖。1.14.13 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>43 个版本</span></summary>
+      <article><h3>v1.14.13 · 视听与窄屏交互修复</h3>
       <p>窄横屏提示不再遮住触控按钮，静音状态和对话框描述与实际界面保持一致。</p>
       <ul class="release-list">
         <li><strong>窄横屏提示避开触控按钮</strong>568×320 等尺寸的启动和驾驶提示移到触控区上方，不再挡住加速、制动与冲刺操作。</li>
         <li><strong>静音状态文案同步</strong>总静音、恢复和音量调整后，指南内的状态提示准确反映当前声音状态。</li>
         <li><strong>对话框描述补齐</strong>暂停、结算和操作指南补充可读描述目标，并复查暂停恢复与焦点流转。1.14.12 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>42 个版本</span></summary>
+      </article>
       <article><h3>v1.14.12 · 快捷键音频边界修复</h3>
       <p>无效的 P 键不会在基地或结算页启动声音，飞行中的暂停操作保持不变。</p>
       <ul class="release-list">

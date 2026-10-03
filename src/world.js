@@ -17,6 +17,15 @@ import { partitionLandscape } from './landscape-chunks.js';
 import { RewardView } from './reward-view.js';
 import { pickupRange } from './route-rewards.js';
 
+export const PERFORMANCE_PRESETS = Object.freeze({
+  ultra: { label: '极致', pixelRatio: 2, shadows: true, bloom: true },
+  high: { label: '精致', pixelRatio: 1.5, shadows: true, bloom: true },
+  balanced: { label: '均衡', pixelRatio: 1.15, shadows: true, bloom: false },
+  low: { label: '流畅', pixelRatio: 0.9, shadows: false, bloom: false },
+  eco: { label: '省电', pixelRatio: 0.6, shadows: false, bloom: false },
+});
+export const PERFORMANCE_LEVELS = Object.freeze(Object.keys(PERFORMANCE_PRESETS));
+
 let seed = 4517;
 function random() {
   seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -38,6 +47,7 @@ export class World {
     this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.2, 4000);
     this.clock = 0;
     this.quality = 'high';
+    this.performance = { ...PERFORMANCE_PRESETS.high };
     this.lastStatus = 'menu';
     this.cameraReady = false;
     this.shake = 0;
@@ -47,6 +57,7 @@ export class World {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.38, 0.45, 1.05);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
+    this.applyPerformanceSettings();
     this.resize();
   }
 
@@ -547,10 +558,31 @@ export class World {
   }
 
   setQuality(quality) {
-    this.quality = quality;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, quality === 'high' ? 1.5 : 0.75));
-    this.renderer.shadowMap.enabled = quality === 'high';
-    this.bloom.enabled = quality === 'high';
+    const preset = PERFORMANCE_PRESETS[quality] ?? PERFORMANCE_PRESETS.high;
+    this.quality = PERFORMANCE_PRESETS[quality] ? quality : 'high';
+    this.performance = { ...preset };
+    this.applyPerformanceSettings();
+    this.resize();
+  }
+
+  setPerformanceOptions(options = {}) {
+    this.quality = 'custom';
+    this.performance = {
+      label: '自定义',
+      pixelRatio: THREE.MathUtils.clamp(Number(options.pixelRatio) || this.performance.pixelRatio, 0.6, 2),
+      shadows: options.shadows ?? this.performance.shadows,
+      bloom: options.bloom ?? this.performance.bloom,
+    };
+    this.applyPerformanceSettings();
+    this.resize();
+  }
+
+  applyPerformanceSettings() {
+    const pixelRatio = THREE.MathUtils.clamp(this.performance.pixelRatio, 0.6, 2);
+    const dpr = Number.isFinite(globalThis.devicePixelRatio) ? globalThis.devicePixelRatio : 1;
+    this.renderer.setPixelRatio(Math.min(dpr, pixelRatio));
+    this.renderer.shadowMap.enabled = this.performance.shadows;
+    this.bloom.enabled = this.performance.bloom;
     this.resize();
   }
 
@@ -689,7 +721,7 @@ export class World {
     this.dust.position.copy(point);
     this.dust.material.opacity = game.boosting ? 0.7 : game.speed / game.craft.speed * 0.25;
     this.dust.rotation.y = this.clock * 0.015;
-    if (this.quality === 'low') this.renderer.render(this.scene, this.camera);
+    if (this.quality === 'low' || this.quality === 'eco' || this.performance?.bloom === false) this.renderer.render(this.scene, this.camera);
     else this.composer.render();
   }
 }
