@@ -77,7 +77,7 @@ document.querySelector('#app').innerHTML = `
     <div id="rival-panel" class="rival-panel"><div class="rival-heading"><span class="ghost-dot"></span><span id="rival-title">个人幽灵 / 首航记录</span></div><strong id="rival-delta">建立纪录</strong><span id="rival-split">成功返航后解锁追逐</span><div id="rival-live" class="rival-live">每一次出发，都有进步。</div><div id="split-flash" class="split-flash" role="status" aria-live="polite"></div></div>
     <div class="hud-bottom"><div class="speed-panel"><div class="eyebrow">GROUND SPEED</div><div><strong id="speed">000</strong><span>KM/H</span></div><div class="speed-ticks">${'<i></i>'.repeat(24)}</div><span id="throttle-hint">按住 W / ↑ 加速</span></div><div class="resource-panel"><div class="resource-label">${icon('bolt')}<span>冲刺能量</span><strong id="energy-value">100%</strong><kbd>SPACE</kbd></div><div class="resource-track"><i id="energy-fill"></i></div><div class="hull-row">${icon('shield')}<span>艇体状态</span><div class="hull-track"><i id="hull-fill"></i></div><strong id="hull-value">100%</strong></div><div class="flight-help"><span>A / D 左右避障</span><span>S 制动</span><span>Esc 暂停</span></div></div><div class="map-panel"><div class="map-heading"><span>航线雷达</span><span id="progress">0%</span></div><canvas id="minimap" width="360" height="200" aria-label="航线进度雷达"></canvas><div class="map-footer"><span class="status-dot"></span><span>${MISSIONS[0].name}</span><strong id="score">00000</strong></div></div></div>
     <div class="jump-indicator"><kbd>F</kbd>${icon('jump')}<span id="jump-status">跃升就绪</span><small>18 能量</small></div>
-    <div id="touch-controls" class="touch-controls"><div><button data-control="left" aria-label="向左">←</button><button data-control="right" aria-label="向右">→</button><button data-control="jump" class="touch-jump" aria-label="跃升">${icon('jump')}</button></div><div><button data-control="brake" aria-label="制动">制动</button><button data-control="boost" class="touch-boost" aria-label="冲刺">${icon('bolt')}</button><button data-control="accelerate" class="touch-go" aria-label="加速">加速 ↑</button></div></div>
+    <div id="touch-controls" class="touch-controls"><div><button data-control="left" aria-label="向左" aria-pressed="false">←</button><button data-control="right" aria-label="向右" aria-pressed="false">→</button><button data-control="jump" class="touch-jump" aria-label="跃升" aria-pressed="false">${icon('jump')}</button></div><div><button data-control="brake" aria-label="制动" aria-pressed="false">制动</button><button data-control="boost" class="touch-boost" aria-label="冲刺" aria-pressed="false">${icon('bolt')}</button><button data-control="accelerate" class="touch-go" aria-label="加速" aria-pressed="false">加速 ↑</button></div></div>
   </section>
 
   <div id="countdown" class="countdown" hidden><span>准备离港</span><strong id="countdown-number">3</strong><small>按住 W 或 ↑ 加速 · 航向自动跟随环线</small></div>
@@ -95,7 +95,7 @@ document.querySelector('.resource-panel').insertAdjacentHTML('afterbegin', `<div
 mountReleases();
 $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
-$('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
+$('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45" aria-valuetext="45%"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80" aria-valuetext="80%"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
 $('quality').closest('.quality-setting').insertAdjacentHTML('afterend', `<fieldset id="performance-settings" class="performance-settings" aria-labelledby="performance-title"><legend id="performance-title">性能参数</legend><div class="performance-field"><label for="performance-profile">性能档位</label><select id="performance-profile"><option value="custom">自定义</option>${PERFORMANCE_LEVELS.map(id => `<option value="${id}">${PERFORMANCE_PRESETS[id].label}</option>`).join('')}</select></div><div class="performance-field performance-range"><label for="performance-scale">渲染比例 <output id="performance-scale-value" for="performance-scale">150%</output></label><input id="performance-scale" type="range" min="60" max="200" step="5" value="150"></div><div class="performance-checks"><label><input id="performance-shadows" type="checkbox" checked> 动态阴影</label><label><input id="performance-bloom" type="checkbox" checked> 环境泛光</label></div><small id="performance-status" role="status">精致 · 渲染比例 150% · 阴影与泛光开启</small></fieldset>`);
 $('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">声音设置与操作指南</button>');
 $('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
@@ -332,7 +332,11 @@ function clearInput() {
 }
 
 function syncControls() {
-  document.querySelectorAll('[data-control]').forEach(button => button.classList.toggle('pressed', controls.held(button.dataset.control)));
+  document.querySelectorAll('[data-control]').forEach(button => {
+    const pressed = controls.held(button.dataset.control);
+    button.classList.toggle('pressed', pressed);
+    button.setAttribute('aria-pressed', String(pressed));
+  });
   $('cruise-button').setAttribute('aria-pressed', String(controls.cruise));
   $('cruise-button').setAttribute('aria-label', controls.cruise ? '关闭巡航油门' : '开启巡航油门');
   $('cruise-button').querySelector('span').textContent = controls.cruise ? '巡航已开' : '巡航油门';
@@ -343,6 +347,7 @@ function toggleCruise() {
   if (!['running', 'countdown'].includes(game.status) || controls.held('brake')) return;
   controls.toggleCruise();
   syncControls();
+  audio.event(controls.cruise ? 'cruise-on' : 'cruise-off');
   toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '巡航油门已关闭 · 可手动加速或制动', 'cyan');
 }
 
@@ -858,7 +863,7 @@ function syncAudioStatus(ready = audio.context?.state === 'running') {
   $('audio-status').textContent = !audio.enabled
     ? '声音已静音。点击“恢复全部声音”重新启用。'
     : ready
-      ? '原创合成配乐 · 暂停或离开页面时停止播放。音量仅保留在当前页面。'
+      ? `音乐 ${Math.round(audio.volumes.music * 100)}% · 音效 ${Math.round(audio.volumes.sfx * 100)}%。${audio.volumes.music || audio.volumes.sfx ? '暂停或离开页面时停止播放。' : '当前音量均为 0%，请拖动滑杆恢复。'} 音量仅保留在当前页面。`
       : '浏览器尚未启用声音，可再次点击声音按钮尝试开启。';
 }
 const activateAudio = event => {
@@ -889,6 +894,7 @@ $('audio-toggle').addEventListener('click', toggleAudio);
 for (const bus of ['music', 'sfx']) $(`${bus}-volume`).addEventListener('input', event => {
   audio.setVolume(bus, Number(event.target.value) / 100);
   $(`${bus}-level`).textContent = `${event.target.value}%`;
+  event.target.setAttribute('aria-valuetext', `${event.target.value}%`);
   unlockAudio();
 });
 const openGuide = () => {
@@ -969,6 +975,7 @@ document.querySelectorAll('[data-control]').forEach((button) => {
 });
 
 syncPanels();
+syncControls();
 updateLoadout();
 requestAnimationFrame(() => {
   try {

@@ -166,6 +166,8 @@ export class AudioEngine {
     if (type === 'meteor-strike') { alertTone(42, .45, 0, 'sawtooth'); alertTone(68, .25, .04); }
     if (type === 'low-gravity') { this.tone(220, 0.3); this.tone(330, 0.4, 0.1); }
     if (type === 'glide' || type === 'meteor-dodge') [660, 990, 1320].forEach((note, i) => this.tone(note, 0.25, i * 0.07));
+    if (type === 'cruise-on') { this.tone(392, 0.11, 0, 'triangle', 'sfx', 0.18); this.tone(784, 0.16, 0.07, 'sine', 'sfx', 0.16); }
+    if (type === 'cruise-off') { this.tone(784, 0.1, 0, 'sine', 'sfx', 0.14); this.tone(392, 0.15, 0.06, 'triangle', 'sfx', 0.16); }
     if (type === 'won') [440, 554, 660, 880].forEach((note, i) => this.tone(note, 0.5, i * 0.13));
     if (type === 'lost') { this.tone(220, 0.3); this.tone(146, 0.5, 0.2); }
   }

@@ -218,3 +218,17 @@ test('muted alerts cannot lower music, and pausing or leaving cancels the tempor
     audio.update(running);
   }
 });
+
+test('cruise controls have distinct short confirmation cues', async () => {
+  const audio = await setup();
+  const before = audio.context.oscillators.length;
+  audio.event('cruise-on');
+  const on = audio.context.oscillators.slice(before);
+  assert.equal(on.length, 2);
+  audio.stopVoices();
+  const offStart = audio.context.oscillators.length;
+  audio.event('cruise-off');
+  const off = audio.context.oscillators.slice(offStart);
+  assert.equal(off.length, 2);
+  assert.notDeepEqual(on.map(note => note.frequency.value), off.map(note => note.frequency.value));
+});

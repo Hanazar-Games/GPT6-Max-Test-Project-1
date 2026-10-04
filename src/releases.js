@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 多档性能参数</h2>
+      <h2 id="release-title">v${version} · 音频状态与巡航反馈</h2>
+      <p>声音设置现在准确反映独立音量，巡航油门开关也有清晰的短促确认音。</p>
+      <ul class="release-list">
+        <li><strong>音量状态准确</strong>音乐与音效滑杆改变后，状态区实时显示百分比；两路都为 0% 时明确提示拖动滑杆恢复。</li>
+        <li><strong>巡航开关有反馈</strong>开启与关闭巡航油门分别使用上行、下行双音，音量跟随引擎与音效总线。</li>
+        <li><strong>触控可访问性补齐</strong>驾驶按钮同步 aria-pressed，音量滑杆提供百分比读法。1.14.14 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>44 个版本</span></summary>
+      <article><h3>v1.14.14 · 多档性能参数</h3>
       <p>画面性能从两档扩展为五档，并可独立调节渲染比例、动态阴影和环境泛光。</p>
       <ul class="release-list">
         <li><strong>五档性能档位</strong>省电、流畅、均衡、精致、极致覆盖更宽的设备性能范围，极致档位渲染比例上限提高到 200%。</li>
         <li><strong>三个独立参数</strong>渲染比例支持 60%–200%，动态阴影与环境泛光可分别开关，组合后显示自定义状态。</li>
         <li><strong>自动降档尊重手动设置</strong>帧率偏低时仍会从默认档位切到流畅，玩家手动调整后不再被自动流程覆盖。1.14.13 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>43 个版本</span></summary>
+      </article>
       <article><h3>v1.14.13 · 视听与窄屏交互修复</h3>
       <p>窄横屏提示不再遮住触控按钮，静音状态和对话框描述与实际界面保持一致。</p>
       <ul class="release-list">
