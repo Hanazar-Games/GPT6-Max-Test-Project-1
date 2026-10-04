@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 音频状态与巡航反馈</h2>
-      <p>声音设置现在准确反映独立音量，巡航油门开关也有清晰的短促确认音。</p>
+      <h2 id="release-title">v${version} · 触屏命中区优化</h2>
+      <p>窄屏触屏下的声音、帮助、暂停和对话框关闭按钮更容易准确点击。</p>
+      <ul class="release-list">
+        <li><strong>小屏按钮扩大</strong>320–600px 触屏布局的页眉图标和对话框关闭按钮统一为 40×40px，减少误触。</li>
+        <li><strong>保持紧凑排列</strong>320px、390px 与 568×320 下维持页眉、巡航按钮和游戏画面的可用间距，不产生横向滚动。</li>
+        <li><strong>历史公告同步</strong>1.14.15 的音量状态、巡航确认音和触控可访问性修复移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>45 个版本</span></summary>
+      <article><h3>v1.14.15 · 音频状态与巡航反馈</h3>
+      <p>声音设置准确反映独立音量，巡航油门开关提供清晰的确认音。</p>
       <ul class="release-list">
         <li><strong>音量状态准确</strong>音乐与音效滑杆改变后，状态区实时显示百分比；两路都为 0% 时明确提示拖动滑杆恢复。</li>
         <li><strong>巡航开关有反馈</strong>开启与关闭巡航油门分别使用上行、下行双音，音量跟随引擎与音效总线。</li>
         <li><strong>触控可访问性补齐</strong>驾驶按钮同步 aria-pressed，音量滑杆提供百分比读法。1.14.14 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>44 个版本</span></summary>
+      </article>
       <article><h3>v1.14.14 · 多档性能参数</h3>
       <p>画面性能从两档扩展为五档，并可独立调节渲染比例、动态阴影和环境泛光。</p>
       <ul class="release-list">
