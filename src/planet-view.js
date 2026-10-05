@@ -64,6 +64,14 @@ export function makeMountainRoad(world) {
   const markers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.08, 3), new THREE.MeshBasicMaterial({ color: '#bed3dc' }), count);
   const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 1.6, 0.2), rail, count * 2);
   const curbs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.65, 0.12, 4), new THREE.MeshStandardMaterial({ color: '#a5b3b8', roughness: 0.8 }), count * 2);
+  const detailStep = 3;
+  const detailCount = Math.ceil(count / detailStep);
+  const supports = new THREE.InstancedMesh(new THREE.ConeGeometry(0.16, 1.8, 3), rail, detailCount * 2);
+  const reflectorMaterial = world.materials.glow?.clone?.() ?? new THREE.MeshBasicMaterial({ color: world.mission.color });
+  reflectorMaterial.side = THREE.DoubleSide;
+  const reflectors = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.42, 0.22), reflectorMaterial, detailCount * 2);
+  supports.name = 'guardrail-supports';
+  reflectors.name = 'guardrail-reflectors';
   const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     const distance = i / count * world.mission.length;
@@ -71,6 +79,7 @@ export function makeMountainRoad(world) {
     world.orient(dummy, frame);
     for (const side of [-1, 0, 1]) {
       dummy.position.copy(frame.point).addScaledVector(frame.right, side * 18.2).addScaledVector(frame.up, side ? .35 : -.25);
+      if (!side) world.orient(dummy, frame);
       dummy.updateMatrix();
       if (!side) markers.setMatrixAt(i, dummy.matrix);
       else {
@@ -79,10 +88,27 @@ export function makeMountainRoad(world) {
         dummy.position.copy(frame.point).addScaledVector(frame.right, side * 16.1).addScaledVector(frame.up, -.24);
         dummy.updateMatrix();
         curbs.setMatrixAt(index, dummy.matrix);
+        if (i % detailStep === 0) {
+          const detailIndex = Math.floor(i / detailStep) * 2 + (side > 0 ? 1 : 0);
+          dummy.position.copy(frame.point).addScaledVector(frame.right, side * 18.2).addScaledVector(frame.up, .15);
+          world.orient(dummy, frame);
+          dummy.rotateZ(side * .22);
+          dummy.updateMatrix();
+          supports.setMatrixAt(detailIndex, dummy.matrix);
+          dummy.position.copy(frame.point).addScaledVector(frame.right, side * 18.2).addScaledVector(frame.up, 1.08);
+          world.orient(dummy, frame);
+          dummy.rotateY(Math.PI);
+          dummy.updateMatrix();
+          reflectors.setMatrixAt(detailIndex, dummy.matrix);
+        }
       }
     }
   }
-  world.scene.add(markers, posts, curbs);
+  for (const mesh of [markers, posts, curbs, supports, reflectors]) {
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }
+  world.scene.add(markers, posts, curbs, supports, reflectors);
   const pierCount = Math.ceil(world.mission.length / 65);
   const piers = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), rail, pierCount * 2);
   piers.name = 'road-piers';

@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 触屏命中区优化</h2>
+      <h2 id="release-title">v${version} · 飞船与护栏建模</h2>
+      <p>飞船机体层次更完整，盘山公路护栏在高速弯道中更有结构感和辨识度。</p>
+      <ul class="release-list">
+        <li><strong>飞船机体细节</strong>中央脊柱灯带、双侧进气环和导航信标补齐高速镜头下的轮廓与能源反馈。</li>
+        <li><strong>护栏结构升级</strong>盘山公路增加实例化斜撑与反光标记，桥接和连续弯道的边界更清晰。</li>
+        <li><strong>长线性能守恒</strong>细节按路段稀疏实例化，并通过末日地图可见三角形预算与资源释放检查。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>46 个版本</span></summary>
+      <article><h3>v1.14.16 · 触屏命中区优化</h3>
       <p>窄屏触屏下的声音、帮助、暂停和对话框关闭按钮更容易准确点击。</p>
       <ul class="release-list">
         <li><strong>小屏按钮扩大</strong>320–600px 触屏布局的页眉图标和对话框关闭按钮统一为 40×40px，减少误触。</li>
         <li><strong>保持紧凑排列</strong>320px、390px 与 568×320 下维持页眉、巡航按钮和游戏画面的可用间距，不产生横向滚动。</li>
         <li><strong>历史公告同步</strong>1.14.15 的音量状态、巡航确认音和触控可访问性修复移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>45 个版本</span></summary>
+      </article>
       <article><h3>v1.14.15 · 音频状态与巡航反馈</h3>
       <p>声音设置准确反映独立音量，巡航油门开关提供清晰的确认音。</p>
       <ul class="release-list">

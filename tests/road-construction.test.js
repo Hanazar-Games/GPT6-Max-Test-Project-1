@@ -55,7 +55,11 @@ test('every road retains its banked cross-sections, texture coordinates, winding
         }
         assert.ok(geometry.attributes.normal.array.every(Number.isFinite));
       });
-      const [markers, posts, curbs] = world.scene.children.slice(strips.length);
+      const [markers, posts, curbs, supports, reflectors] = world.scene.children.slice(strips.length);
+      assert.equal(supports.name, 'guardrail-supports');
+      assert.equal(reflectors.name, 'guardrail-reflectors');
+      assert.equal(supports.count, Math.ceil(markers.count / 3) * 2);
+      assert.equal(reflectors.count, Math.ceil(markers.count / 3) * 2);
       for (const i of [0, Math.floor(markers.count / 2), markers.count - 1]) for (const side of [-1, 0, 1]) {
         const distance = i / markers.count * mission.length;
         const frame = World.prototype.frame.call(world, distance, side * 18.2, side ? .35 : -.25);
@@ -69,6 +73,14 @@ test('every road retains its banked cross-sections, texture coordinates, winding
           curbs.getMatrixAt(index, matrix);
           actual.setFromMatrixPosition(matrix);
           assert.ok(actual.distanceTo(World.prototype.frame.call(world, distance, side * 16.1, -.24).point) < .01);
+          const detailMarkerIndex = i - i % 3, detailIndex = Math.floor(detailMarkerIndex / 3) * 2 + (side > 0 ? 1 : 0);
+          const detailDistance = detailMarkerIndex / markers.count * mission.length;
+          supports.getMatrixAt(detailIndex, matrix);
+          actual.setFromMatrixPosition(matrix);
+          assert.ok(actual.distanceTo(World.prototype.frame.call(world, detailDistance, side * 18.2, .15).point) < .01);
+          reflectors.getMatrixAt(detailIndex, matrix);
+          actual.setFromMatrixPosition(matrix);
+          assert.ok(actual.distanceTo(World.prototype.frame.call(world, detailDistance, side * 18.2, 1.08).point) < .01);
         }
       }
     } finally { world.clearScene(); world.materials.dark.dispose(); }
