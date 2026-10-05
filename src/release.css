@@ -18,7 +18,8 @@
 #audio-status { display: block; font-size: 10px; color: #9eb2c2; line-height: 1.8; }
 @media (max-width: 600px) {
   .menu-footer::before { content: '触屏驾驶 · 建议横屏'; font-size: 9px; letter-spacing: 0; }
-  .release-link { font-size: 9px; }
+  .release-link { display: inline-flex; align-items: center; min-height: 40px; font-size: 9px; }
   .release-list, .release-history ul { font-size: 11px; }
   .audio-settings { padding: 12px; }
+  .audio-settings input[type='range'], .performance-range input[type='range'] { height: 40px; min-height: 40px; }
 }

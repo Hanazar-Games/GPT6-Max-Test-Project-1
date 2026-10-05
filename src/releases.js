@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 飞船与护栏建模</h2>
+      <h2 id="release-title">v${version} · 小屏触控细节</h2>
+      <p>窄屏下的公告、声音设置和性能调节更容易准确触摸，长内容仍可顺畅滚动。</p>
+      <ul class="release-list">
+        <li><strong>触控高度统一</strong>320–600px 布局中的更新公告入口、音乐/音效滑杆和性能滑杆统一为 40px 高度，减少误触。</li>
+        <li><strong>窄屏滚动复查</strong>390×844、568×320 与 320×844 下对话框保持内部滚动，不产生横向溢出。</li>
+        <li><strong>音频与性能状态可达</strong>保留独立音量百分比、静音状态、画质档位和自定义参数的现有反馈。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>47 个版本</span></summary>
+      <article><h3>v1.14.17 · 飞船与护栏建模</h3>
       <p>飞船机体层次更完整，盘山公路护栏在高速弯道中更有结构感和辨识度。</p>
       <ul class="release-list">
         <li><strong>飞船机体细节</strong>中央脊柱灯带、双侧进气环和导航信标补齐高速镜头下的轮廓与能源反馈。</li>
         <li><strong>护栏结构升级</strong>盘山公路增加实例化斜撑与反光标记，桥接和连续弯道的边界更清晰。</li>
         <li><strong>长线性能守恒</strong>细节按路段稀疏实例化，并通过末日地图可见三角形预算与资源释放检查。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>46 个版本</span></summary>
+      </article>
       <article><h3>v1.14.16 · 触屏命中区优化</h3>
       <p>窄屏触屏下的声音、帮助、暂停和对话框关闭按钮更容易准确点击。</p>
       <ul class="release-list">
