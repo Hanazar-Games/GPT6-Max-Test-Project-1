@@ -35,13 +35,33 @@ export function makeBridges(world) {
     const { start, end, kind } = bridge, length = end - start;
     for (const side of [-1, 1]) path('steel', start, end, side * 14, () => -5, 1.8);
     for (let distance = start; distance <= end; distance += 60) {
-      beam('steel', point(distance, -17, -4.8), point(distance, 17, -4.8), 1.2);
+      const deckMaterial = kind === 'viaduct' ? 'concrete' : 'steel';
+      beam(deckMaterial, point(distance, -17, -4.8), point(distance, 17, -4.8), kind === 'viaduct' ? 1.45 : 1.2, kind === 'viaduct' ? 2.4 : 1.2);
       for (const side of [-1, 1]) {
         beam('lights', point(distance, side * 19.5, 1.6), point(distance, side * 19.5, 3), .25);
-        if (kind === 'viaduct') pier(distance, side * 12.8, 3.4, 5);
+        if (kind === 'viaduct') {
+          pier(distance, side * 12.8, 3.4, 5);
+          beam('concrete', point(distance, side * 12.8, -5.1), point(distance, side * 16.6, -8.8), .95, 1.5);
+          beam('lights', point(distance, side * 18.1, -3.8), point(distance, side * 18.1, -2.5), .22);
+        }
+      }
+      if (kind === 'viaduct' && distance < end - 30) {
+        for (const side of [-1, 1]) {
+          const next = Math.min(end, distance + 60);
+          const lowerDistance = (distance + next) / 2;
+          const lower = point(lowerDistance, side * 12.8, -12.5);
+          beam('concrete', point(distance, side * 12.8, -5.1), lower, 1.15, 1.8);
+          beam('concrete', lower, point(next, side * 12.8, -5.1), 1.15, 1.8);
+        }
       }
     }
-    if (kind === 'viaduct') continue;
+    if (kind === 'viaduct') {
+      for (const side of [-1, 1]) {
+        path('concrete', start, end, side * 17.2, () => -5.15, 2.2);
+        path('steel', start, end, side * 11.8, () => -8.4, 1.2);
+      }
+      continue;
+    }
     const towers = [.2, .8].map(t => start + length * t);
     for (const distance of towers) {
       for (const side of [-1, 1]) {

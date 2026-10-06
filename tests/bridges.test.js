@@ -47,3 +47,22 @@ test('modeled bridge structures leave road and jump clearance, use four batches 
     assert.equal(disposed, resources.size);
   }
 });
+
+test('viaducts add a continuous deck, flared supports and underdeck ribs within the shared batches', async () => {
+  const { makeBridges } = await import('../src/bridge-view.js');
+  const source = MISSIONS.find(mission => mission.bridges.some(bridge => bridge.kind === 'viaduct'));
+  const span = source.bridges.find(bridge => bridge.kind === 'viaduct');
+  const mission = { ...source, bridges: [span] };
+  const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } } });
+  world.samples = world.curve.getSpacedPoints(Math.ceil(mission.length / 20));
+  world.makeTerrain();
+  makeBridges(world);
+  const concrete = world.scene.getObjectByName('bridge-concrete');
+  const steel = world.scene.getObjectByName('bridge-steel');
+  const lights = world.scene.getObjectByName('bridge-lights');
+  const intervals = Math.ceil((span.end - span.start) / 60);
+  assert.ok(concrete.count > intervals * 6, 'viaduct needs deck, supports and underdeck ribs');
+  assert.ok(steel.count >= intervals * 2, 'viaduct needs continuous inner girders');
+  assert.ok(lights.count >= intervals * 4, 'viaduct needs edge and guide lighting');
+  world.clearScene();
+});

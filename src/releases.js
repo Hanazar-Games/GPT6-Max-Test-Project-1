@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 小屏触控细节</h2>
+      <h2 id="release-title">v${version} · 高架桥结构升级</h2>
+      <p>高架桥的桥面、支撑与灯带结构更完整，高速驶入桥下时层次更清晰，仍保持飞行净空与渲染预算。</p>
+      <ul class="release-list">
+        <li><strong>连续高架桥面</strong>增加混凝土横梁、边梁和内侧纵梁，桥面长段结构不再显得单薄。</li>
+        <li><strong>桥下支撑层次</strong>增加外挑支撑与下弦肋架，桥墩和桥面之间的受力关系在弯道中更容易辨识。</li>
+        <li><strong>桥缘灯带反馈</strong>桥缘与桥下导向灯沿桥段重复布置，夜间高速镜头更容易判断桥面边界。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>48 个版本</span></summary>
+      <article><h3>v1.14.18 · 小屏触控细节</h3>
       <p>窄屏下的公告、声音设置和性能调节更容易准确触摸，长内容仍可顺畅滚动。</p>
       <ul class="release-list">
         <li><strong>触控高度统一</strong>320–600px 布局中的更新公告入口、音乐/音效滑杆和性能滑杆统一为 40px 高度，减少误触。</li>
         <li><strong>窄屏滚动复查</strong>390×844、568×320 与 320×844 下对话框保持内部滚动，不产生横向溢出。</li>
         <li><strong>音频与性能状态可达</strong>保留独立音量百分比、静音状态、画质档位和自定义参数的现有反馈。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>47 个版本</span></summary>
+      </article>
       <article><h3>v1.14.17 · 飞船与护栏建模</h3>
       <p>飞船机体层次更完整，盘山公路护栏在高速弯道中更有结构感和辨识度。</p>
       <ul class="release-list">
