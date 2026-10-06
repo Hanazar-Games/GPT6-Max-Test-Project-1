@@ -158,6 +158,21 @@ export function makeLandmarks(world, random) {
     }
     for (let i = 0; i < 6; i++) box([25, 1, 12], stone, 0, 8 + i * 5);
     box([1, 44, 1], light, 0, 23, -7);
+  } else if (biome === 'city') {
+    foundation(25);
+    for (const [x, z, width, depth, height] of [[-16, 4, 8, 10, 56], [0, 0, 11, 12, 74], [16, 5, 8, 10, 48]]) {
+      box([width, height, depth], stone, x, height / 2 + 3, z);
+      for (let level = 0; level < Math.floor(height / 9); level++) {
+        box([width * .68, .42, .18], light, x, 7 + level * 9, z - depth / 2 - .12);
+      }
+      box([width * .5, .22, depth * .72], light, x, height + 3.25, z);
+    }
+    box([43, 2.2, 7], dark, 0, 31, 0);
+    for (const side of [-1, 1]) {
+      pillar(1.1, 34, dark, side * 21, 19, 0, .8, 6);
+      ring(5.5, .42, light, 39).position.x = side * 21;
+    }
+    box([1.2, 22, 1.2], light, 0, 46, -2.9);
   } else if (biome === 'magnetic') {
     foundation(19);
     rock([11, 15, 10], stone, 0, 44).rotation.z = 0.45;

@@ -159,6 +159,11 @@ export function makePlanetScenery(world, random) {
     makeLandmarks(world, random);
     return;
   }
+  if (biome === 'city') {
+    makeCityScenery(world, random);
+    makeLandmarks(world, random);
+    return;
+  }
   let geometry;
   if (['crystal', 'ice', 'spires', 'storm', 'aurora', 'prism'].includes(biome)) geometry = new THREE.ConeGeometry(1, 1, biome === 'ice' ? 4 : 6);
   else if (['mesa', 'sandstone', 'volcanic', 'geyser'].includes(biome)) geometry = new THREE.CylinderGeometry(0.7, 1, 1, biome === 'mesa' ? 6 : 8);
@@ -222,4 +227,39 @@ function makeEarthForest(world, random) {
     mesh.computeBoundingSphere(); world.scene.add(mesh);
   }
   leaves.instanceColor.needsUpdate = true;
+}
+
+function makeCityScenery(world, random) {
+  const count = Math.max(96, Math.ceil(world.mission.length / 80));
+  const buildings = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#152b42', roughness: .72, metalness: .32 }), count);
+  const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: '#ffbd78', emissive: '#ff713f', emissiveIntensity: 1.7, roughness: .32 }), count * 4);
+  const roofs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: world.mission.color, emissive: world.mission.color, emissiveIntensity: 1.4, roughness: .35, metalness: .45 }), count);
+  const transform = new THREE.Object3D(), tint = new THREE.Color(), up = new THREE.Vector3(0, 1, 0), offset = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    const distance = (i + .45) / count * world.mission.length;
+    const frame = world.frame(distance), side = i % 2 ? -1 : 1;
+    const lane = side * (72 + random() * 165), position = frame.point.clone().addScaledVector(frame.right, lane);
+    const ground = world.groundInfo(position.x, position.z).y;
+    const width = 12 + random() * 13, depth = 12 + random() * 18, height = 24 + random() * 74;
+    const yaw = Math.atan2(frame.tangent.x, frame.tangent.z) + (random() - .5) * .2;
+    transform.position.set(position.x, ground + height / 2, position.z);
+    transform.rotation.set(0, yaw, 0); transform.scale.set(width, height, depth); transform.updateMatrix();
+    buildings.setMatrixAt(i, transform.matrix);
+    buildings.setColorAt(i, tint.setHSL(.56 + random() * .06, .34, .17 + random() * .08));
+    for (let row = 0; row < 4; row++) {
+      const localY = -height * .34 + row * height * .2;
+      offset.set(0, localY, -depth / 2 - .12).applyAxisAngle(up, yaw);
+      transform.position.copy(position).add(offset);
+      transform.rotation.set(0, yaw, 0); transform.scale.set(width * (.52 + random() * .2), .48, .12); transform.updateMatrix();
+      windows.setMatrixAt(i * 4 + row, transform.matrix);
+    }
+    offset.set(0, height / 2 + .35, 0).applyAxisAngle(up, yaw);
+    transform.position.copy(position).add(offset);
+    transform.rotation.set(0, yaw, 0); transform.scale.set(width * .72, .28, depth * .72); transform.updateMatrix();
+    roofs.setMatrixAt(i, transform.matrix);
+  }
+  for (const [mesh, name] of [[buildings, 'city-buildings'], [windows, 'city-windows'], [roofs, 'city-roofs']]) {
+    mesh.name = name; mesh.instanceMatrix.needsUpdate = true; mesh.castShadow = mesh.receiveShadow = true; mesh.computeBoundingSphere(); world.scene.add(mesh);
+  }
+  buildings.instanceColor.needsUpdate = true;
 }
