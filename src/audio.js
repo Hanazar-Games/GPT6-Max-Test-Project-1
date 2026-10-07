@@ -11,43 +11,54 @@ export class AudioEngine {
     this.beat = 0;
     this.nextBeat = 0;
     this.alertUntil = 0;
+    this.unlocking = null;
   }
 
   async unlock() {
-    try {
-      if (!this.context) {
-        this.context = this.createContext();
-        this.master = this.context.createGain();
-        this.master.gain.value = this.enabled && !this.background ? 0.22 : 0;
-        this.master.connect(this.context.destination);
-        for (const bus of ['music', 'sfx']) {
-          this[bus] = this.context.createGain();
-          this[bus].gain.value = this.volumes[bus];
-          this[bus].connect(this.master);
+    if (this.unlocking) return this.unlocking;
+    this.unlocking = (async () => {
+      let context;
+      await Promise.resolve();
+      try {
+        if (!this.context) {
+          this.context = this.createContext();
+          context = this.context;
+          this.master = this.context.createGain();
+          this.master.gain.value = this.enabled && !this.background ? 0.22 : 0;
+          this.master.connect(this.context.destination);
+          for (const bus of ['music', 'sfx']) {
+            this[bus] = this.context.createGain();
+            this[bus].gain.value = this.volumes[bus];
+            this[bus].connect(this.master);
+          }
+          this.engine = this.context.createOscillator();
+          this.engine.type = 'sawtooth';
+          this.filter = this.context.createBiquadFilter();
+          this.filter.type = 'lowpass';
+          this.filter.frequency.value = 220;
+          this.engineGain = this.context.createGain();
+          this.engineGain.gain.value = 0;
+          this.engine.connect(this.filter).connect(this.engineGain).connect(this.sfx);
+          this.engine.start();
+          this.noiseBuffer = this.context.createBuffer(1, this.context.sampleRate, this.context.sampleRate);
+          const noise = this.noiseBuffer.getChannelData(0);
+          for (let i = 0; i < noise.length; i++) noise[i] = Math.random() * 2 - 1;
+          this.ready = true;
         }
-        this.engine = this.context.createOscillator();
-        this.engine.type = 'sawtooth';
-        this.filter = this.context.createBiquadFilter();
-        this.filter.type = 'lowpass';
-        this.filter.frequency.value = 220;
-        this.engineGain = this.context.createGain();
-        this.engineGain.gain.value = 0;
-        this.engine.connect(this.filter).connect(this.engineGain).connect(this.sfx);
-        this.engine.start();
-        this.noiseBuffer = this.context.createBuffer(1, this.context.sampleRate, this.context.sampleRate);
-        const noise = this.noiseBuffer.getChannelData(0);
-        for (let i = 0; i < noise.length; i++) noise[i] = Math.random() * 2 - 1;
-        this.ready = true;
+        context = this.context;
+        await context.resume();
+        return context.state === 'running';
+      } catch {
+        if (context && this.context === context && !this.ready) {
+          context.close().catch(() => {});
+          for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
+        }
+        return false;
+      } finally {
+        this.unlocking = null;
       }
-      await this.context.resume();
-      return this.context.state === 'running';
-    } catch {
-      if (this.context && !this.ready) {
-        this.context.close().catch(() => {});
-        for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
-      }
-      return false;
-    }
+    })();
+    return this.unlocking;
   }
 
   toggle() {

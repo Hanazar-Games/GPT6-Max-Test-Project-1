@@ -43,6 +43,30 @@ test('audio unlock failure is recoverable without a partially initialized graph'
   assert.equal(attempts, 2);
 });
 
+test('audio graph setup failure is cleaned up before retry', async () => {
+  let fail = true;
+  const audio = new AudioEngine(() => {
+    const context = new Context();
+    if (fail) {
+      fail = false;
+      context.createGain = () => { throw new Error('graph setup failed'); };
+    }
+    return context;
+  });
+  assert.equal(await audio.unlock(), false);
+  assert.equal(audio.context, null);
+  assert.equal(await audio.unlock(), true);
+});
+
+test('concurrent unlock requests share one audio graph', async () => {
+  let created = 0;
+  const audio = new AudioEngine(() => { created++; return new Context(); });
+  const results = await Promise.all([audio.unlock(), audio.unlock(), audio.unlock()]);
+  assert.deepEqual(results, [true, true, true]);
+  assert.equal(created, 1);
+  assert.equal(audio.context.oscillators.length, 1);
+});
+
 test('music plays after activation and has an independent bus from sound effects', async () => {
   const audio = await setup();
   audio.update(running);

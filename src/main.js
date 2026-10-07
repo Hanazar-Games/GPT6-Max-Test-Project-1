@@ -156,6 +156,7 @@ let lastCountdown = 4;
 let toastTimeout;
 let toastPriority = 0;
 let guidePaused = false;
+let guideReturnFocus = null;
 let frameTime = performance.now();
 let accumulator = 0;
 let uiTime = 0;
@@ -898,6 +899,7 @@ for (const bus of ['music', 'sfx']) $(`${bus}-volume`).addEventListener('input',
   unlockAudio();
 });
 const openGuide = () => {
+  guideReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   guidePaused = ['running', 'countdown'].includes(game.status);
   if (guidePaused) pause();
   $('guide').showModal();
@@ -906,7 +908,14 @@ for (const id of ['help', 'pause-settings', 'result-settings']) $(id).addEventLi
 const closeGuide = () => $('guide').close();
 $('close-guide').addEventListener('click', closeGuide);
 $('guide-ready').addEventListener('click', closeGuide);
-$('guide').addEventListener('close', () => { if (guidePaused && game.status === 'paused') pause(); guidePaused = false; clearInput(); });
+$('guide').addEventListener('close', () => {
+  if (guidePaused && game.status === 'paused') pause();
+  guidePaused = false;
+  clearInput();
+  const target = guideReturnFocus;
+  guideReturnFocus = null;
+  if (target?.isConnected && !target.hidden && !target.disabled && !target.closest('[inert]') && target.getClientRects().length) target.focus({ preventScroll: true });
+});
 $('quality').addEventListener('click', () => {
   if (!world) return;
   autoQuality = false;

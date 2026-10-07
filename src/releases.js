@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 霓虹城市场景</h2>
+      <h2 id="release-title">v${version} · 视听与焦点稳定性</h2>
+      <p>声音解锁、指南关闭和窄屏交互完成一轮回归，驾驶流程在快速操作后仍保持可恢复。</p>
+      <ul class="release-list">
+        <li><strong>音频解锁去重</strong>帮助、音量和开始飞行的同一轮手势只建立一套 Web Audio 图，失败后仍可再次尝试。</li>
+        <li><strong>指南焦点稳定</strong>从基地、飞行、暂停或结算打开指南，关闭后焦点回到仍可操作的入口，不落在 inert 控件上。</li>
+        <li><strong>视口回归</strong>复查桌面、390×844、568×320、320×844 的公告、机库、声音设置与模式筛选；1.14.20 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>50 个版本</span></summary>
+      <article><h3>v1.14.20 · 霓虹城市场景</h3>
       <p>铜锈星现在是一条城市夜景航线，高楼、空中连廊与发光信标沿道路展开，驾驶净空和实例化预算保持稳定。</p>
       <ul class="release-list">
         <li><strong>城市峡谷天际线</strong>沿道路两侧生成不同高度的高楼群，形成连续的城市纵深。</li>
         <li><strong>窗带与屋顶信标</strong>每栋建筑带有发光窗带和屋顶光板，夜间高速镜头中更容易判断城市边界。</li>
         <li><strong>交通枢纽地标</strong>新增空中连廊、双塔和环形信标地标，并通过道路间距与资源释放测试。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>49 个版本</span></summary>
+      </article>
       <article><h3>v1.14.19 · 高架桥结构升级</h3>
       <p>高架桥的桥面、支撑与灯带结构更完整，高速驶入桥下时层次更清晰，仍保持飞行净空与渲染预算。</p>
       <ul class="release-list">
