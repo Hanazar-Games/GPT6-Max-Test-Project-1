@@ -20,6 +20,13 @@ export class AudioEngine {
       let context;
       await Promise.resolve();
       try {
+        if (this.context?.state === 'closed') {
+          this.ready = false;
+          this.voices.clear();
+          this.alertUntil = 0;
+          this.nextBeat = 0;
+          for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
+        }
         if (!this.context) {
           this.context = this.createContext();
           context = this.context;
@@ -49,8 +56,12 @@ export class AudioEngine {
         await context.resume();
         return context.state === 'running';
       } catch {
-        if (context && this.context === context && !this.ready) {
+        if (context && this.context === context && (!this.ready || context.state === 'closed')) {
           context.close().catch(() => {});
+          this.ready = false;
+          this.voices.clear();
+          this.alertUntil = 0;
+          this.nextBeat = 0;
           for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
         }
         return false;

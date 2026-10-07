@@ -5,16 +5,24 @@ export function mountReleases() {
   document.querySelector('.footer-note').remove();
   document.querySelector('.menu-footer').insertAdjacentHTML('beforeend', `<button id="open-releases" class="release-link" aria-haspopup="dialog">v${version} · 更新公告</button>`);
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
-    <dialog id="releases" aria-labelledby="release-title">
+    <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 视听与焦点稳定性</h2>
+      <h2 id="release-title">v${version} · 视听生命周期与无障碍细节</h2>
+      <p id="release-copy">音频上下文、性能滑杆和多个对话框完成一轮边界复查，快速操作后状态与焦点仍可恢复。</p>
+      <ul class="release-list">
+        <li><strong>音频上下文可恢复</strong>浏览器关闭或恢复失败后清理失效图，下一次主动操作会重新建立音乐、音效与引擎总线。</li>
+        <li><strong>状态读法同步</strong>性能渲染比例滑杆同步百分比读法，更新公告补充描述目标，读屏信息与界面数值一致。</li>
+        <li><strong>对话框焦点稳定</strong>指南、任务机库和更新公告关闭后回到仍可操作的打开入口；1.14.21 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>51 个版本</span></summary>
+      <article><h3>v1.14.21 · 视听与焦点稳定性</h3>
       <p>声音解锁、指南关闭和窄屏交互完成一轮回归，驾驶流程在快速操作后仍保持可恢复。</p>
       <ul class="release-list">
         <li><strong>音频解锁去重</strong>帮助、音量和开始飞行的同一轮手势只建立一套 Web Audio 图，失败后仍可再次尝试。</li>
         <li><strong>指南焦点稳定</strong>从基地、飞行、暂停或结算打开指南，关闭后焦点回到仍可操作的入口，不落在 inert 控件上。</li>
         <li><strong>视口回归</strong>复查桌面、390×844、568×320、320×844 的公告、机库、声音设置与模式筛选；1.14.20 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>50 个版本</span></summary>
+      </article>
       <article><h3>v1.14.20 · 霓虹城市场景</h3>
       <p>铜锈星现在是一条城市夜景航线，高楼、空中连廊与发光信标沿道路展开，驾驶净空和实例化预算保持稳定。</p>
       <ul class="release-list">
@@ -460,8 +468,18 @@ export function mountReleases() {
           <li>程序生成的三维场景和音效、触屏驾驶、两档画质。</li>
         </ul></article>
       </details>
-      <button id="close-releases" class="primary-button">收到，返回基地 →</button>
+      <button id="close-releases" type="button" class="primary-button">收到，返回基地 →</button>
     </dialog>`);
-  document.querySelector('#open-releases').addEventListener('click', () => document.querySelector('#releases').showModal());
-  document.querySelector('#close-releases').addEventListener('click', () => document.querySelector('#releases').close());
+  const dialog = document.querySelector('#releases');
+  let returnFocus = null;
+  document.querySelector('#open-releases').addEventListener('click', () => {
+    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.showModal();
+  });
+  document.querySelector('#close-releases').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => {
+    const target = returnFocus;
+    returnFocus = null;
+    if (target?.isConnected && !target.hidden && !target.disabled && !target.closest('[inert]') && target.getClientRects().length) target.focus({ preventScroll: true });
+  });
 }

@@ -58,6 +58,33 @@ test('audio graph setup failure is cleaned up before retry', async () => {
   assert.equal(await audio.unlock(), true);
 });
 
+test('a closed audio context is discarded before retry', async () => {
+  let first = true;
+  const audio = new AudioEngine(() => {
+    const context = new Context();
+    if (first) {
+      first = false;
+      context.resume = async () => { context.state = 'closed'; throw new Error('context closed'); };
+    }
+    return context;
+  });
+  assert.equal(await audio.unlock(), false);
+  assert.equal(audio.context, null);
+  assert.equal(await audio.unlock(), true);
+});
+
+test('rebuilding after a closed context drops stale voices', async () => {
+  const contexts = [];
+  const audio = new AudioEngine(() => { const context = new Context(); contexts.push(context); return context; });
+  assert.equal(await audio.unlock(), true);
+  audio.event('pickup');
+  assert.ok(audio.voices.size > 0);
+  contexts[0].state = 'closed';
+  assert.equal(await audio.unlock(), true);
+  assert.equal(audio.voices.size, 0);
+  assert.equal(contexts.length, 2);
+});
+
 test('concurrent unlock requests share one audio graph', async () => {
   let created = 0;
   const audio = new AudioEngine(() => { created++; return new Context(); });

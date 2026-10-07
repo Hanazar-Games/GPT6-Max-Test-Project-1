@@ -96,7 +96,7 @@ mountReleases();
 $('guide').setAttribute('aria-labelledby', 'guide-title');
 $('guide').querySelector('h2').id = 'guide-title';
 $('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45" aria-valuetext="45%"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80" aria-valuetext="80%"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
-$('quality').closest('.quality-setting').insertAdjacentHTML('afterend', `<fieldset id="performance-settings" class="performance-settings" aria-labelledby="performance-title"><legend id="performance-title">性能参数</legend><div class="performance-field"><label for="performance-profile">性能档位</label><select id="performance-profile"><option value="custom">自定义</option>${PERFORMANCE_LEVELS.map(id => `<option value="${id}">${PERFORMANCE_PRESETS[id].label}</option>`).join('')}</select></div><div class="performance-field performance-range"><label for="performance-scale">渲染比例 <output id="performance-scale-value" for="performance-scale">150%</output></label><input id="performance-scale" type="range" min="60" max="200" step="5" value="150"></div><div class="performance-checks"><label><input id="performance-shadows" type="checkbox" checked> 动态阴影</label><label><input id="performance-bloom" type="checkbox" checked> 环境泛光</label></div><small id="performance-status" role="status">精致 · 渲染比例 150% · 阴影与泛光开启</small></fieldset>`);
+$('quality').closest('.quality-setting').insertAdjacentHTML('afterend', `<fieldset id="performance-settings" class="performance-settings" aria-labelledby="performance-title"><legend id="performance-title">性能参数</legend><div class="performance-field"><label for="performance-profile">性能档位</label><select id="performance-profile"><option value="custom">自定义</option>${PERFORMANCE_LEVELS.map(id => `<option value="${id}">${PERFORMANCE_PRESETS[id].label}</option>`).join('')}</select></div><div class="performance-field performance-range"><label for="performance-scale">渲染比例 <output id="performance-scale-value" for="performance-scale">150%</output></label><input id="performance-scale" type="range" min="60" max="200" step="5" value="150" aria-valuetext="150%"></div><div class="performance-checks"><label><input id="performance-shadows" type="checkbox" checked> 动态阴影</label><label><input id="performance-bloom" type="checkbox" checked> 环境泛光</label></div><small id="performance-status" role="status">精致 · 渲染比例 150% · 阴影与泛光开启</small></fieldset>`);
 $('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">声音设置与操作指南</button>');
 $('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
 $('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">声音设置与操作指南</button>');
@@ -157,6 +157,7 @@ let toastTimeout;
 let toastPriority = 0;
 let guidePaused = false;
 let guideReturnFocus = null;
+let hangarReturnFocus = null;
 let frameTime = performance.now();
 let accumulator = 0;
 let uiTime = 0;
@@ -255,6 +256,7 @@ function syncPerformanceSettings() {
   $('performance-profile').value = profile;
   $('performance-scale').value = Math.round(settings.pixelRatio * 100);
   $('performance-scale-value').textContent = `${Math.round(settings.pixelRatio * 100)}%`;
+  $('performance-scale').setAttribute('aria-valuetext', `${Math.round(settings.pixelRatio * 100)}%`);
   $('performance-shadows').checked = settings.shadows;
   $('performance-bloom').checked = settings.bloom;
   $('quality').innerHTML = `${settings.label} <span>↔</span>`;
@@ -790,9 +792,14 @@ $('cruise-button').addEventListener('click', event => {
 });
 $('back-pause').addEventListener('click', home);
 $('back-result').addEventListener('click', home);
-$('open-hangar').addEventListener('click', () => { updateLoadout(); $('hangar').showModal(); });
+$('open-hangar').addEventListener('click', () => { hangarReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null; updateLoadout(); $('hangar').showModal(); });
 $('close-hangar').addEventListener('click', () => $('hangar').close());
 $('confirm-hangar').addEventListener('click', () => $('hangar').close());
+$('hangar').addEventListener('close', () => {
+  const target = hangarReturnFocus;
+  hangarReturnFocus = null;
+  if (target?.isConnected && !target.hidden && !target.disabled && !target.closest('[inert]') && target.getClientRects().length) target.focus({ preventScroll: true });
+});
 $('mission-search').addEventListener('input', () => { updateMissionCatalogue(); $('mission-options').scrollTop = 0; });
 $('mission-categories').addEventListener('click', event => {
   const button = event.target.closest('[data-category]');
