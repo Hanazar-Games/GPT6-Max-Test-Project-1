@@ -21,6 +21,8 @@ test('bridge depth joins the mountain smoothly and never changes unrelated route
 
 test('modeled bridge structures leave road and jump clearance, use four batches and release their resources', async () => {
   const { makeBridges } = await import('../src/bridge-view.js');
+  const probes = [-.5, 0, .5].map(y => new THREE.Vector3(0, y, 0));
+  for (const x of [-.5, .5]) for (const y of [-.5, .5]) for (const z of [-.5, .5]) probes.push(new THREE.Vector3(x, y, z));
   for (const mission of MISSIONS.filter(mission => mission.bridges.length)) {
     const world = Object.assign(Object.create(World.prototype), { mission, curve: createRoute(mission), scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } } });
     world.samples = world.curve.getSpacedPoints(Math.ceil(mission.length / 20));
@@ -33,11 +35,12 @@ test('modeled bridge structures leave road and jump clearance, use four batches 
     for (const mesh of meshes) for (let i = 0; i < mesh.count; i++) {
       mesh.getMatrixAt(i, matrix);
       assert.ok(matrix.elements.every(Number.isFinite));
-      for (const t of [-.5, 0, .5]) {
-        const p = new THREE.Vector3(0, t, 0).applyMatrix4(matrix);
+      for (const probe of probes) {
+        const p = probe.clone().applyMatrix4(matrix);
         const sample = world.groundSampler(p.x, p.z);
-        const roadHeight = world.frame(sample.progress * mission.length).point.y;
-        assert.ok(sample.distance >= 18.25 || p.y < roadHeight - 2 || p.y > roadHeight + 15, `${mission.id}/${mesh.name}: intrusion into flight space`);
+        const frame = world.frame(sample.progress * mission.length);
+        const height = p.sub(frame.point).dot(frame.up);
+        assert.ok(sample.distance >= 18.25 || height < -2 || height > 15, `${mission.id}/${mesh.name}: intrusion into flight space`);
       }
     }
     const resources = new Set(meshes.flatMap(mesh => [mesh.geometry, mesh.material, mesh]));

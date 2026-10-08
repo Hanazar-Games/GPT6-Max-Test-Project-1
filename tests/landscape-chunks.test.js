@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import * as THREE from 'three';
 import { partitionLandscape } from '../src/landscape-chunks.js';
 import { MISSIONS } from '../src/missions.js';
@@ -9,6 +10,53 @@ import { World } from '../src/world.js';
 import { makePlanetScenery } from '../src/planet-view.js';
 
 const triangles = mesh => (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3 * (mesh.isInstancedMesh ? mesh.count : 1);
+
+test('banked road strips share material batches while preserving every vertex, face and shadow setting', t => {
+  const mission = MISSIONS.find(mission => mission.id === 'marathon');
+  const world = Object.assign(Object.create(World.prototype), {
+    mission: { ...mission, bridges: [] }, curve: createRoute(mission), scene: new THREE.Scene(),
+    materials: { dark: new THREE.MeshStandardMaterial() }, groundInfo: () => ({ y: -2000 }),
+    renderer: { renderLists: { dispose() {} } },
+  });
+  t.after(() => { world.clearScene(); world.materials.dark.dispose(); });
+  world.makeTrack();
+  const batches = new Map();
+  for (const mesh of world.scene.children.filter(mesh => !mesh.isInstancedMesh && mesh.isMesh && !mesh.material.transparent)) {
+    if (!batches.has(mesh.material)) batches.set(mesh.material, []);
+    batches.get(mesh.material).push(mesh);
+  }
+  assert.equal(batches.size, 3);
+  const expected = new Map();
+  const digest = arrays => {
+    const hash = createHash('sha256');
+    for (const array of arrays) hash.update(Buffer.from(array.buffer, array.byteOffset, array.byteLength));
+    return hash.digest('hex');
+  };
+  for (const [material, meshes] of batches) {
+    let offset = 0;
+    const indices = meshes.flatMap(mesh => {
+      const indices = Array.from(mesh.geometry.index.array, index => index + offset);
+      offset += mesh.geometry.attributes.position.count;
+      return indices;
+    });
+    expected.set(material, {
+      attributes: Object.fromEntries(['position', 'normal', 'uv'].map(name => [name, digest(meshes.map(mesh => mesh.geometry.attributes[name].array))])),
+      faces: Array.from({ length: indices.length / 3 }, (_, i) => indices.slice(i * 3, i * 3 + 3).join(',')).sort(),
+    });
+  }
+  partitionLandscape(world.scene);
+  const surfaces = world.scene.children.filter(mesh => !mesh.isInstancedMesh && mesh.isMesh && !mesh.material.transparent);
+  assert.equal(new Set(surfaces.map(mesh => mesh.geometry.attributes.position)).size, 3, 'road strips need one shared vertex buffer per material');
+  for (const [material, source] of expected) {
+    const chunks = surfaces.filter(mesh => mesh.material === material);
+    for (const mesh of chunks) {
+      assert.ok(mesh.receiveShadow && !mesh.castShadow);
+      for (const name of ['position', 'normal', 'uv']) assert.equal(digest([mesh.geometry.attributes[name].array]), source.attributes[name]);
+    }
+    const faces = chunks.flatMap(mesh => Array.from({ length: mesh.geometry.index.count / 3 }, (_, i) => Array.from(mesh.geometry.index.array.slice(i * 3, i * 3 + 3)).join(','))).sort();
+    assert.deepEqual(faces, source.faces);
+  }
+});
 
 for (const indexed of [true, false]) test(`${indexed ? 'indexed' : 'non-indexed'} landscape tiles preserve geometry, transforms and instance colors with local bounds`, () => {
   const scene = new THREE.Scene(), material = new THREE.MeshBasicMaterial();

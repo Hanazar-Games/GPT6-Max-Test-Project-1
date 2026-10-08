@@ -13,7 +13,12 @@ export function makeBridges(world) {
     transform.updateMatrix();
     parts[kind].push(transform.matrix.clone());
   };
-  const point = (distance, lane, height) => world.frame(distance, lane, height).point;
+  const frames = new Map();
+  const point = (distance, lane, height) => {
+    let frame = frames.get(distance);
+    if (!frame) { frame = world.frame(distance); frames.set(distance, frame); }
+    return frame.point.clone().addScaledVector(frame.right, lane).addScaledVector(frame.up, height);
+  };
   const pier = (distance, lane, width, depth) => {
     const top = point(distance, lane, -4.8);
     const bottom = top.clone();

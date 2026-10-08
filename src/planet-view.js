@@ -37,7 +37,7 @@ function makeRoadStrips(world, strips) {
     geometry.computeVertexNormals();
     const mesh = world.mesh(geometry, material, world.scene);
     mesh.receiveShadow = true;
-    mesh.name = name;
+    mesh.name = name || 'road-structure';
   }
 }
 
@@ -110,20 +110,27 @@ export function makeMountainRoad(world) {
   }
   world.scene.add(markers, posts, curbs, supports, reflectors);
   const pierCount = Math.ceil(world.mission.length / 65);
-  const piers = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), rail, pierCount * 2);
-  piers.name = 'road-piers';
-  for (let i = 0; i < pierCount; i++) for (const side of [-1, 1]) {
-    const frame = world.frame(i / pierCount * world.mission.length, side * 12.8, -2.4);
-    const ground = world.groundInfo(frame.point.x, frame.point.z).y;
-    const height = Math.max(0.1, frame.point.y - ground);
-    dummy.position.set(frame.point.x, ground + height / 2, frame.point.z);
-    dummy.rotation.set(0, Math.atan2(frame.tangent.x, frame.tangent.z), 0);
-    dummy.scale.set(1.3, height, 2.8);
-    if (bridgeAt(world.mission, i / pierCount * world.mission.length)) dummy.scale.setScalar(0);
-    dummy.updateMatrix();
-    piers.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix);
+  const pierDistances = Array.from({ length: pierCount }, (_, i) => i / pierCount * world.mission.length).filter(distance => !bridgeAt(world.mission, distance));
+  if (pierDistances.length) {
+    const piers = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), rail, pierDistances.length * 2);
+    piers.name = 'road-piers';
+    const top = new THREE.Vector3();
+    for (const [i, distance] of pierDistances.entries()) {
+      const frame = world.frame(distance);
+      for (const side of [-1, 1]) {
+        top.copy(frame.point).addScaledVector(frame.right, side * 12.8).addScaledVector(frame.up, -2.4);
+        const ground = world.groundInfo(top.x, top.z).y;
+        const height = Math.max(0.1, top.y - ground);
+        dummy.position.set(top.x, ground + height / 2, top.z);
+        dummy.rotation.set(0, Math.atan2(frame.tangent.x, frame.tangent.z), 0);
+        dummy.scale.set(1.3, height, 2.8);
+        dummy.updateMatrix();
+        piers.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix);
+      }
+    }
+    piers.computeBoundingSphere();
+    world.scene.add(piers);
   }
-  world.scene.add(piers);
   makeBridges(world);
   const signMaterial = new THREE.MeshBasicMaterial({ color: world.mission.color });
   const signs = new THREE.Group();

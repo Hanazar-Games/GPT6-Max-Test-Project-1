@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 视听生命周期与无障碍细节</h2>
-      <p id="release-copy">音频上下文、性能滑杆和多个对话框完成一轮边界复查，快速操作后状态与焦点仍可恢复。</p>
+      <h2 id="release-title">v${version} · 山桥建模与绘制优化</h2>
+      <p id="release-copy">高架桥、斜拉桥与悬索桥减少重复生成和绘制开销，长路线继续保留完整结构与驾驶净空。</p>
+      <ul class="release-list">
+        <li><strong>桥梁生成复用采样</strong>同一里程的道路横截面只计算一次；240 公里路线桥梁采样减少约 87%，桥梁模型数据保持一致。</li>
+        <li><strong>支撑与道路批次精简</strong>普通路墩跳过桥梁区间，同材质桥面、侧墙与护栏合并后仍按空间裁剪，降低长路线绘制调用。</li>
+        <li><strong>建模边界复查</strong>桥梁净空覆盖构件边角与倾斜路面，回归检查道路几何、支撑位置、裁剪和换图资源释放；1.14.22 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>52 个版本</span></summary>
+      <article><h3>v1.14.22 · 视听生命周期与无障碍细节</h3>
+      <p>音频上下文、性能滑杆和多个对话框完成一轮边界复查，快速操作后状态与焦点仍可恢复。</p>
       <ul class="release-list">
         <li><strong>音频上下文可恢复</strong>浏览器关闭或恢复失败后清理失效图，下一次主动操作会重新建立音乐、音效与引擎总线。</li>
         <li><strong>状态读法同步</strong>性能渲染比例滑杆同步百分比读法，更新公告补充描述目标，读屏信息与界面数值一致。</li>
         <li><strong>对话框焦点稳定</strong>指南、任务机库和更新公告关闭后回到仍可操作的打开入口；1.14.21 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>51 个版本</span></summary>
+      </article>
       <article><h3>v1.14.21 · 视听与焦点稳定性</h3>
       <p>声音解锁、指南关闭和窄屏交互完成一轮回归，驾驶流程在快速操作后仍保持可恢复。</p>
       <ul class="release-list">

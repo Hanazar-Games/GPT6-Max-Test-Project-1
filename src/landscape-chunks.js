@@ -1,7 +1,21 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Only call before creating animated objects and mutable instance buffers.
 export function partitionLandscape(scene, retainedGeometry, cellSize = 1200) {
+  const roads = new Map();
+  for (const mesh of scene.children) {
+    if (mesh.name !== 'road-structure' || mesh.material.transparent) continue;
+    if (!roads.has(mesh.material)) roads.set(mesh.material, []);
+    roads.get(mesh.material).push(mesh);
+  }
+  for (const meshes of roads.values()) {
+    if (meshes.length < 2) continue;
+    const mesh = meshes[0].clone();
+    mesh.geometry = mergeGeometries(meshes.map(mesh => mesh.geometry));
+    for (const source of meshes) { scene.remove(source); source.geometry.dispose(); }
+    scene.add(mesh);
+  }
   const cell = (x, z) => `${Math.floor(x / cellSize)},${Math.floor(z / cellSize)}`;
   const matrix = new THREE.Matrix4(), point = new THREE.Vector3(), color = new THREE.Color();
   for (const source of [...scene.children]) {
