@@ -66,6 +66,7 @@ function impact(game, damage, source = 'obstacle') {
     return;
   }
   game.hull = Math.max(0, game.hull - damage);
+  if (game.hull === 0) { game.status = 'lost'; game.reason = 'hull'; game.boosting = false; }
   game.speed *= 0.45;
   game.padBoost = 0;
   game.overdriveTime = 0;
@@ -234,7 +235,7 @@ export function updateGame(game, input, delta) {
     game.lateralSpeed = 0;
     impact(game, 8, 'boundary');
   }
-  if (game.hull <= 0) { game.status = 'lost'; game.reason = 'hull'; game.boosting = false; return; }
+  if (game.status === 'lost') return;
 
   const before = game.distance;
   game.distance = Math.min(game.mission.length, game.distance + game.speed * dt);
@@ -274,6 +275,7 @@ export function updateGame(game, input, delta) {
       impact(game, obstacle.kind === 'drone' ? 28 : 24);
       game.passedObstacles.add(obstacle.id);
       game.pendingObstacleDodges.delete(obstacle.id);
+      if (game.status === 'lost') return;
     } else if (contact && !game.passedObstacles.has(obstacle.id)) game.pendingObstacleDodges.add(obstacle.id);
     if (game.pendingObstacleDodges.has(obstacle.id) && game.distance >= obstacle.distance + 3) {
       game.pendingObstacleDodges.delete(obstacle.id);
@@ -312,6 +314,7 @@ export function updateGame(game, input, delta) {
       impact(game, ENVIRONMENT.damage, 'meteor');
       game.resolvedMeteors.add(meteor.id);
       game.pendingMeteorDodges.delete(meteor.id);
+      if (game.status === 'lost') return;
     } else if (contact && !game.resolvedMeteors.has(meteor.id)) game.pendingMeteorDodges.add(meteor.id);
     const inside = Math.hypot(game.distance - meteor.distance, game.lane - meteor.lane) < meteor.radius + ENVIRONMENT.craftRadius;
     if (game.pendingMeteorDodges.has(meteor.id) && (!inside || state.phase !== 'impact')) {
@@ -384,10 +387,7 @@ export function updateGame(game, input, delta) {
     }
   }
 
-  if (game.hull <= 0) {
-    game.status = 'lost';
-    game.reason = 'hull';
-  } else if (game.distance >= game.mission.length) {
+  if (game.distance >= game.mission.length) {
     game.status = game.gates === game.course.gates.length && game.collected.size >= game.mission.cargo ? 'won' : 'lost';
     game.reason = game.status === 'won' ? '' : game.collected.size < game.mission.cargo ? 'cargo' : 'gates';
     if (game.status === 'won') game.score += Math.round(game.time * 25 + game.hull / game.craft.hull * 1000);

@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 桥梁接缝与地表支撑修正</h2>
-      <p id="release-copy">桥端、基础和悬索连接完成近景复查，桥下观察更完整，坡面支撑与实际地表贴合。</p>
+      <h2 id="release-title">v${version} · 致命碰撞与设置反馈修正</h2>
+      <p id="release-copy">致命碰撞后任务立即中止，驾驶反馈与结算保持一致；自定义性能档位现在会实际应用设置。</p>
+      <ul class="release-list">
+        <li><strong>致命碰撞及时中止</strong>艇体归零后不再触发加速带、挑战或过门奖励，也不会在漏门时回退，避免多余的成功提示与音效。</li>
+        <li><strong>设置与介绍同步</strong>自定义档位实际应用当前比例、阴影和泛光；页面介绍同步 58 颗星球与 40 款飞船。</li>
+        <li><strong>驾驶与视听复查</strong>新增致命伤与护盾／免疫存活回归检查，复查山桥结构、渲染预算、窄屏弹窗和声音暂停恢复；1.14.24 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>54 个版本</span></summary>
+      <article><h3>v1.14.24 · 桥梁接缝与地表支撑修正</h3>
+      <p>桥端、基础和悬索连接完成近景复查，桥下观察更完整，坡面支撑与实际地表贴合。</p>
       <ul class="release-list">
         <li><strong>桥端与悬索接缝</strong>补齐桥端横梁和高架桥墩，主缆对齐桥塔与吊杆，消除连接处的错位。</li>
         <li><strong>坡面支撑落地</strong>基础沿道路朝向布置，桥梁与普通道路支撑覆盖完整底部轮廓，避免边角悬空。</li>
         <li><strong>桥底与缆索细节</strong>补齐连续桥底板与圆截面拉索，末日地图细化远景裁剪，新增细节保持渲染预算；1.14.23 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>53 个版本</span></summary>
+      </article>
       <article><h3>v1.14.23 · 山桥建模与绘制优化</h3>
       <p>高架桥、斜拉桥与悬索桥减少重复生成和绘制开销，长路线继续保留完整结构与驾驶净空。</p>
       <ul class="release-list">

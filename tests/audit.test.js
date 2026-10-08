@@ -42,6 +42,60 @@ test('destroyed craft cannot be revived by a pickup later in the same step', () 
   assert.equal(game.collected.size, 0);
 });
 
+test('a fatal rock collision stops later pads, challenges and navigation rewards in the same step', () => {
+  const game = flight();
+  Object.assign(game, { distance: 99.8, hull: 8, energy: 40, speed: game.craft.speed });
+  game.course.obstacles = [{ id: 0, distance: 100, lane: 0, radius: 2.8, kind: 'rock' }];
+  game.course.pads = [{ id: 0, distance: 100, lane: 0 }];
+  game.course.challenges = [{ id: 0, distance: 100, lane: 0, kind: 'speed' }];
+  game.course.gates = [{ id: 0, distance: 100, lane: 0, width: 8 }];
+  updateGame(game, { accelerate: true }, 1 / 60);
+  assert.equal(game.status, 'lost');
+  assert.equal(game.reason, 'hull');
+  assert.equal(game.hull, 0);
+  assert.equal(game.score, 0);
+  assert.equal(game.gates, 0);
+  assert.equal(game.activatedPads.size, 0);
+  assert.equal(game.challengesResolved.size, 0);
+  assert.deepEqual(game.events.map(event => event.type), ['impact']);
+  const ended = structuredClone(game);
+  updateGame(game, { accelerate: true, boost: true }, 1 / 60);
+  assert.deepEqual(game, { ...ended, events: [] });
+});
+
+test('a fatal meteor strike cannot grant later navigation rewards or rewind the destroyed craft', () => {
+  for (const lane of [0, 10]) {
+    const game = flight();
+    Object.assign(game, { distance: 99.8, hull: 8, speed: game.craft.speed, elapsed: 4.1, boosting: true });
+    game.course.meteors = [{ id: 0, distance: 100, lane: 0, radius: 5, first: 4, period: 10 }];
+    game.course.gates = [{ id: 0, distance: 100, lane, width: 2 }];
+    updateGame(game, { accelerate: true, boost: true }, 1 / 60);
+    assert.equal(game.status, 'lost');
+    assert.equal(game.reason, 'hull');
+    assert.equal(game.boosting, false);
+    assert.equal(game.gates, 0);
+    assert.equal(game.score, 0);
+    assert.ok(game.distance >= 100, 'fatal contact must not trigger a gate rewind');
+    assert.ok(game.resolvedMeteors.has(0));
+    assert.deepEqual(game.events.map(event => event.type), ['impact']);
+  }
+});
+
+test('surviving a collision through armour, immunity or a shield still permits the next pad and gate', () => {
+  for (const protection of [{ hull: 100 }, { hull: 8, immunity: 1 }, { hull: 8, shieldTime: 1 }]) {
+    const game = flight();
+    Object.assign(game, { distance: 99.8, speed: game.craft.speed, ...protection });
+    game.course.obstacles = [{ id: 0, distance: 100, lane: 0, radius: 2.8, kind: 'rock' }];
+    game.course.pads = [{ id: 0, distance: 100, lane: 0 }];
+    game.course.gates = [{ id: 0, distance: 100, lane: 0, width: 8 }];
+    updateGame(game, { accelerate: true }, 1 / 60);
+    assert.equal(game.status, 'running');
+    assert.ok(game.hull > 0);
+    assert.equal(game.gates, 1);
+    assert.ok(game.activatedPads.has(0));
+  }
+});
+
 test('a simulation step cannot travel or collect beyond the remaining time', () => {
   const game = flight();
   Object.assign(game, { time: 0.001, speed: game.craft.speed });

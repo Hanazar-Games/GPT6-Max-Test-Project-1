@@ -931,6 +931,7 @@ $('quality').addEventListener('click', () => {
   syncPerformanceSettings();
 });
 $('performance-profile').addEventListener('change', event => {
+  if (event.target.value === 'custom') { applyCustomPerformance(); return; }
   if (!world || !PERFORMANCE_PRESETS[event.target.value]) return;
   autoQuality = false;
   world.setQuality(event.target.value);
