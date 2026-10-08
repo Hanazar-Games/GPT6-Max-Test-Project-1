@@ -109,7 +109,7 @@ export class World {
     this.makeTrack();
     this.makeRocks();
     makePlanetScenery(this, random);
-    if (this.mission.endurance) partitionLandscape(this.scene, this.terrainGeometry, this.mission.bridges.length ? 1200 : 2400);
+    if (this.mission.endurance) partitionLandscape(this.scene, this.terrainGeometry, this.mission.bridges.length ? 1200 : this.mission.special === 'hazard' ? 2000 : 2400);
     this.makeGates();
     this.makePickups();
     this.makePads();

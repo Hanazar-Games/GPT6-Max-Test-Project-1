@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeLandmarks } from './landmarks.js';
 import { makeSurfaceTexture } from './surface-view.js';
-import { batchMeshes } from './model-utils.js';
+import { batchMeshes, foundationLevel } from './model-utils.js';
 import { bridgeAt } from './bridges.js';
 import { makeBridges } from './bridge-view.js';
 
@@ -59,6 +59,7 @@ export function makeMountainRoad(world) {
       { left: side * 18.2, right: side * 18.2, material: rail, height: .65, depth: .5 },
       { left: side * 18.2, right: side * 18.2, material: edge, height: 1.16, depth: .08 });
   }
+  strips.push({ left: -17, right: 17, material: asphalt, height: -4.38 });
   makeRoadStrips(world, strips);
   const count = Math.ceil(world.mission.length / 14);
   const markers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.2, 0.08, 3), new THREE.MeshBasicMaterial({ color: '#bed3dc' }), count);
@@ -119,10 +120,11 @@ export function makeMountainRoad(world) {
       const frame = world.frame(distance);
       for (const side of [-1, 1]) {
         top.copy(frame.point).addScaledVector(frame.right, side * 12.8).addScaledVector(frame.up, -2.4);
-        const ground = world.groundInfo(top.x, top.z).y;
+        const yaw = Math.atan2(frame.tangent.x, frame.tangent.z);
+        const ground = foundationLevel(world, top, 1.3, 2.8, yaw);
         const height = Math.max(0.1, top.y - ground);
         dummy.position.set(top.x, ground + height / 2, top.z);
-        dummy.rotation.set(0, Math.atan2(frame.tangent.x, frame.tangent.z), 0);
+        dummy.rotation.set(0, yaw, 0);
         dummy.scale.set(1.3, height, 2.8);
         dummy.updateMatrix();
         piers.setMatrixAt(i * 2 + (side > 0 ? 1 : 0), dummy.matrix);

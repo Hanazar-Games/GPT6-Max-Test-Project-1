@@ -1,37 +1,44 @@
 import * as THREE from 'three';
+import { foundationLevel } from './model-utils.js';
 
 export function makeBridges(world) {
   if (!world.mission.bridges.length) return;
   const parts = { concrete: [], steel: [], cables: [], lights: [] };
   const transform = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0);
-  const beam = (kind, a, b, width, depth = width) => {
+  const beam = (kind, a, b, width, depth = width, yaw) => {
     const direction = b.clone().sub(a), length = direction.length();
     if (length < .01) return;
     transform.position.copy(a).add(b).multiplyScalar(.5);
-    transform.quaternion.setFromUnitVectors(up, direction.divideScalar(length));
+    if (yaw === undefined) transform.quaternion.setFromUnitVectors(up, direction.divideScalar(length));
+    else transform.quaternion.setFromAxisAngle(up, yaw);
     transform.scale.set(width, length, depth);
     transform.updateMatrix();
     parts[kind].push(transform.matrix.clone());
   };
   const frames = new Map();
-  const point = (distance, lane, height) => {
+  const frameAt = distance => {
     let frame = frames.get(distance);
     if (!frame) { frame = world.frame(distance); frames.set(distance, frame); }
+    return frame;
+  };
+  const point = (distance, lane, height) => {
+    const frame = frameAt(distance);
     return frame.point.clone().addScaledVector(frame.right, lane).addScaledVector(frame.up, height);
   };
   const pier = (distance, lane, width, depth) => {
     const top = point(distance, lane, -4.8);
     const bottom = top.clone();
-    bottom.y = Math.min(top.y - .1, world.groundInfo(top.x, top.z).y - 2);
-    beam('concrete', bottom, top, width, depth);
+    const { tangent } = frameAt(distance), yaw = Math.atan2(tangent.x, tangent.z);
+    bottom.y = Math.min(top.y - .1, foundationLevel(world, top, width + 4, depth + 4, yaw));
+    beam('concrete', bottom, top, width, depth, yaw);
     const foot = bottom.clone(); foot.y += 2;
-    beam('concrete', bottom, foot, width + 4, depth + 4);
+    beam('concrete', bottom, foot, width + 4, depth + 4, yaw);
   };
-  const path = (kind, start, end, lane, heightAt, width) => {
-    const steps = Math.ceil((end - start) / 30);
+  const path = (kind, start, end, lane, heightAt, width, joints) => {
+    const steps = Math.ceil((end - start) / 30), stations = joints ?? Array.from({ length: steps + 1 }, (_, i) => start + (end - start) * i / steps);
     let previous = point(start, lane, heightAt(0));
-    for (let i = 1; i <= steps; i++) {
-      const next = point(start + (end - start) * i / steps, lane, heightAt(i / steps));
+    for (let i = 1; i < stations.length; i++) {
+      const next = point(stations[i], lane, heightAt((stations[i] - start) / (end - start)));
       beam(kind, previous, next, width);
       previous = next;
     }
@@ -39,7 +46,9 @@ export function makeBridges(world) {
   for (const bridge of world.mission.bridges) {
     const { start, end, kind } = bridge, length = end - start;
     for (const side of [-1, 1]) path('steel', start, end, side * 14, () => -5, 1.8);
-    for (let distance = start; distance <= end; distance += 60) {
+    const intervals = Math.ceil(length / 60);
+    for (let i = 0; i <= intervals; i++) {
+      const distance = start + length * i / intervals;
       const deckMaterial = kind === 'viaduct' ? 'concrete' : 'steel';
       beam(deckMaterial, point(distance, -17, -4.8), point(distance, 17, -4.8), kind === 'viaduct' ? 1.45 : 1.2, kind === 'viaduct' ? 2.4 : 1.2);
       for (const side of [-1, 1]) {
@@ -50,9 +59,9 @@ export function makeBridges(world) {
           beam('lights', point(distance, side * 18.1, -3.8), point(distance, side * 18.1, -2.5), .22);
         }
       }
-      if (kind === 'viaduct' && distance < end - 30) {
+      if (kind === 'viaduct' && i < intervals) {
         for (const side of [-1, 1]) {
-          const next = Math.min(end, distance + 60);
+          const next = start + length * (i + 1) / intervals;
           const lowerDistance = (distance + next) / 2;
           const lower = point(lowerDistance, side * 12.8, -12.5);
           beam('concrete', point(distance, side * 12.8, -5.1), lower, 1.15, 1.8);
@@ -89,8 +98,10 @@ export function makeBridges(world) {
         const heightAt = distance => distance < towers[0] ? 3 + 72 * (distance - start) / (towers[0] - start)
           : distance > towers[1] ? 3 + 72 * (end - distance) / (end - towers[1])
             : 14 + 61 * ((distance - (start + end) / 2) / (length * .3)) ** 2;
-        path('cables', start, end, side * 23, t => heightAt(start + length * t), .65);
-        for (let distance = start + 30; distance < end; distance += 30) {
+        const hangers = Array.from({ length: Math.ceil(length / 30) - 1 }, (_, i) => start + (i + 1) * 30);
+        const joints = [...new Set([start, end, ...towers, ...hangers])].sort((a, b) => a - b);
+        path('cables', start, end, side * 23, t => heightAt(start + length * t), .65, joints);
+        for (const distance of hangers) {
           beam('cables', point(distance, side * 23, 1.8), point(distance, side * 23, heightAt(distance)), .22);
           beam('steel', point(distance, side * 17, -4), point(distance, side * 23, 1.8), .6);
         }
@@ -104,8 +115,11 @@ export function makeBridges(world) {
     lights: new THREE.MeshStandardMaterial({ color: world.mission.color, emissive: world.mission.color, emissiveIntensity: 1.8 }),
   };
   const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const cableGeometry = new THREE.CylinderGeometry(.5, .5, 1, 8);
+  if (!parts.cables.length) cableGeometry.dispose();
   for (const [kind, matrices] of Object.entries(parts)) {
-    const mesh = new THREE.InstancedMesh(geometry, materials[kind], matrices.length);
+    if (!matrices.length) { materials[kind].dispose(); continue; }
+    const mesh = new THREE.InstancedMesh(kind === 'cables' ? cableGeometry : geometry, materials[kind], matrices.length);
     mesh.name = `bridge-${kind}`;
     matrices.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
     mesh.instanceMatrix.needsUpdate = true;

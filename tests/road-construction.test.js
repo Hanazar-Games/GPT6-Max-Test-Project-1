@@ -34,6 +34,7 @@ test('every road retains its banked cross-sections, texture coordinates, winding
       const strips = [[-17, 17, -.38, 0]];
       if (mission.special === 'boost') strips.push([-16, 16, -.29, 0], [-10, -10.45, -.25, 0], [10, 10.45, -.25, 0]);
       for (const side of [-1, 1]) strips.push([side * 17, side * 17, -.38, -4], [side * 12.8, side * 12.8, -1.2, -2.4], [side * 16.6, side * 17, -.28, 0], [side * 18.2, side * 18.2, .65, .5], [side * 18.2, side * 18.2, 1.16, .08]);
+      strips.push([-17, 17, -4.38, 0]);
       const steps = Math.max(1000, Math.ceil(mission.length / 8));
       const samples = [0, 1, Math.floor(steps / 3), Math.floor(steps / 2), steps - 1, steps];
       strips.forEach(([left, right, height, depth], strip) => {

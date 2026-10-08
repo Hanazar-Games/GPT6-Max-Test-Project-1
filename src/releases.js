@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 山桥建模与绘制优化</h2>
-      <p id="release-copy">高架桥、斜拉桥与悬索桥减少重复生成和绘制开销，长路线继续保留完整结构与驾驶净空。</p>
+      <h2 id="release-title">v${version} · 桥梁接缝与地表支撑修正</h2>
+      <p id="release-copy">桥端、基础和悬索连接完成近景复查，桥下观察更完整，坡面支撑与实际地表贴合。</p>
+      <ul class="release-list">
+        <li><strong>桥端与悬索接缝</strong>补齐桥端横梁和高架桥墩，主缆对齐桥塔与吊杆，消除连接处的错位。</li>
+        <li><strong>坡面支撑落地</strong>基础沿道路朝向布置，桥梁与普通道路支撑覆盖完整底部轮廓，避免边角悬空。</li>
+        <li><strong>桥底与缆索细节</strong>补齐连续桥底板与圆截面拉索，末日地图细化远景裁剪，新增细节保持渲染预算；1.14.23 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>53 个版本</span></summary>
+      <article><h3>v1.14.23 · 山桥建模与绘制优化</h3>
+      <p>高架桥、斜拉桥与悬索桥减少重复生成和绘制开销，长路线继续保留完整结构与驾驶净空。</p>
       <ul class="release-list">
         <li><strong>桥梁生成复用采样</strong>同一里程的道路横截面只计算一次；240 公里路线桥梁采样减少约 87%，桥梁模型数据保持一致。</li>
         <li><strong>支撑与道路批次精简</strong>普通路墩跳过桥梁区间，同材质桥面、侧墙与护栏合并后仍按空间裁剪，降低长路线绘制调用。</li>
         <li><strong>建模边界复查</strong>桥梁净空覆盖构件边角与倾斜路面，回归检查道路几何、支撑位置、裁剪和换图资源释放；1.14.22 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>52 个版本</span></summary>
+      </article>
       <article><h3>v1.14.22 · 视听生命周期与无障碍细节</h3>
       <p>音频上下文、性能滑杆和多个对话框完成一轮边界复查，快速操作后状态与焦点仍可恢复。</p>
       <ul class="release-list">
