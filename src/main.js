@@ -25,7 +25,7 @@ import { AudioEngine } from './audio.js';
 import { ENVIRONMENT, gravityAt } from './environment.js';
 import { RouteRadar } from './radar.js';
 import { mountReleases } from './releases.js';
-import { FlightInput, KEY_ACTIONS } from './input.js';
+import { FlightInput, KEY_ACTIONS, acceptsGameKey } from './input.js';
 import { getDriveStatus } from './drive-status.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
@@ -879,6 +879,7 @@ const activateAudio = event => {
 };
 window.addEventListener('pointerdown', activateAudio, { passive: true });
 window.addEventListener('keydown', event => {
+  if (!acceptsGameKey(event)) return;
   if (!event.repeat && (event.key.length === 1 || event.code === 'Enter')) {
     if (event.code === 'KeyP' && !['running', 'countdown', 'paused'].includes(game.status)) return;
     activateAudio(event);
@@ -943,11 +944,12 @@ $('performance-bloom').addEventListener('change', applyCustomPerformance);
 $('reload').addEventListener('click', () => location.reload());
 
 window.addEventListener('keydown', (event) => {
+  if (!acceptsGameKey(event)) return;
   if (event.repeat && ['Space', 'Enter'].includes(event.code) && event.target.closest('button, a, summary')) { event.preventDefault(); return; }
   if (!$('error').hidden) return;
   if (document.querySelector('dialog[open]')) return;
-  if (event.code === 'KeyC' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    if (!event.repeat && !event.isComposing) toggleCruise();
+  if (event.code === 'KeyC') {
+    if (!event.repeat) toggleCruise();
     return;
   }
   if (event.code === 'Tab' && ['paused', 'won', 'lost'].includes(game.status)) {

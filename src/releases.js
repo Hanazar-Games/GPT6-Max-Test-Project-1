@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title">v${version} · 致命碰撞与设置反馈修正</h2>
-      <p id="release-copy">致命碰撞后任务立即中止，驾驶反馈与结算保持一致；自定义性能档位现在会实际应用设置。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 键盘、声音与公告交互修正</h2>
+      <p id="release-copy">浏览器组合快捷键与输入法不再误触发驾驶或声音；公告优先显示最新版本内容。</p>
+      <ul class="release-list">
+        <li><strong>组合快捷键不再冲突</strong>Ctrl/Cmd/Alt 查找、保存和打印等操作不会触发跃升、制动、转向或游戏暂停。</li>
+        <li><strong>声音激活跟随正常操作</strong>浏览器组合键、输入法和已处理的键盘事件不再意外启用音乐，正常点击与驾驶键仍可启用声音。</li>
+        <li><strong>公告从本版标题开始</strong>打开后聚焦当前版本标题，避免自动滚动到历史入口；复查淡出、独立音量与暂停恢复。1.14.25 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>55 个版本</span></summary>
+      <article><h3>v1.14.25 · 致命碰撞与设置反馈修正</h3>
+      <p>致命碰撞后任务立即中止，驾驶反馈与结算保持一致；自定义性能档位现在会实际应用设置。</p>
       <ul class="release-list">
         <li><strong>致命碰撞及时中止</strong>艇体归零后不再触发加速带、挑战或过门奖励，也不会在漏门时回退，避免多余的成功提示与音效。</li>
         <li><strong>设置与介绍同步</strong>自定义档位实际应用当前比例、阴影和泛光；页面介绍同步 58 颗星球与 40 款飞船。</li>
         <li><strong>驾驶与视听复查</strong>新增致命伤与护盾／免疫存活回归检查，复查山桥结构、渲染预算、窄屏弹窗和声音暂停恢复；1.14.24 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>54 个版本</span></summary>
+      </article>
       <article><h3>v1.14.24 · 桥梁接缝与地表支撑修正</h3>
       <p>桥端、基础和悬索连接完成近景复查，桥下观察更完整，坡面支撑与实际地表贴合。</p>
       <ul class="release-list">
@@ -499,6 +507,8 @@ export function mountReleases() {
   document.querySelector('#open-releases').addEventListener('click', () => {
     returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
+    dialog.querySelector('#release-title').focus({ preventScroll: true });
+    dialog.scrollTop = 0;
   });
   document.querySelector('#close-releases').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {

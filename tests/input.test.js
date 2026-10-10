@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FlightInput, KEY_ACTIONS } from '../src/input.js';
+import { FlightInput, KEY_ACTIONS, acceptsGameKey } from '../src/input.js';
 import { createGame, startGame, updateGame, isJumpReady } from '../src/game.js';
 
 function flight() {
@@ -10,6 +10,27 @@ function flight() {
   for (const key of ['gates', 'pickups', 'obstacles', 'pads', 'meteors', 'gravityZones']) game.course[key] = [];
   return game;
 }
+
+test('plain and shifted driving keys remain available to the game', () => {
+  for (const code of [...Object.keys(KEY_ACTIONS), 'KeyC', 'KeyP', 'Escape', 'Enter', 'Tab']) {
+    assert.equal(acceptsGameKey({ code }), true);
+    assert.equal(acceptsGameKey({ code, shiftKey: true }), true);
+  }
+});
+
+test('browser and system shortcuts cannot become flight input or activate sound', () => {
+  for (const code of [...Object.keys(KEY_ACTIONS), 'KeyC', 'KeyP', 'Escape', 'Enter']) {
+    for (const modifier of ['ctrlKey', 'metaKey', 'altKey']) assert.equal(acceptsGameKey({ code, [modifier]: true }), false);
+    assert.equal(acceptsGameKey({ code, ctrlKey: true, altKey: true }), false);
+  }
+});
+
+test('composition and consumed keyboard events remain with their original handler', () => {
+  for (const code of ['KeyF', 'KeyP', 'Enter', 'Space', 'ArrowLeft']) {
+    assert.equal(acceptsGameKey({ code, isComposing: true }), false);
+    assert.equal(acceptsGameKey({ code, defaultPrevented: true }), false);
+  }
+});
 
 test('keyboard and touch taps survive until a simulation step and fire only once', () => {
   for (const source of ['KeyF', 'pointer:1']) {

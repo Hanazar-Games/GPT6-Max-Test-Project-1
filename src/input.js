@@ -4,6 +4,8 @@ export const KEY_ACTIONS = Object.freeze({
   KeyF: 'jump', Space: 'boost',
 });
 
+export const acceptsGameKey = event => !(event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.defaultPrevented);
+
 export class FlightInput {
   constructor() { this.clear(); }
 
