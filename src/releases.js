@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 键盘、声音与公告交互修正</h2>
-      <p id="release-copy">浏览器组合快捷键与输入法不再误触发驾驶或声音；公告优先显示最新版本内容。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 结算焦点与操作体验修正</h2>
+      <p id="release-copy">任务结束先阅读结果标题，短横屏的键盘焦点保持可见；重飞与晋级仍可直接按 Enter。</p>
+      <ul class="release-list">
+        <li><strong>结算焦点清晰可见</strong>成功与失败结算优先聚焦结果标题，从顶部展示任务反馈，避免焦点落在视口外的操作按钮。</li>
+        <li><strong>键盘操作顺畅衔接</strong>标题支持 Shift+Tab 循环，Tab 可访问报告和补给；Enter 保留重飞、赛事晋级与远征继续操作。</li>
+        <li><strong>界面与声音复查</strong>检查三种模式、机库筛选、窄屏布局、独立音量、静音与暂停恢复；1.14.26 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>56 个版本</span></summary>
+      <article><h3>v1.14.26 · 键盘、声音与公告交互修正</h3>
+      <p>浏览器组合快捷键与输入法不再误触发驾驶或声音；公告优先显示最新版本内容。</p>
       <ul class="release-list">
         <li><strong>组合快捷键不再冲突</strong>Ctrl/Cmd/Alt 查找、保存和打印等操作不会触发跃升、制动、转向或游戏暂停。</li>
         <li><strong>声音激活跟随正常操作</strong>浏览器组合键、输入法和已处理的键盘事件不再意外启用音乐，正常点击与驾驶键仍可启用声音。</li>
         <li><strong>公告从本版标题开始</strong>打开后聚焦当前版本标题，避免自动滚动到历史入口；复查淡出、独立音量与暂停恢复。1.14.25 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>55 个版本</span></summary>
+      </article>
       <article><h3>v1.14.25 · 致命碰撞与设置反馈修正</h3>
       <p>致命碰撞后任务立即中止，驾驶反馈与结算保持一致；自定义性能档位现在会实际应用设置。</p>
       <ul class="release-list">
