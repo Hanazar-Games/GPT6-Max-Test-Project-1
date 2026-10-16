@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 结算焦点与操作体验修正</h2>
-      <p id="release-copy">任务结束先阅读结果标题，短横屏的键盘焦点保持可见；重飞与晋级仍可直接按 Enter。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 模型细节与几何缓冲优化</h2>
+      <p id="release-copy">座舱与进气口衔接更完整，飞船和场景减少重复模型数据，保留原有细节。</p>
+      <ul class="release-list">
+        <li><strong>飞船结构更贴合</strong>座舱框架沿玻璃曲面布置，双侧进气口增加内凹底片，修正悬离与漏空。</li>
+        <li><strong>模型缓冲更紧凑</strong>飞船几何缓冲合计减少约 59%，保留原有轮廓、表面和灯光细节；基地、云层与地标同步受益。</li>
+        <li><strong>场景与长线复查</strong>复查 40 款飞船切换、桥梁结构、长路线裁剪和换图资源释放；1.14.27 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>57 个版本</span></summary>
+      <article><h3>v1.14.27 · 结算焦点与操作体验修正</h3>
+      <p>任务结束先阅读结果标题，短横屏的键盘焦点保持可见；重飞与晋级仍可直接按 Enter。</p>
       <ul class="release-list">
         <li><strong>结算焦点清晰可见</strong>成功与失败结算优先聚焦结果标题，从顶部展示任务反馈，避免焦点落在视口外的操作按钮。</li>
         <li><strong>键盘操作顺畅衔接</strong>标题支持 Shift+Tab 循环，Tab 可访问报告和补给；Enter 保留重飞、赛事晋级与远征继续操作。</li>
         <li><strong>界面与声音复查</strong>检查三种模式、机库筛选、窄屏布局、独立音量、静音与暂停恢复；1.14.26 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>56 个版本</span></summary>
+      </article>
       <article><h3>v1.14.26 · 键盘、声音与公告交互修正</h3>
       <p>浏览器组合快捷键与输入法不再误触发驾驶或声音；公告优先显示最新版本内容。</p>
       <ul class="release-list">

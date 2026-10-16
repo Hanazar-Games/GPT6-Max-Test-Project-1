@@ -34,17 +34,23 @@ export function makeCraftModel(materials) {
   cockpit.name = 'cockpit';
   cockpit.scale.set(0.7, 0.64, 1.65);
   for (const z of [-0.55, 1.35]) {
-    tube([[-0.58, 0.63, z], [-0.48, 0.98, z], [0, 1.16, z + 0.12], [0.48, 0.98, z], [0.58, 0.63, z]], 0.045, materials.dark);
+    const radius = Math.sqrt(1 - ((z - 0.5) / 1.65) ** 2);
+    tube(Array.from({ length: 17 }, (_, i) => {
+      const angle = i / 16 * Math.PI;
+      return [0.7 * radius * Math.cos(angle), 0.64 + 0.64 * radius * Math.sin(angle), z];
+    }), 0.045, materials.dark);
   }
-  tube([[0, 0.71, -1.14], [0, 1.3, 0.45], [0, 0.7, 2.12]], 0.035, materials.metal);
+  tube(Array.from({ length: 17 }, (_, i) => {
+    const angle = (i / 16 - 0.5) * Math.PI;
+    return [0, 0.64 + 0.64 * Math.cos(angle), 0.5 + 1.65 * Math.sin(angle)];
+  }), 0.035, materials.metal);
   box([0.18, 0.14, 4.8], materials.dark, [0, 0.72, -0.18]);
   box([0.055, 0.035, 3.45], materials.cyan, [0, 0.81, 0.23]);
   for (const side of [-1, 1]) {
     const beacon = add(new THREE.SphereGeometry(0.12, 8, 6), materials.glow, [side * 1.2, 0.58, 1.28]);
     beacon.scale.set(0.8, 0.8, 1.35);
-    const intake = add(new THREE.TorusGeometry(0.34, 0.055, 6, 18), materials.metal, [side * 1.28, 0.43, -1.72]);
-    const intakeCore = add(new THREE.CircleGeometry(0.23, 12), materials.dark, [side * 1.28, 0.43, -1.72]);
-    intakeCore.rotation.x = Math.PI / 2;
+    add(new THREE.TorusGeometry(0.34, 0.055, 6, 18), materials.metal, [side * 1.28, 0.43, -1.72]);
+    add(new THREE.CircleGeometry(0.32, 18), materials.dark, [side * 1.28, 0.43, -1.75]);
   }
   const variants = {};
   for (const { id } of CRAFTS) {
