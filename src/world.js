@@ -59,7 +59,6 @@ export class World {
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.applyPerformanceSettings();
-    this.resize();
   }
 
   clearScene() {
@@ -564,7 +563,6 @@ export class World {
     this.quality = PERFORMANCE_PRESETS[quality] ? quality : 'high';
     this.performance = { ...preset };
     this.applyPerformanceSettings();
-    this.resize();
   }
 
   setPerformanceOptions(options = {}) {
@@ -576,24 +574,28 @@ export class World {
       bloom: options.bloom ?? this.performance.bloom,
     };
     this.applyPerformanceSettings();
-    this.resize();
   }
 
   applyPerformanceSettings() {
-    const pixelRatio = THREE.MathUtils.clamp(this.performance.pixelRatio, 0.6, 2);
-    const dpr = Number.isFinite(globalThis.devicePixelRatio) ? globalThis.devicePixelRatio : 1;
-    this.renderer.setPixelRatio(Math.min(dpr, pixelRatio));
     this.renderer.shadowMap.enabled = this.performance.shadows;
     this.bloom.enabled = this.performance.bloom;
     this.resize();
   }
 
   resize() {
+    const dpr = Number.isFinite(globalThis.devicePixelRatio) ? globalThis.devicePixelRatio : 1;
+    const pixelRatio = Math.min(dpr, THREE.MathUtils.clamp(this.performance.pixelRatio, 0.6, 2));
+    if (pixelRatio !== this.renderer.getPixelRatio()) {
+      this.renderer.setPixelRatio(pixelRatio);
+      this.composer.setPixelRatio(pixelRatio);
+    }
+    if (this.viewportWidth === innerWidth && this.viewportHeight === innerHeight) return;
+    this.viewportWidth = innerWidth;
+    this.viewportHeight = innerHeight;
     this.cameraReady = false;
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth, innerHeight);
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(innerWidth, innerHeight);
   }
 

@@ -25,12 +25,22 @@ test('city route builds deterministic skyline batches outside the driving corrid
   assert.equal(windows.count, buildings.count * 4);
   assert.equal(roofs.count, buildings.count);
   assert.ok(buildings.count >= 96 && buildings.count < 220);
-  const matrix = new THREE.Matrix4();
+  const matrix = new THREE.Matrix4(), inverse = new THREE.Matrix4(), detail = new THREE.Matrix4();
+  const local = new THREE.Vector3();
   for (let i = 0; i < buildings.count; i++) {
     buildings.getMatrixAt(i, matrix);
     const position = new THREE.Vector3().setFromMatrixPosition(matrix);
     assert.ok(world.groundInfo(position.x, position.z).distance > 40, `building ${i} enters the road corridor`);
     assert.ok(matrix.elements.every(Number.isFinite));
+    inverse.copy(matrix).invert();
+    roofs.getMatrixAt(i, detail);
+    local.setFromMatrixPosition(detail).applyMatrix4(inverse);
+    assert.ok(Math.abs(local.x) < .001 && Math.abs(local.z) < .001 && local.y > .5 && local.y < .53, `roof ${i} must rest just above its building`);
+    for (let row = 0; row < 4; row++) {
+      windows.getMatrixAt(i * 4 + row, detail);
+      local.setFromMatrixPosition(detail).applyMatrix4(inverse);
+      assert.ok(Math.abs(local.x) < .001 && local.y > -.5 && local.y < .5 && Math.abs(local.z + .5) < .02, `window ${i}/${row} must stay on its building facade`);
+    }
   }
   const resources = new Set();
   world.scene.traverse(mesh => { if (mesh.geometry) resources.add(mesh.geometry); if (mesh.material) resources.add(mesh.material); });

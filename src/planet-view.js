@@ -251,7 +251,8 @@ function makeCityScenery(world, random) {
     const ground = world.groundInfo(position.x, position.z).y;
     const width = 12 + random() * 13, depth = 12 + random() * 18, height = 24 + random() * 74;
     const yaw = Math.atan2(frame.tangent.x, frame.tangent.z) + (random() - .5) * .2;
-    transform.position.set(position.x, ground + height / 2, position.z);
+    position.y = ground + height / 2;
+    transform.position.copy(position);
     transform.rotation.set(0, yaw, 0); transform.scale.set(width, height, depth); transform.updateMatrix();
     buildings.setMatrixAt(i, transform.matrix);
     buildings.setColorAt(i, tint.setHSL(.56 + random() * .06, .34, .17 + random() * .08));

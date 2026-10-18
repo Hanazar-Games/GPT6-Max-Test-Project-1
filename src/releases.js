@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 车流设置与视听反馈修正</h2>
-      <p id="release-copy">车流设置更清楚，车辆撞击有对应的提示与音效。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 场景衔接与画质切换优化</h2>
+      <p id="release-copy">城市建筑衔接更完整，画质调整与键盘设置更顺畅。</p>
+      <ul class="release-list">
+        <li><strong>城市细节归位</strong>修正山坡建筑的窗带与屋顶高度错位，与楼体使用相同的中心基准。</li>
+        <li><strong>减少画质调整开销</strong>尺寸变化时才更新画面缓冲；单独切换阴影、泛光时保持镜头，窗口变化时同步设备像素比。</li>
+        <li><strong>车型设置继续可操作</strong>比例归零或只剩一种车型时，焦点移到对应复选框，避免滑杆禁用后焦点丢失；1.15.1 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>60 个版本</span></summary>
+      <article><h3>v1.15.1 · 车流设置与视听反馈修正</h3>
+      <p>车流设置更清楚，车辆撞击有对应的提示与音效。</p>
       <ul class="release-list">
         <li><strong>草稿与实际车流分清</strong>未应用更改在折叠栏明确标记，可一键撤销；当前车流保持已应用配置，确认后才生效。</li>
         <li><strong>键盘焦点保持可见</strong>应用与撤销后聚焦状态文字，补齐控件轮廓；窄屏和短横屏也能继续操作。</li>
         <li><strong>车辆碰撞反馈准确</strong>修正撞车后提示避开岩石的问题，加入独立短撞击音与驾驶说明；复查音乐、音效、暂停和静音，1.15.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>59 个版本</span></summary>
+      </article>
       <article><h3>v1.15.0 · 货车车流与车型自选</h3>
       <p>路上多了大货车，车型与比例由你决定。</p>
       <ul class="release-list">
