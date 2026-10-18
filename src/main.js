@@ -461,7 +461,10 @@ function failureAdvice() {
     if (mission.special === 'boost') return '保持低空，让全路宽加速带连续接力；避免长时间制动，提前对准中央导航门。';
     return course.pads.length ? '绿色加速带提供免费加速，收集蓝色核心可补充冲刺能量；减少碰撞和漏门，保持前进。' : '交替使用巡航与冲刺，为跃升保留能量；跟随核心穿过安全缺口，减少碰撞和漏门造成的时间损失。';
   }
-  if (reason === 'hull') return course.obstacles.length || course.meteors.length ? '横移避让或按 F 跃过障碍，留意陨石红圈；蓝色核心可以修复艇体。' : '远离航道边缘，提前松开转向并用 S 制动；沿中央收集蓝色核心可以修复艇体。';
+  if (reason === 'hull') {
+    if (course.traffic.length) return '留意两侧道路车辆，提前横移避让或按 F 跃升；同时注意岩石、巡逻机和陨石预警，蓝色核心可以修复艇体。';
+    return course.obstacles.length || course.meteors.length ? '横移避让或按 F 跃过障碍，留意陨石红圈；蓝色核心可以修复艇体。' : '远离航道边缘，提前松开转向并用 S 制动；沿中央收集蓝色核心可以修复艇体。';
+  }
   if (reason === 'cargo') return `需要至少 ${mission.cargo} 枚蓝色核心才能完成交付，${mission.special && mission.special !== 'hazard' ? '保持低空，沿航道中央收集' : '保持低空，留意航道两侧'}。`;
   return '请依次穿过全部 6 座导航门，按航向提示提前对准门中央。';
 }
@@ -707,7 +710,7 @@ function updateHUD() {
 function processEvents() {
   for (const event of game.events) {
     if (controls.cruise && ['impact', 'miss'].includes(event.type)) { controls.cruise = false; syncControls(); }
-    if (!event.chained) audio.event(event.type, event.kind);
+    if (!event.chained) audio.event(event.type, event.kind ?? event.source);
     world.event(event, game);
     if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '出发！按住 W / ↑ 加速，或按 C 开启巡航油门');
     if (event.type === 'powerup') toast(`${POWERUPS[event.kind].name} · ${POWERUPS[event.kind].description}`, 'cyan');
@@ -729,7 +732,7 @@ function processEvents() {
     if (event.type === 'glide') toast('引力旅人！腾空离开低重力区 · +200', 'cyan');
     if (event.type === 'miss') toast('未穿过导航门 · 已返回门前，时间 −4 秒', 'warning');
     if (event.type === 'impact') {
-      toast(event.source === 'meteor' ? '受到陨石冲击 · 避开红圈，核心可修复艇体' : event.source === 'boundary' ? '擦碰航道边缘 · 松开转向并制动' : '发生碰撞 · 避开岩石，收集核心修复艇体', 'warning');
+      toast(event.source === 'meteor' ? '受到陨石冲击 · 避开红圈，核心可修复艇体' : event.source === 'boundary' ? '擦碰航道边缘 · 松开转向并制动' : event.source === 'traffic' ? '撞上道路车辆 · 提前横移避让，核心可修复艇体' : '发生碰撞 · 避开岩石与巡逻机，收集核心修复艇体', 'warning');
       $('impact-flash').classList.remove('flash');
       void $('impact-flash').offsetWidth;
       $('impact-flash').classList.add('flash');
@@ -868,6 +871,7 @@ $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', `<p class=
 $('guide').querySelector('.cup-guide-note').insertAdjacentHTML('afterend', `<p class="cup-guide-note">「远征补给」沿 ${MISSIONS.length} 站完成可选委托，成功交付获 2 补给，每项委托再获 2 点。${MISSIONS.length - 1} 次中途补给可改装飞船，每项最多两级；失败重试保留升级，返回基地结束远征。牵引磁场扩大低空核心吸附范围，飞船下方的绿色圆环显示范围。</p>`);
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('beforebegin', '<p id="route-guide" class="cup-guide-note"></p>');
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<p class="cup-guide-note">巡航油门等同于持续按住加速，仍需手动转向、避障、收集和过门；冲刺需另行按住。按 C 或顶部巡航按钮切换，制动、暂停、切出页面、碰撞、漏门、结算与重飞都会解除，继续飞行后需主动重新开启。</p>');
+$('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<p class="cup-guide-note">道路 NPC 沿两侧车道同向行驶，轿车、厢式车与大货车均会造成碰撞；留意车型预警，提前横移或按 F 跃升。任务机库可调节车型比例与密度，地球与纯加速无障碍航线保持无车。</p>');
 $('guide').querySelector('.guide-tip').insertAdjacentHTML('afterend', '<div class="environment-guide"><div id="meteor-help"><strong>☄ 陨石预警</strong><p>红圈提前 2.6 秒预警，撞击后 1 秒内低空艇体会受到 22 点伤害；横向避开红圈，或按 F 腾空越过冲击波可获 180 分。灰色落点和退去的余辉没有伤害。</p></div><div id="gravity-help"><strong>⌁ 低重力航段</strong><p>紫色边线标出低重力区，跃升滞空更久；腾空离开区域可获 200 分，高空仍会错过核心。</p></div><small>每处技巧奖励只计一次。环境按飞行用时循环，暂停时冻结；重飞从头开始，雷达同步标出环境航段。</small></div>');
 document.querySelector('.flight-help').innerHTML = '<span>A / D 避障</span><span>F 跃升</span><span>S 制动</span><span>Esc 暂停</span>';
 document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); if (game.status === 'menu') return; if (['running', 'countdown'].includes(game.status)) pause(); else home(); });

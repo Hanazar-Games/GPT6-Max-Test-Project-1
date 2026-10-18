@@ -178,7 +178,8 @@ export class AudioEngine {
     if (type === 'challenge') (kind === 'precision' ? [659, 880, 1100, 1320] : [880, 1100, 1320]).forEach((note, i) => this.tone(note, .2, i * .06));
     if (type === 'pickup') { this.tone(780); this.tone(1170, 0.22, 0.08); }
     if (type === 'gate') [440, 660, 880].forEach((note, i) => this.tone(note, 0.25, i * 0.09));
-    if (type === 'impact' || type === 'miss') { alertTone(75, .3); alertTone(48, .3, .06, 'sawtooth'); }
+    if (type === 'impact' && kind === 'traffic') { alertTone(110, .16); alertTone(220, .12, .025, 'square'); }
+    else if (type === 'impact' || type === 'miss') { alertTone(75, .3); alertTone(48, .3, .06, 'sawtooth'); }
     if (type === 'launch') { this.tone(440); this.tone(880, 0.4, 0.12); }
     if (type === 'jump') { this.tone(180, 0.16, 0, 'triangle'); this.tone(540, 0.25, 0.08); }
     if (type === 'land') this.tone(65, 0.12, 0, 'triangle');

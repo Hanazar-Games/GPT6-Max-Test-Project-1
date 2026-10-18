@@ -283,3 +283,27 @@ test('cruise controls have distinct short confirmation cues', async () => {
   assert.equal(off.length, 2);
   assert.notDeepEqual(on.map(note => note.frequency.value), off.map(note => note.frequency.value));
 });
+
+test('traffic impacts sound distinct while retaining alert headroom, music ducking and mute behavior', async () => {
+  const audio = await setup();
+  audio.update(running);
+  const notes = kind => {
+    const before = audio.context.oscillators.length;
+    audio.event('impact', kind);
+    return audio.context.oscillators.slice(before).map(node => [node.frequency.value, node.type]);
+  };
+  const rock = notes(); audio.stopVoices();
+  const traffic = notes('traffic');
+  assert.equal(traffic.length, 2);
+  assert.notDeepEqual(traffic, rock);
+  assert.equal(audio.music.gain.value, audio.volumes.music * .4);
+  audio.stopVoices();
+  for (let i = 0; i < 30; i++) audio.event('challenge', 'precision');
+  const before = audio.context.oscillators.length;
+  audio.event('meteor-warning'); audio.event('impact', 'traffic');
+  assert.equal(audio.context.oscillators.length - before, 4);
+  audio.setVolume('sfx', 0);
+  audio.event('impact', 'traffic');
+  assert.equal(audio.voices.size, 0);
+  assert.equal(audio.music.gain.value, audio.volumes.music);
+});

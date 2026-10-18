@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 货车车流与车型自选</h2>
-      <p id="release-copy">路上多了大货车，车型与比例由你决定。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 车流设置与视听反馈修正</h2>
+      <p id="release-copy">车流设置更清楚，车辆撞击有对应的提示与音效。</p>
+      <ul class="release-list">
+        <li><strong>草稿与实际车流分清</strong>未应用更改在折叠栏明确标记，可一键撤销；当前车流保持已应用配置，确认后才生效。</li>
+        <li><strong>键盘焦点保持可见</strong>应用与撤销后聚焦状态文字，补齐控件轮廓；窄屏和短横屏也能继续操作。</li>
+        <li><strong>车辆碰撞反馈准确</strong>修正撞车后提示避开岩石的问题，加入独立短撞击音与驾驶说明；复查音乐、音效、暂停和静音，1.15.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>59 个版本</span></summary>
+      <article><h3>v1.15.0 · 货车车流与车型自选</h3>
+      <p>路上多了大货车，车型与比例由你决定。</p>
       <ul class="release-list">
         <li><strong>四种道路车辆</strong>轿车、厢式车、重型货车和半挂卡车沿两侧车道行驶，默认每公里 8 辆，大货车占 70%。</li>
         <li><strong>机库自定义车流</strong>展开「道路 NPC 交通」，勾选车型、调节生成比例与每公里 0–12 辆的密度；支持仅大货车或关闭交通，确认配置后生效。</li>
         <li><strong>避让与性能同步</strong>车辆接入碰撞、护盾和车型预警，电脑同样避让；附近车流使用固定实例池。地球与纯加速无障碍路线保持无车，1.14.28 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>58 个版本</span></summary>
+      </article>
       <article><h3>v1.14.28 · 模型细节与几何缓冲优化</h3>
       <p>座舱与进气口衔接更完整，飞船和场景减少重复模型数据，保留原有细节。</p>
       <ul class="release-list">

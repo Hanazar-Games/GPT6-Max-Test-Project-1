@@ -18,13 +18,14 @@ export function mountTrafficSettings(settings, onApply) {
           </div>`).join('')}
         </fieldset>
         <div class="traffic-presets"><button type="button" data-traffic-preset="default">货车为主 · 默认</button><button type="button" data-traffic-preset="balanced">均衡车流</button><button type="button" data-traffic-preset="heavy">仅大货车</button><button type="button" data-traffic-preset="off">关闭交通</button></div>
-        <p id="traffic-route-note"></p><p id="traffic-status" role="status"></p>
-        <button id="apply-traffic" type="button" class="secondary-button">应用交通设置</button>
-        <small>当前页面内保留；重飞、换艇与换图沿用。确认飞行配置时也会应用。</small>
+        <p id="traffic-route-note"></p><p id="traffic-status" role="status" tabindex="-1"></p>
+        <div class="traffic-actions"><button id="apply-traffic" type="button" class="secondary-button">应用交通设置</button><button id="reset-traffic" type="button" hidden>撤销未应用更改</button></div>
+        <small>当前页面内保留；重飞、换艇与换图沿用。确认飞行配置时也会应用；待应用的更改不影响当前车流。</small>
       </div>
     </details>`);
   const root = document.querySelector('#traffic-settings'), $ = id => root.querySelector(`#${id}`);
   const render = () => {
+    const focused = document.activeElement;
     const count = Object.values(draft.mix).filter(Boolean).length, enabled = draft.density && count;
     $('traffic-density').value = draft.density;
     $('traffic-density').setAttribute('aria-valuetext', `${draft.density} 辆每公里`);
@@ -37,10 +38,13 @@ export function mountTrafficSettings(settings, onApply) {
       $(`traffic-share-${type}`).textContent = `${value}%`;
     }
     const allowed = !mission || trafficAllowed(mission), pending = JSON.stringify(draft) !== applied;
-    $('traffic-summary').textContent = !allowed ? '本航线无车' : enabled ? `${draft.density} 辆/km · 大货车 ${draft.mix.truck + draft.mix.semi}%` : '已关闭';
+    const summary = !allowed ? '本航线无车' : enabled ? `${draft.density} 辆/km · 大货车 ${draft.mix.truck + draft.mix.semi}%` : '交通关闭';
+    $('traffic-summary').textContent = `${pending ? '待应用 · ' : ''}${summary}`;
     $('traffic-route-note').textContent = allowed ? '地球与纯加速无障碍航线始终无车；其他航线按此配置生成。' : '当前为无障碍航线，保持无车；此配置将在其他航线使用。';
     $('traffic-status').textContent = `${pending ? '待应用' : '已应用'} · ${enabled ? `车型比例合计 100%${count === 1 ? ' · 单车型自动设为 100%' : ''}` : !count ? '未选择车型，不生成车辆' : '密度为 0，不生成车辆'}`;
     $('apply-traffic').disabled = !pending;
+    $('reset-traffic').hidden = !pending;
+    if (!pending && [$('apply-traffic'), $('reset-traffic')].includes(focused)) $('traffic-status').focus();
   };
   const apply = () => {
     if (JSON.stringify(draft) === applied) return true;
@@ -64,6 +68,7 @@ export function mountTrafficSettings(settings, onApply) {
     render();
   });
   $('apply-traffic').addEventListener('click', apply);
+  $('reset-traffic').addEventListener('click', () => { draft = JSON.parse(applied); render(); });
   render();
   return { apply, updateMission(value) { mission = value; render(); } };
 }
