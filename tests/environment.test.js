@@ -9,7 +9,7 @@ const meteor = { id: 0, distance: 100, lane: 0, radius: 5, first: 4, period: 10 
 const pose = (elapsed, distance = 100, lane = 0, height = 0) => ({ elapsed, distance, lane, height });
 
 function flight() {
-  const game = createGame();
+  const game = createGame('tranquility', 'scout', {}, { density: 0 });
   startGame(game);
   game.status = 'running';
   game.course.obstacles = [];
@@ -170,7 +170,7 @@ test('meteor cues warn about nearby strikes without hiding a closer rock collisi
 
 test('meteor warnings include lateral inertia and agree with actual coasting impacts', () => {
   for (const craft of CRAFTS) for (const side of [-1, 1]) for (const approaching of [false, true]) {
-    const game = createGame('tranquility', craft.id);
+    const game = createGame('tranquility', craft.id, {}, { density: 0 });
     Object.assign(game, { status: 'running', distance: 100, speed: craft.boostSpeed,
       lane: side * (approaching ? 6.5 : 5), lateralSpeed: side * craft.handling * (approaching ? -1 : 1) });
     for (const key of ['gates', 'pickups', 'pads', 'obstacles', 'gravityZones']) game.course[key] = [];

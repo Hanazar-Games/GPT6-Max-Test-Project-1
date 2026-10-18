@@ -53,7 +53,7 @@ test('hazard guidance reports time to contact at the current speed', () => {
 
 test('obstacle warnings match coasting collisions and safe escapes for every craft', () => {
   for (const craft of CRAFTS) for (const boost of [false, true]) for (const side of [-1, 1]) for (const approaching of [false, true]) for (const kind of ['rock', 'drone']) {
-    const game = createGame('tranquility', craft.id);
+    const game = createGame('tranquility', craft.id, {}, { density: 0 });
     Object.assign(game, { status: 'running', distance: 100, speed: boost ? craft.boostSpeed : craft.speed,
       lane: side * (approaching ? 4.5 : 3), lateralSpeed: side * craft.handling * (approaching ? -1 : 1) });
     for (const key of ['gates', 'pickups', 'pads', 'meteors', 'gravityZones']) game.course[key] = [];
@@ -72,7 +72,7 @@ test('obstacle warnings match coasting collisions and safe escapes for every cra
 });
 
 function gateApproach(craft = 'nova') {
-  const game = createGame('frontier', craft);
+  const game = createGame('frontier', craft, {}, { density: 0 });
   const index = game.course.gates.findIndex(gate => gate.lane === 0);
   Object.assign(game, { status: 'running', gates: index, speed: game.craft.boostSpeed });
   game.distance = game.course.gates[index].distance - 50;

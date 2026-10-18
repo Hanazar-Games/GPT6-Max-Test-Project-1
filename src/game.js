@@ -3,6 +3,7 @@ import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
 import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
 import { STEERING_RESPONSE, ROAD_HALF_WIDTH, coastingLane } from './flight-motion.js';
+import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficDistance } from './traffic.js';
 
 export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 
@@ -20,14 +21,15 @@ export function getJumpRingCue(game, distance) {
   return distance <= game.speed * .65 ? { action: 'jump', text: '现在跃升 · F / 跃升键' } : { action: 'approach', text: '接近后准备跃升' };
 }
 
-export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}) {
+export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}, trafficOptions = {}) {
   const mission = MISSIONS.find(item => item.id === missionId);
   const base = CRAFTS.find(item => item.id === craftId);
   if (!mission || !base) throw new RangeError('Unknown mission or craft');
   const upgrades = upgradeLevels(levels);
   const craft = upgradeCraft(base, upgrades);
+  const trafficSettings = normalizeTrafficSettings(trafficOptions);
   return {
-    mission, craft, upgrades, course: makeCourse(mission),
+    mission, craft, upgrades, trafficSettings, course: { ...makeCourse(mission), traffic: makeTraffic(mission, trafficSettings) },
     status: 'menu', previousStatus: 'running', countdown: 3,
     distance: 0, lane: 0, lateralSpeed: 0, speed: 0,
     time: mission.duration, hull: craft.hull, energy: 100, boosting: false, boostLocked: false,
@@ -43,7 +45,7 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
 }
 
 export function startGame(game) {
-  Object.assign(game, createGame(game.mission.id, game.craft.id, game.upgrades), { status: 'countdown' });
+  Object.assign(game, createGame(game.mission.id, game.craft.id, game.upgrades, game.trafficSettings), { status: 'countdown' });
 }
 
 export function togglePause(game) {
@@ -81,12 +83,12 @@ export function obstacleLane(obstacle, elapsed) {
   return obstacle.kind === 'drone' ? Math.sin(elapsed * obstacle.frequency + obstacle.phase) * 10 : obstacle.lane;
 }
 
-function courseContact(obstacle, before, after, forward = 3, lateral = obstacle.radius + 1.1) {
-  if (obstacle.distance < Math.min(before.distance, after.distance) - forward || obstacle.distance > Math.max(before.distance, after.distance) + forward) return null;
+function courseContact(obstacle, before, after, forward = obstacle.kind === 'traffic' ? obstacle.length / 2 + 3 : 3, lateral = obstacle.radius + 1.1) {
+  const distanceAt = time => obstacle.kind === 'traffic' ? trafficDistance(obstacle, time) : obstacle.distance;
   let entry = 0;
   let exit = 1;
   const intervals = [
-    [before.distance - obstacle.distance, after.distance - obstacle.distance, forward],
+    [before.distance - distanceAt(before.elapsed), after.distance - distanceAt(after.elapsed), forward],
     [before.lane - obstacleLane(obstacle, before.elapsed), after.lane - obstacleLane(obstacle, after.elapsed), lateral],
   ];
   for (const [start, end, radius] of intervals) {
@@ -116,8 +118,9 @@ export function getDeliveryStatus(game) {
 export function getFlightCue(game) {
   let hazard = null, timeToImpact = Infinity;
   const obstacles = game.course.obstacles;
-  for (let i = firstAtOrAfter(obstacles, game.distance - 3); i < obstacles.length && obstacles[i].distance <= game.distance + game.speed * 1.6 + 3; i++) {
-    const obstacle = obstacles[i];
+  const threats = trafficNear(game.course.traffic, game.elapsed, game.mission.length, game.distance - 65, game.distance + game.speed * 1.6 + 65);
+  for (let i = firstAtOrAfter(obstacles, game.distance - 3); i < obstacles.length && obstacles[i].distance <= game.distance + game.speed * 1.6 + 3; i++) threats.push(obstacles[i]);
+  for (const obstacle of threats) {
     let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
     let verticalSpeed = game.verticalSpeed;
     for (let step = 0; step < 96; step++) {
@@ -125,18 +128,19 @@ export function getFlightCue(game) {
       const after = { elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60,
         lane: coastingLane(game, (step + 1) / 60), height: Math.max(0, before.height + verticalSpeed / 60) };
       const contact = courseContact(obstacle, before, after);
-      if (contact && contact.height < 2.5) {
+      if (contact && contact.height < (obstacle.clearance ?? 2.5)) {
         const time = contact.elapsed - game.elapsed;
         if (time < timeToImpact) { timeToImpact = time; hazard = obstacle; }
         break;
       }
-      if (after.distance > obstacle.distance + 3) break;
+      if (obstacle.kind !== 'traffic' && after.distance > obstacle.distance + 3) break;
       before = after;
     }
   }
   const meteor = getMeteorCue(game);
   if (meteor && (!hazard || meteor.danger && meteor.timeToImpact < timeToImpact)) return meteor;
   if (hazard) return { kind: 'hazard', distance: Math.max(0, Math.ceil(hazard.distance - game.distance)), hazard: hazard.kind, timeToImpact,
+    ...(hazard.kind === 'traffic' ? { vehicle: hazard.name } : {}),
     drifting: Math.abs(game.lane - obstacleLane(hazard, game.elapsed + timeToImpact)) >= hazard.radius + 1.1 };
   const gate = game.course.gates[game.gates];
   const delivery = getDeliveryStatus(game);
@@ -283,6 +287,12 @@ export function updateGame(game, input, delta) {
       game.airDodges++;
       game.score += 120;
       game.events.push({ type: 'dodge', points: 120 });
+    }
+  }
+  for (const vehicle of trafficNear(game.course.traffic, game.elapsed, game.mission.length, before - 30, game.distance + 30)) {
+    if (courseContact(vehicle, previous, game)?.height < vehicle.clearance) {
+      impact(game, vehicle.damage, 'traffic');
+      if (game.status === 'lost') return;
     }
   }
   for (let i = firstAtOrAfter(game.course.pads, before - 3); i < game.course.pads.length && game.course.pads[i].distance <= game.distance + 3; i++) {

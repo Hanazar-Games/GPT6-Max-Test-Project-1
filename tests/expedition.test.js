@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MISSIONS, CRAFTS, makeCourse } from '../src/missions.js';
 import { createGame, startGame, updateGame, togglePause, obstacleLane, getDebrief } from '../src/game.js';
-import { FlightRecorder, MAX_GHOST_SAMPLES, saveRecord } from '../src/ghost.js';
+import { FlightRecorder, MAX_GHOST_SAMPLES, saveRecord, flightKey } from '../src/ghost.js';
 import { pilotInput } from '../src/pilots.js';
 
 function running(missionId = 'tranquility', craftId = 'scout') {
@@ -204,7 +204,7 @@ test('every mission and craft combination can complete and record a continuous r
     assert.ok(debrief.medals.length >= 1);
     assert.ok(['S', 'A', 'B'].includes(debrief.rank));
     assert.equal(saveRecord(records, game, recorder).newBest, true);
-    const ghost = records.get(`${mission.id}/${craft.id}`).ghost;
+    const ghost = records.get(flightKey(game)).ghost;
     assert.equal(ghost.splits.length, 7);
     assert.equal(ghost.samples.at(-1).time, game.elapsed);
     assert.ok(ghost.samples.length < MAX_GHOST_SAMPLES);

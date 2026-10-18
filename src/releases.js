@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 模型细节与几何缓冲优化</h2>
-      <p id="release-copy">座舱与进气口衔接更完整，飞船和场景减少重复模型数据，保留原有细节。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 货车车流与车型自选</h2>
+      <p id="release-copy">路上多了大货车，车型与比例由你决定。</p>
+      <ul class="release-list">
+        <li><strong>四种道路车辆</strong>轿车、厢式车、重型货车和半挂卡车沿两侧车道行驶，默认每公里 8 辆，大货车占 70%。</li>
+        <li><strong>机库自定义车流</strong>展开「道路 NPC 交通」，勾选车型、调节生成比例与每公里 0–12 辆的密度；支持仅大货车或关闭交通，确认配置后生效。</li>
+        <li><strong>避让与性能同步</strong>车辆接入碰撞、护盾和车型预警，电脑同样避让；附近车流使用固定实例池。地球与纯加速无障碍路线保持无车，1.14.28 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>58 个版本</span></summary>
+      <article><h3>v1.14.28 · 模型细节与几何缓冲优化</h3>
+      <p>座舱与进气口衔接更完整，飞船和场景减少重复模型数据，保留原有细节。</p>
       <ul class="release-list">
         <li><strong>飞船结构更贴合</strong>座舱框架沿玻璃曲面布置，双侧进气口增加内凹底片，修正悬离与漏空。</li>
         <li><strong>模型缓冲更紧凑</strong>飞船几何缓冲合计减少约 59%，保留原有轮廓、表面和灯光细节；基地、云层与地标同步受益。</li>
         <li><strong>场景与长线复查</strong>复查 40 款飞船切换、桥梁结构、长路线裁剪和换图资源释放；1.14.27 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>57 个版本</span></summary>
+      </article>
       <article><h3>v1.14.27 · 结算焦点与操作体验修正</h3>
       <p>任务结束先阅读结果标题，短横屏的键盘焦点保持可见；重飞与晋级仍可直接按 Enter。</p>
       <ul class="release-list">

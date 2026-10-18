@@ -14,7 +14,7 @@ import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } f
 import { POWERUPS, CHALLENGES, getRewardProgress, getSpeedRingCue } from './route-rewards.js';
 import { BRIDGE_NAMES, bridgeAt } from './bridges.js';
 import { craftIcon } from './craft-icons.js';
-import { FlightRecorder, sampleGhost, compareSplit, saveRecord } from './ghost.js';
+import { FlightRecorder, sampleGhost, compareSplit, saveRecord, flightKey } from './ghost.js';
 import { RACERS, buildField } from './pilots.js';
 import { createCup, completeStage, advanceStage, getStandings, getTrophy, getRaceView } from './cup.js';
 import { createExpedition, settleExpedition, buyUpgrade, advanceExpedition, getContracts } from './expedition.js';
@@ -27,6 +27,7 @@ import { RouteRadar } from './radar.js';
 import { mountReleases } from './releases.js';
 import { FlightInput, KEY_ACTIONS, acceptsGameKey } from './input.js';
 import { getDriveStatus } from './drive-status.js';
+import { mountTrafficSettings } from './traffic-settings.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
 
@@ -164,9 +165,18 @@ let uiTime = 0;
 let autoQuality = true;
 let performanceFrames = 0;
 let performanceTime = 0;
+let trafficOptions = game.trafficSettings;
+const trafficSettings = mountTrafficSettings(trafficOptions, settings => {
+  const previous = trafficOptions;
+  trafficOptions = settings;
+  if (configure(game.mission.id, game.craft.id, game.upgrades)) return true;
+  trafficOptions = previous;
+  return false;
+});
 
 function updateLoadout() {
   const { mission, craft } = game;
+  trafficSettings.updateMission(mission);
   const scrollPositions = ['mission-options', 'craft-options'].map(id => $(id).scrollTop);
   document.body.dataset.mode = mode;
   document.body.dataset.biome = mission.biome;
@@ -181,7 +191,7 @@ function updateLoadout() {
   $('scene-craft').textContent = `${craft.model} · ${craft.name}`;
   $('region-label').textContent = mission.region;
   $('planet-profile').textContent = `${mission.planet} / ${(mission.length / 1000).toFixed(1)} KM 山路`;
-  const best = records.get(`${mission.id}/${craft.id}`);
+  const best = records.get(flightKey(game));
   $('session-best').textContent = best ? `会话最佳 ${best.score} 分 · 最快 ${best.time.toFixed(1)}s` : '新的航程，等你留下纪录。';
   $('ghost-availability').textContent = best ? `幽灵已就绪 · ${best.time.toFixed(2)}s · 再次出发，挑战自己的最快航程。` : '此配置尚无幽灵。成功返航一次即可建立；纪录随页面刷新清空。';
   if (mode === 'cup') {
@@ -301,7 +311,7 @@ function showError(message) {
 function configure(missionId, craftId, upgrades = {}) {
   if (game.status !== 'menu' || !world) return false;
   const changedMission = game.mission.id !== missionId;
-  Object.assign(game, createGame(missionId, craftId, upgrades));
+  Object.assign(game, createGame(missionId, craftId, upgrades, trafficOptions));
   try {
     if (changedMission) world.loadMission(game);
     else world.setCraft(game.craft);
@@ -371,15 +381,15 @@ function launch() {
       if (!configure(MISSIONS[0].id, cup.craftId)) { cup = null; return; }
     }
     if (cup.status !== 'racing') return;
-    const key = `${game.mission.id}/${game.craft.id}`;
-    if (!fields.has(key)) fields.set(key, buildField(game.mission.id, game.craft.id));
+    const key = flightKey(game);
+    if (!fields.has(key)) fields.set(key, buildField(game.mission.id, game.craft.id, game.trafficSettings));
     raceField = fields.get(key);
   }
   clearInput();
   unlockAudio();
   startGame(game);
   recorder = expedition ? null : new FlightRecorder(game);
-  rival = expedition ? null : records.get(`${game.mission.id}/${game.craft.id}`)?.ghost ?? null;
+  rival = expedition ? null : records.get(flightKey(game))?.ghost ?? null;
   completedContracts = new Set();
   ghostPose = null;
   projections = [];
@@ -675,7 +685,7 @@ function updateHUD() {
     $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
     $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
   } else {
-    $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.hazard === 'drone' ? '巡逻机' : '岩石'} ${cue.distance}m` : '◇ 返回基地';
+    $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.vehicle ?? (cue.hazard === 'drone' ? '巡逻机' : '岩石')} ${cue.distance}m` : '◇ 返回基地';
     $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${cue.drifting ? '惯性侧滑，横移修正' : isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
   }
   const drive = getDriveStatus(game, { brake: controls.held('brake'), cruise: controls.cruise, lowGravity });
@@ -794,7 +804,7 @@ $('back-pause').addEventListener('click', home);
 $('back-result').addEventListener('click', home);
 $('open-hangar').addEventListener('click', () => { hangarReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null; updateLoadout(); $('hangar').showModal(); });
 $('close-hangar').addEventListener('click', () => $('hangar').close());
-$('confirm-hangar').addEventListener('click', () => $('hangar').close());
+$('confirm-hangar').addEventListener('click', () => { if (trafficSettings.apply()) $('hangar').close(); });
 $('hangar').addEventListener('close', () => {
   const target = hangarReturnFocus;
   hangarReturnFocus = null;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, startGame, updateGame, togglePause } from '../src/game.js';
-import { FlightRecorder, MAX_GHOST_SAMPLES, sampleGhost, compareSplit, saveRecord } from '../src/ghost.js';
+import { FlightRecorder, MAX_GHOST_SAMPLES, sampleGhost, compareSplit, saveRecord, flightKey } from '../src/ghost.js';
 
 function flight() {
   const game = createGame();
@@ -94,16 +94,16 @@ test('only the fastest complete successful flight replaces the ghost, while scor
   const records = new Map();
   const first = complete();
   assert.equal(saveRecord(records, first.game, first.recorder).newBest, true);
-  const ghost = records.get('tranquility/scout').ghost;
+  const ghost = records.get(flightKey(first.game)).ghost;
   const slower = complete(55, 'scout', 6000);
   const result = saveRecord(records, slower.game, slower.recorder);
   assert.equal(result.newBest, false);
   assert.equal(result.newScore, true);
-  assert.equal(records.get('tranquility/scout').ghost, ghost);
+  assert.equal(records.get(flightKey(first.game)).ghost, ghost);
   const faster = complete(45, 'scout', 4000);
   assert.equal(saveRecord(records, faster.game, faster.recorder).newBest, true);
-  assert.equal(records.get('tranquility/scout').score, 6000);
-  assert.equal(records.get('tranquility/scout').time, 45);
+  assert.equal(records.get(flightKey(first.game)).score, 6000);
+  assert.equal(records.get(flightKey(first.game)).time, 45);
   first.game.distance = 0;
   assert.equal(ghost.samples.at(-1).distance, first.game.mission.length);
 });
@@ -112,31 +112,38 @@ test('failed or incomplete recordings never overwrite a successful ghost', () =>
   const records = new Map();
   const first = complete();
   saveRecord(records, first.game, first.recorder);
-  const before = records.get('tranquility/scout');
+  const before = records.get(flightKey(first.game));
   const failed = complete(40);
   failed.game.status = 'lost';
   saveRecord(records, failed.game, failed.recorder);
   const incomplete = complete(39);
   incomplete.recorder.splits.pop();
   saveRecord(records, incomplete.game, incomplete.recorder);
-  assert.equal(records.get('tranquility/scout'), before);
+  assert.equal(records.get(flightKey(first.game)), before);
 });
 
 test('records isolate mission and craft combinations and ties keep the existing ghost', () => {
   const records = new Map();
   const first = complete();
   saveRecord(records, first.game, first.recorder);
-  const ghost = records.get('tranquility/scout').ghost;
+  const ghost = records.get(flightKey(first.game)).ghost;
   const second = complete(50, 'hauler');
   saveRecord(records, second.game, second.recorder);
   const tied = complete();
   saveRecord(records, tied.game, tied.recorder);
   assert.equal(records.size, 2);
-  assert.equal(records.get('tranquility/scout').ghost, ghost);
-  assert.equal(records.get('eclipse/scout'), undefined);
+  assert.equal(records.get(flightKey(first.game)).ghost, ghost);
+  assert.equal(records.get(flightKey(createGame('eclipse'))), undefined);
   second.game.mission = createGame('eclipse').mission;
   saveRecord(records, second.game, second.recorder);
   assert.equal(records.size, 2);
+});
+
+test('different NPC traffic configurations isolate records and invalidate a changed recording', () => {
+  const first = complete(), other = createGame('tranquility', 'scout', {}, { density: 12, mix: { semi: 100 } });
+  assert.notEqual(flightKey(first.game), flightKey(other));
+  first.game.trafficSettings = other.trafficSettings;
+  assert.equal(first.recorder.finish(first.game), null);
 });
 
 test('recording memory is bounded and an overflow cannot become a partial ghost', () => {

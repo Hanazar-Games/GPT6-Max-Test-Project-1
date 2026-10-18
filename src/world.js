@@ -16,6 +16,7 @@ import { bridgeDepth } from './bridges.js';
 import { partitionLandscape } from './landscape-chunks.js';
 import { RewardView } from './reward-view.js';
 import { pickupRange } from './route-rewards.js';
+import { TrafficView } from './traffic-view.js';
 
 export const PERFORMANCE_PRESETS = Object.freeze({
   ultra: { label: '极致', pixelRatio: 2, shadows: true, bloom: true },
@@ -122,6 +123,7 @@ export class World {
     this.makeDust();
     this.makeSpeedLines();
     this.makeEffects();
+    this.traffic = new TrafficView(this, game);
     this.viewFrustum = new THREE.Frustum();
     this.viewProjection = new THREE.Matrix4();
     this.prepareTransforms();
@@ -692,6 +694,7 @@ export class World {
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
     this.viewFrustum.setFromProjectionMatrix(this.viewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
+    this.traffic.render(game);
     for (let i = 0; i < this.pickups.length; i++) {
       const { group, core, ring, bounds } = this.pickups[i];
       group.visible = !game.collected.has(i) && this.viewFrustum.intersectsSphere(bounds);

@@ -156,3 +156,16 @@ test('opponents choose distinct flight lines so their projections are identifiab
   const lanes = field.map(racer => sampleGhost(racer.trace, 3).lane.toFixed(1));
   assert.equal(new Set(lanes).size, 3);
 });
+
+test('competitors complete truck-heavy custom traffic on fragile, slow, long and hazard routes', () => {
+  for (const [mission, craft] of [['magnetar', 'blade'], ['frontier', 'atlas'], ['summit', 'hauler'], ['apocalypse', 'nova']]) {
+    for (const settings of [{ density: 12, mix: { semi: 100 } }, { density: 12, mix: { car: 60, truck: 40 } }]) {
+      const field = buildField(mission, craft, settings);
+      for (const racer of field) {
+        assert.equal(racer.status, 'won', `${mission}/${craft}/${racer.id}: ${racer.reason}`);
+        assert.equal(racer.gates, 6);
+        assert.ok(racer.cargo >= MISSIONS.find(item => item.id === mission).cargo);
+      }
+    }
+  }
+});

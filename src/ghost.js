@@ -1,10 +1,12 @@
+import { trafficAllowed, trafficKey } from './traffic.js';
+
 export const MAX_GHOST_SAMPLES = 2400;
-const keyFor = game => `${game.mission.id}/${game.craft.id}`;
+export const flightKey = game => `${game.mission.id}/${game.craft.id}/${trafficAllowed(game.mission) ? trafficKey(game.trafficSettings) : 'off'}`;
 const poseFor = game => ({ time: game.elapsed, distance: game.distance, lane: game.lane, height: game.height, speed: game.speed, lateralSpeed: game.lateralSpeed });
 
 export class FlightRecorder {
   constructor(game) {
-    this.key = keyFor(game);
+    this.key = flightKey(game);
     this.interval = Math.max(0.1, game.mission.duration / (MAX_GHOST_SAMPLES - 128));
     this.previous = poseFor(game);
     this.samples = [this.previous];
@@ -20,7 +22,7 @@ export class FlightRecorder {
   }
 
   capture(game) {
-    if (this.finished || !this.valid || keyFor(game) !== this.key || !['running', 'won', 'lost'].includes(game.status) || game.elapsed <= this.previous.time) return;
+    if (this.finished || !this.valid || flightKey(game) !== this.key || !['running', 'won', 'lost'].includes(game.status) || game.elapsed <= this.previous.time) return;
     const sample = poseFor(game);
     const cut = sample.distance < this.previous.distance || game.events.some(event => event.type === 'miss');
     const gate = game.gates > this.splits.length;
@@ -36,7 +38,7 @@ export class FlightRecorder {
 
   finish(game) {
     this.capture(game);
-    if (!this.valid || !this.finished || game.status !== 'won' || keyFor(game) !== this.key || this.splits.length !== game.course.gates.length + 1 || this.samples.at(-1).distance !== game.mission.length || this.samples.at(-1).time !== game.elapsed) return null;
+    if (!this.valid || !this.finished || game.status !== 'won' || flightKey(game) !== this.key || this.splits.length !== game.course.gates.length + 1 || this.samples.at(-1).distance !== game.mission.length || this.samples.at(-1).time !== game.elapsed) return null;
     return Object.freeze({
       samples: Object.freeze(this.samples.map(sample => Object.freeze({ ...sample }))),
       splits: Object.freeze([...this.splits]),
@@ -72,11 +74,11 @@ export function compareSplit(splits, reference, index) {
 }
 
 export function saveRecord(records, game, recorder) {
-  const previous = records.get(keyFor(game));
+  const previous = records.get(flightKey(game));
   const ghost = Object.keys(game.upgrades).length ? null : recorder?.finish(game);
   const newBest = !!ghost && (!previous || game.elapsed < previous.time - 1e-6);
   const newScore = !!ghost && (!previous || game.score > previous.score);
-  if (ghost && (newBest || newScore)) records.set(keyFor(game), {
+  if (ghost && (newBest || newScore)) records.set(flightKey(game), {
     score: Math.max(previous?.score ?? 0, game.score),
     time: newBest ? game.elapsed : previous.time,
     ghost: newBest ? ghost : previous.ghost,

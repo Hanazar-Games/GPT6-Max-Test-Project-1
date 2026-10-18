@@ -20,7 +20,7 @@ function makeWorld(t) {
 test('patrols reuse their fixed route samples and retain their exact pose through pause, retry and map changes', t => {
   const world = makeWorld(t), expected = new THREE.Object3D();
   for (const id of ['summit', 'opalreach', 'summit']) {
-    const game = createGame(id);
+    const game = createGame(id, 'scout', {}, { density: 0 });
     world.loadMission(game);
     world.environment.render = () => {};
     let frames = 0;
