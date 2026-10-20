@@ -79,11 +79,12 @@ export class TrafficView {
       for (const part of model.children) {
         const mesh = new THREE.InstancedMesh(part.geometry, part.material, 24);
         mesh.name = `traffic-${type}-${meshes.length}`; mesh.count = 0;
+        if (meshes.length) mesh.instanceMatrix = meshes[0].mesh.instanceMatrix;
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         mesh.frustumCulled = false; mesh.castShadow = mesh.receiveShadow = true;
         this.root.add(mesh); meshes.push({ mesh, paint: part.userData.paint });
       }
-      this.batches.push({ type, meshes });
+      this.batches.push({ type, meshes, tints: [] });
     }
   }
 
@@ -92,23 +93,37 @@ export class TrafficView {
     this.lastFleet = game.course.traffic; this.lastTime = game.elapsed; this.lastDistance = game.distance;
     if (this.world.viewProjection) this.lastView.copy(this.world.viewProjection);
     const vehicles = trafficNear(game.course.traffic, game.elapsed, game.mission.length, game.distance - 60, game.distance + 1100);
-    for (const { type, meshes } of this.batches) {
-      let count = 0;
+    for (const { type, meshes, tints } of this.batches) {
+      const transforms = meshes[0].mesh, paint = meshes.find(part => part.paint).mesh;
+      let count = 0, colorsChanged = false;
       for (const vehicle of vehicles) {
         if (vehicle.type !== type) continue;
         const frame = this.world.frame(vehicle.distance, vehicle.lane, TRAFFIC_ROAD_HEIGHT);
-        this.sphere.set(frame.point.clone().addScaledVector(frame.up, vehicle.height / 2), Math.hypot(vehicle.width, vehicle.height, vehicle.length) / 2);
+        this.sphere.center.copy(frame.point).addScaledVector(frame.up, vehicle.height / 2);
+        this.sphere.radius = Math.hypot(vehicle.width, vehicle.height, vehicle.length) / 2;
         if (this.world.viewFrustum && !this.world.viewFrustum.intersectsSphere(this.sphere)) continue;
         this.transform.position.copy(frame.point); this.world.orient(this.transform, frame); this.transform.updateMatrix();
-        for (const { mesh, paint } of meshes) {
-          mesh.setMatrixAt(count, this.transform.matrix);
-          if (paint) mesh.setColorAt(count, this.color.set(this.palette[vehicle.tint]));
+        transforms.setMatrixAt(count, this.transform.matrix);
+        if (tints[count] !== vehicle.tint) {
+          paint.setColorAt(count, this.color.set(this.palette[vehicle.tint]));
+          tints[count] = vehicle.tint;
+          colorsChanged = true;
         }
         count++;
       }
-      for (const { mesh, paint } of meshes) {
-        mesh.count = count; mesh.visible = count > 0; mesh.instanceMatrix.needsUpdate = true;
-        if (paint && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (count) {
+        transforms.instanceMatrix.clearUpdateRanges();
+        transforms.instanceMatrix.addUpdateRange(0, count * 16);
+        transforms.instanceMatrix.needsUpdate = true;
+      }
+      if (colorsChanged) {
+        paint.instanceColor.setUsage(THREE.DynamicDrawUsage);
+        paint.instanceColor.clearUpdateRanges();
+        paint.instanceColor.addUpdateRange(0, count * 3);
+        paint.instanceColor.needsUpdate = true;
+      }
+      for (const { mesh } of meshes) {
+        mesh.count = count; mesh.visible = count > 0;
       }
     }
   }

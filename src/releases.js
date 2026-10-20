@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 场景衔接与画质切换优化</h2>
-      <p id="release-copy">城市建筑衔接更完整，画质调整与键盘设置更顺畅。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 车流与粒子上传优化</h2>
+      <p id="release-copy">道路车辆减少重复数据上传，碰撞粒子在任务结束时也能正确显示。</p>
+      <ul class="release-list">
+        <li><strong>车流共享位置缓冲</strong>同车型的部件共用变换，仅上传可见车辆；车身颜色改变时才更新，保留车辆与模型细节。</li>
+        <li><strong>空闲特效减少开销</strong>没有活动粒子时停止上传与绘制，活动时只更新实际范围；修复失败碰撞粒子漏显示。</li>
+        <li><strong>动态缓冲实测下降</strong>固定城市与长山路场景的每帧上传量减少约 93%–96%，实际帧率因设备而异；1.15.2 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>61 个版本</span></summary>
+      <article><h3>v1.15.2 · 场景衔接与画质切换优化</h3>
+      <p>城市建筑衔接更完整，画质调整与键盘设置更顺畅。</p>
       <ul class="release-list">
         <li><strong>城市细节归位</strong>修正山坡建筑的窗带与屋顶高度错位，与楼体使用相同的中心基准。</li>
         <li><strong>减少画质调整开销</strong>尺寸变化时才更新画面缓冲；单独切换阴影、泛光时保持镜头，窗口变化时同步设备像素比。</li>
         <li><strong>车型设置继续可操作</strong>比例归零或只剩一种车型时，焦点移到对应复选框，避免滑杆禁用后焦点丢失；1.15.1 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>60 个版本</span></summary>
+      </article>
       <article><h3>v1.15.1 · 车流设置与视听反馈修正</h3>
       <p>车流设置更清楚，车辆撞击有对应的提示与音效。</p>
       <ul class="release-list">

@@ -17,6 +17,51 @@ function makeWorld(t) {
   return world;
 }
 
+test('impact particles synchronize on failure without advancing frozen effects or uploading idle buffers', t => {
+  const world = makeWorld(t), game = createGame();
+  world.loadMission(game);
+  world.render(game, 1 / 60);
+  const { position, color } = world.effects.geometry.attributes;
+  assert.equal(world.effects.visible, false);
+  assert.equal(world.effects.geometry.drawRange.count, 0);
+  assert.equal(position.version, 0);
+  assert.equal(color.version, 0);
+  game.status = 'lost';
+  world.event({ type: 'impact' }, game);
+  const origin = world.sparks[0].position.clone();
+  world.render(game, 1 / 60);
+  assert.equal(world.effects.visible, true);
+  assert.equal(world.effects.geometry.drawRange.count, 12);
+  for (let i = 0; i < 3; i++) assert.ok(Math.abs(position.array[i] - origin.getComponent(i)) < 1e-3);
+  assert.equal(world.sparks[0].life, .65, 'failure freezes particle age');
+  const version = position.version;
+  world.render(game, 1 / 60);
+  assert.equal(position.version, version, 'unchanged frozen effects must not upload');
+  game.status = 'running';
+  world.render(game, 1 / 60);
+  assert.equal(world.effects.geometry.drawRange.count, world.sparks.length);
+  assert.deepEqual(position.updateRanges, [{ start: 0, count: world.sparks.length * 3 }]);
+  assert.ok(world.sparks[0].life < .65);
+  for (let i = 0; i < 8; i++) world.event({ type: 'meteor-strike', distance: game.distance, lane: 0 }, game);
+  world.render(game, 0);
+  assert.equal(world.sparks.length, 72);
+  assert.equal(world.effects.geometry.drawRange.count, 72);
+  world.sparks = [];
+  game.status = 'countdown';
+  world.render(game, 0);
+  assert.equal(world.effects.visible, false, 'retry must clear the previous impact immediately');
+  assert.equal(world.effects.geometry.drawRange.count, 0);
+  world.event({ type: 'impact' }, game);
+  world.render(game, 0);
+  assert.equal(world.effects.geometry.drawRange.count, 12);
+  world.render(game, 1);
+  assert.equal(world.effects.visible, false);
+  assert.equal(world.effects.geometry.drawRange.count, 0);
+  const expiredVersion = position.version;
+  world.render(game, 1 / 60);
+  assert.equal(position.version, expiredVersion);
+});
+
 test('patrols reuse their fixed route samples and retain their exact pose through pause, retry and map changes', t => {
   const world = makeWorld(t), expected = new THREE.Object3D();
   for (const id of ['summit', 'opalreach', 'summit']) {

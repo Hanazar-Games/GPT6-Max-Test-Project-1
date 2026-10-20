@@ -516,14 +516,16 @@ export class World {
 
   makeEffects() {
     this.sparks = [];
+    this.sparksDirty = false;
     this.effectPositions = new Float32Array(72 * 3);
-    this.effectPositions.fill(10000);
     this.effectColors = new Float32Array(72 * 3);
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(this.effectPositions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(this.effectColors, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(this.effectPositions, 3).setUsage(THREE.DynamicDrawUsage));
+    geometry.setAttribute('color', new THREE.BufferAttribute(this.effectColors, 3).setUsage(THREE.DynamicDrawUsage));
+    geometry.setDrawRange(0, 0);
     this.effects = new THREE.Points(geometry, new THREE.PointsMaterial({ vertexColors: true, size: 0.3, transparent: true, opacity: 0.9, depthWrite: false }));
     this.effects.frustumCulled = false;
+    this.effects.visible = false;
     this.scene.add(this.effects);
   }
 
@@ -537,6 +539,7 @@ export class World {
       if (this.sparks.length >= 72) this.sparks.shift();
       this.sparks.push({ position: origin.clone(), velocity: new THREE.Vector3((random() - 0.5) * 12, random() * 6, (random() - 0.5) * 12), life: 0.65, color });
     }
+    this.sparksDirty = true;
   }
 
   makeDust() {
@@ -654,17 +657,23 @@ export class World {
       group.rotateZ(Math.cos(motionTime * obstacle.frequency + obstacle.phase) * -0.12);
     }
     this.updatePads(game);
-    if (animated) {
-      this.sparks = this.sparks.filter(spark => (spark.life -= dt) > 0);
-      this.effectPositions.fill(10000);
+    if (this.sparksDirty || (animated && this.sparks.length) || (this.effects.visible && !this.sparks.length)) {
+      const step = animated ? dt : 0;
+      this.sparks = this.sparks.filter(spark => (spark.life -= step) > 0);
       this.sparks.forEach((spark, index) => {
-        spark.velocity.y -= dt * 5;
-        spark.position.addScaledVector(spark.velocity, dt);
+        spark.velocity.y -= step * 5;
+        spark.position.addScaledVector(spark.velocity, step);
         spark.position.toArray(this.effectPositions, index * 3);
         spark.color.toArray(this.effectColors, index * 3);
       });
-      this.effects.geometry.attributes.position.needsUpdate = true;
-      this.effects.geometry.attributes.color.needsUpdate = true;
+      this.effects.geometry.setDrawRange(0, this.sparks.length);
+      this.effects.visible = this.sparks.length > 0;
+      if (this.effects.visible) for (const attribute of Object.values(this.effects.geometry.attributes)) {
+        attribute.clearUpdateRanges();
+        attribute.addUpdateRange(0, this.sparks.length * 3);
+        attribute.needsUpdate = true;
+      }
+      this.sparksDirty = false;
     }
     this.gates.forEach(({ light }, i) => {
       light.emissive.set(i < game.gates ? '#43d9ad' : '#ff672d');

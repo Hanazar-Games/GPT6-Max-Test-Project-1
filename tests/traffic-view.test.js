@@ -66,3 +66,30 @@ test('traffic culling follows camera changes while simulation time is frozen', (
   view.render(game); assert.equal(count(), before);
   world.clearScene();
 });
+
+test('traffic parts share one active-range matrix upload per type and retain unchanged paint', () => {
+  const world = Object.assign(Object.create(World.prototype), { scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } },
+    frame: (distance, lane, height) => ({ point: new THREE.Vector3(-lane, height, distance), right: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0), tangent: new THREE.Vector3(0, 0, 1) }) });
+  const game = createGame('summit', 'scout', {}, { density: 12, mix: { semi: 100 } });
+  const view = new TrafficView(world, game);
+  try {
+    view.render(game);
+    for (const { type, meshes } of view.batches) {
+      const matrices = new Set(meshes.map(({ mesh }) => mesh.instanceMatrix));
+      assert.equal(matrices.size, 1, `${type}: material parts must share vehicle transforms`);
+      const { mesh } = meshes[0];
+      assert.deepEqual(mesh.instanceMatrix.updateRanges, mesh.count ? [{ start: 0, count: mesh.count * 16 }] : []);
+      assert.equal(mesh.instanceMatrix.version, mesh.count ? 1 : 0, 'empty batches must not upload');
+    }
+    const paint = view.batches.find(batch => batch.type === 'semi').meshes.find(part => part.paint).mesh;
+    const version = paint.instanceColor.version, initial = paint.instanceColor.array.slice();
+    game.elapsed += 1 / 60; view.render(game);
+    assert.equal(paint.instanceColor.version, version, 'moving the same vehicles must not upload unchanged paint');
+    assert.deepEqual(paint.instanceColor.array, initial);
+    game.course.traffic = game.course.traffic.map(vehicle => ({ ...vehicle, tint: (vehicle.tint + 1) % 6 }));
+    view.render(game);
+    assert.equal(paint.instanceColor.version, version + 1);
+    assert.notDeepEqual(paint.instanceColor.array, initial, 'fleet replacement must repaint reused slots');
+    assert.deepEqual(paint.instanceColor.updateRanges, [{ start: 0, count: paint.count * 3 }]);
+  } finally { world.clearScene(); }
+});
