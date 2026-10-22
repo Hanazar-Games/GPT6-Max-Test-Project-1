@@ -8,6 +8,7 @@ import './compact.css';
 import './delivery.css';
 import './cruise.css';
 import './rewards.css';
+import './mobile.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, getJumpRingCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } from './catalogue.js';
@@ -28,6 +29,7 @@ import { mountReleases } from './releases.js';
 import { FlightInput, KEY_ACTIONS, acceptsGameKey } from './input.js';
 import { getDriveStatus } from './drive-status.js';
 import { mountTrafficSettings } from './traffic-settings.js';
+import { mountTouchControls } from './touch-controls.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
 
@@ -78,7 +80,7 @@ document.querySelector('#app').innerHTML = `
     <div id="rival-panel" class="rival-panel"><div class="rival-heading"><span class="ghost-dot"></span><span id="rival-title">个人幽灵 / 首航记录</span></div><strong id="rival-delta">建立纪录</strong><span id="rival-split">成功返航后解锁追逐</span><div id="rival-live" class="rival-live">每一次出发，都有进步。</div><div id="split-flash" class="split-flash" role="status" aria-live="polite"></div></div>
     <div class="hud-bottom"><div class="speed-panel"><div class="eyebrow">GROUND SPEED</div><div><strong id="speed">000</strong><span>KM/H</span></div><div class="speed-ticks">${'<i></i>'.repeat(24)}</div><span id="throttle-hint">按住 W / ↑ 加速</span></div><div class="resource-panel"><div class="resource-label">${icon('bolt')}<span>冲刺能量</span><strong id="energy-value">100%</strong><kbd>SPACE</kbd></div><div class="resource-track"><i id="energy-fill"></i></div><div class="hull-row">${icon('shield')}<span>艇体状态</span><div class="hull-track"><i id="hull-fill"></i></div><strong id="hull-value">100%</strong></div><div class="flight-help"><span>A / D 左右避障</span><span>S 制动</span><span>Esc 暂停</span></div></div><div class="map-panel"><div class="map-heading"><span>航线雷达</span><span id="progress">0%</span></div><canvas id="minimap" width="360" height="200" aria-label="航线进度雷达"></canvas><div class="map-footer"><span class="status-dot"></span><span>${MISSIONS[0].name}</span><strong id="score">00000</strong></div></div></div>
     <div class="jump-indicator"><kbd>F</kbd>${icon('jump')}<span id="jump-status">跃升就绪</span><small>18 能量</small></div>
-    <div id="touch-controls" class="touch-controls"><div><button data-control="left" aria-label="向左" aria-pressed="false">←</button><button data-control="right" aria-label="向右" aria-pressed="false">→</button><button data-control="jump" class="touch-jump" aria-label="跃升" aria-pressed="false">${icon('jump')}</button></div><div><button data-control="brake" aria-label="制动" aria-pressed="false">制动</button><button data-control="boost" class="touch-boost" aria-label="冲刺" aria-pressed="false">${icon('bolt')}</button><button data-control="accelerate" class="touch-go" aria-label="加速" aria-pressed="false">加速 ↑</button></div></div>
+    <div id="touch-controls" class="touch-controls" role="group" aria-label="触屏驾驶"></div>
   </section>
 
   <div id="countdown" class="countdown" hidden><span>准备离港</span><strong id="countdown-number">3</strong><small>按住 W 或 ↑ 加速 · 航向自动跟随环线</small></div>
@@ -148,6 +150,9 @@ let ghostEnabled = true;
 let splitFlashUntil = 0;
 const audio = new AudioEngine();
 const controls = new FlightInput();
+const touchControls = mountTouchControls({ root: $('touch-controls'), guide: $('guide'), controls, icon,
+  isActive: () => ['running', 'countdown'].includes(game.status) && !document.querySelector('dialog[open]') && $('error').hidden,
+  onChange: syncControls, onCruise: toggleCruise, onActivate: unlockAudio });
 const panels = ['menu', 'hud', 'countdown', 'pause', 'result'].map($);
 const refs = Object.fromEntries(['sector', 'objective', 'timer', 'timer-fill', 'cargo', 'gates', 'speed', 'energy-value', 'energy-fill', 'hull-value', 'hull-fill', 'next-distance', 'next-label', 'progress', 'score', 'throttle-hint', 'countdown-number'].map((id) => [id, $(id)]));
 const radar = new RouteRadar($('minimap'));
@@ -339,6 +344,7 @@ function toast(message, tone = '', priority = tone === 'warning' ? 2 : 0) {
 
 function clearInput() {
   controls.clear();
+  touchControls.clear();
   game.jumpHeld = false;
   game.boostLocked = false;
   syncControls();
@@ -354,6 +360,7 @@ function syncControls() {
   $('cruise-button').setAttribute('aria-label', controls.cruise ? '关闭巡航油门' : '开启巡航油门');
   $('cruise-button').querySelector('span').textContent = controls.cruise ? '巡航已开' : '巡航油门';
   $('cruise-button').disabled = controls.held('brake');
+  touchControls.sync();
 }
 
 function toggleCruise() {
@@ -994,17 +1001,9 @@ window.addEventListener('pagehide', pauseOnLeave);
 window.addEventListener('pageshow', () => audio.setBackground(document.hidden));
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseOnLeave(); else audio.setBackground(!document.hasFocus()); frameTime = performance.now(); accumulator = 0; });
 window.addEventListener('resize', () => world?.resize());
-document.querySelectorAll('[data-control]').forEach((button) => {
-  button.addEventListener('pointerdown', event => {
-    if (!['running', 'countdown'].includes(game.status)) return;
-    event.preventDefault(); button.setPointerCapture(event.pointerId);
-    controls.press(`pointer:${event.pointerId}`, button.dataset.control); syncControls(); unlockAudio();
-  });
-  const release = event => {
-    controls.release(`pointer:${event.pointerId}`, event.type === 'pointercancel'); syncControls();
-  };
-  button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
-  button.addEventListener('contextmenu', (event) => event.preventDefault());
+window.addEventListener('orientationchange', () => {
+  clearInput();
+  if (['running', 'countdown'].includes(game.status)) pause();
 });
 
 syncPanels();
@@ -1013,6 +1012,7 @@ updateLoadout();
 requestAnimationFrame(() => {
   try {
     world = new World($('viewport'), game);
+    if (matchMedia('(any-pointer: coarse)').matches) world.setQuality('balanced');
     world.renderer.domElement.addEventListener('webglcontextlost', (event) => { event.preventDefault(); showError('图形连接已中断。请重新连接以恢复游戏。'); });
     syncPerformanceSettings();
     $('start').disabled = false;

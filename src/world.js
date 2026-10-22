@@ -687,9 +687,10 @@ export class World {
       desired.copy(pose.position);
       look.copy(pose.target);
     } else {
-      desired.copy(this.frame(game.distance - 19 - game.speed * 0.018, game.lane, 2 + game.height).point);
+      const fit = Math.max(1, Math.min(2.2, .85 / this.camera.aspect));
+      desired.copy(this.frame(game.distance - (19 + game.speed * 0.018) * fit, game.lane, 2 + game.height).point);
       desired.addScaledVector(right, -game.lateralSpeed * 0.07);
-      desired.y += 7;
+      desired.y += 7 * fit;
       look.copy(this.frame(game.distance + 32 + game.speed * 0.065, game.lane * 0.6, 3).point);
     }
     if (this.lastStatus === 'menu' && !menu) this.cameraReady = false;

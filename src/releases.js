@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 车流与粒子上传优化</h2>
-      <p id="release-copy">道路车辆减少重复数据上传，碰撞粒子在任务结束时也能正确显示。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 手机驾驶与操作优化</h2>
+      <p id="release-copy">横竖屏都能玩，滑动转向与巡航按键更适合双拇指驾驶。</p>
+      <ul class="release-list">
+        <li><strong>手机双手驾驶</strong>滑动转向、松手回正，右手点按巡航后可持续加速，再配合冲刺、跃升与制动。</li>
+        <li><strong>操作按习惯调整</strong>指南内可切换左右手布局、左右按键、按住加速和转向灵敏度；旋转屏幕自动暂停并清空输入。</li>
+        <li><strong>手机画面更清楚</strong>重排横竖屏仪表与安全区，修复宽翼飞船竖屏裁切；触屏默认均衡画质，1.15.3 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>62 个版本</span></summary>
+      <article><h3>v1.15.3 · 车流与粒子上传优化</h3>
+      <p>道路车辆减少重复数据上传，碰撞粒子在任务结束时也能正确显示。</p>
       <ul class="release-list">
         <li><strong>车流共享位置缓冲</strong>同车型的部件共用变换，仅上传可见车辆；车身颜色改变时才更新，保留车辆与模型细节。</li>
         <li><strong>空闲特效减少开销</strong>没有活动粒子时停止上传与绘制，活动时只更新实际范围；修复失败碰撞粒子漏显示。</li>
         <li><strong>动态缓冲实测下降</strong>固定城市与长山路场景的每帧上传量减少约 93%–96%，实际帧率因设备而异；1.15.2 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>61 个版本</span></summary>
+      </article>
       <article><h3>v1.15.2 · 场景衔接与画质切换优化</h3>
       <p>城市建筑衔接更完整，画质调整与键盘设置更顺畅。</p>
       <ul class="release-list">

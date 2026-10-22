@@ -11,6 +11,39 @@ function flight() {
   return game;
 }
 
+test('analogue steering retains fractional input, clamps invalid values and yields to direction keys', () => {
+  const controls = new FlightInput();
+  controls.setSteer('pointer:1', .35);
+  assert.equal(controls.read().steer, .35);
+  controls.press('KeyA', 'left');
+  assert.equal(controls.read().steer, -1);
+  controls.press('KeyD', 'right');
+  assert.equal(controls.read().steer, 0);
+  controls.release('KeyA'); controls.release('KeyD');
+  assert.equal(controls.read().steer, .35);
+  for (const [value, expected] of [[2, 1], [-2, -1], [NaN, 0], [Infinity, 0]]) {
+    controls.setSteer('pointer:1', value);
+    assert.equal(controls.read().steer, expected);
+  }
+  controls.setSteer('pointer:1', -.7); controls.release('pointer:1', true);
+  assert.equal(controls.read().steer, 0);
+  controls.setSteer('pointer:1', .8); controls.clear();
+  assert.equal(controls.read().steer, 0);
+});
+
+test('partial touch steering remains usable with cruise, boost, brake and jump', () => {
+  const game = flight(), controls = new FlightInput();
+  controls.toggleCruise(); controls.setSteer('pointer:1', .25);
+  controls.press('pointer:2', 'boost'); controls.press('pointer:3', 'jump');
+  updateGame(game, controls.read(), 1 / 60);
+  assert.ok(game.lane > 0 && game.height > 0 && game.boosting);
+  controls.release('pointer:1');
+  controls.press('pointer:4', 'brake');
+  assert.equal(controls.cruise, false);
+  assert.equal(controls.read().steer, 0);
+  assert.equal(controls.read().boost, true);
+});
+
 test('plain and shifted driving keys remain available to the game', () => {
   for (const code of [...Object.keys(KEY_ACTIONS), 'KeyC', 'KeyP', 'Escape', 'Enter', 'Tab']) {
     assert.equal(acceptsGameKey({ code }), true);

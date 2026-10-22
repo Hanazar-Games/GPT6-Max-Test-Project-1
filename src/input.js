@@ -26,16 +26,23 @@ export class FlightInput {
   release(source, cancelled = false) {
     const action = this.sources.get(source);
     this.sources.delete(source);
+    this.steering.delete(source);
     if (cancelled) this.jumpPresses.delete(source);
     if (action === 'boost' && !this.held(action)) this.boostReleased = true;
   }
 
+  setSteer(source, value) {
+    this.steering.set(source, Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0);
+  }
+
   read() {
     const held = new Set(this.sources.values());
+    let steer = 0;
+    for (const value of this.steering.values()) steer = value;
     const input = {
       accelerate: this.cruise || held.has('accelerate'), brake: held.has('brake'),
       boost: held.has('boost'), jump: held.has('jump'),
-      steer: Number(held.has('right')) - Number(held.has('left')),
+      steer: held.has('right') || held.has('left') ? Number(held.has('right')) - Number(held.has('left')) : steer,
       jumpPressed: this.jumpPresses.size > 0, boostReleased: this.boostReleased,
     };
     this.jumpPresses.clear();
@@ -46,6 +53,7 @@ export class FlightInput {
   clear() {
     this.cruise = false;
     this.sources = new Map();
+    this.steering = new Map();
     this.jumpPresses = new Set();
     this.boostReleased = false;
   }

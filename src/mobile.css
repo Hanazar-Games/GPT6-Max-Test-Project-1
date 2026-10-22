@@ -1,0 +1,126 @@
+.touch-settings { margin: 0 0 22px; padding: 16px; border: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.touch-settings legend { color: #b4e5eb; font-size: 12px; padding-inline: 7px; }
+.touch-settings > p, .touch-settings > small { grid-column: 1 / -1; margin: 0; font-size: 11px; color: #acc4d0; line-height: 1.8; }
+.touch-settings > small { font-size: 10px; color: #91a9b9; }
+.touch-settings label { min-width: 0; font-size: 11px; color: #d2e1e9; }
+.touch-settings select { display: block; width: 100%; min-height: 44px; margin-top: 8px; padding: 8px; border: 1px solid #adc7d34a; border-radius: 4px; color: #e2edf2; background: #0b1825; font-family: inherit; font-size: 12px; color-scheme: dark; }
+.touch-settings input { width: 100%; min-height: 44px; margin: 8px 0 0; accent-color: #99e7ec; }
+.touch-settings output { float: right; color: #99e7ec; }
+.touch-settings :is(input, select):focus-visible, .touch-steer:focus-visible { outline: 2px solid #a6edff; outline-offset: 3px; }
+.touch-controls { --touch-bottom: max(12px, env(safe-area-inset-bottom)); align-items: flex-end; gap: 16px; user-select: none; -webkit-user-select: none; }
+.touch-controls > .touch-steering, .touch-controls > .touch-action-group { display: flex; flex-direction: column; gap: 8px; width: clamp(126px, 36vw, 166px); }
+.touch-controls > .touch-action-group { width: clamp(136px, 40vw, 180px); }
+.touch-caption { color: #bed3df; font-size: 9px; line-height: 1.5; text-align: center; text-shadow: 0 1px 4px #000; white-space: nowrap; }
+.touch-steer { position: relative; display: flex; align-items: center; justify-content: space-between; height: 102px; width: 100%; padding: 12px; border: 1px solid #b4d1df5e; border-radius: 26px; background: linear-gradient(180deg, #142d3ce8, #0a1b2be8); touch-action: none; cursor: ew-resize; }
+.touch-steer::before { content: ''; position: absolute; left: 24px; right: 24px; height: 2px; background: #bddde731; }
+.steer-arrow { color: #94c4d5; font: 16px var(--mono); }
+.steer-thumb { position: absolute; left: calc(50% + var(--steer, 0) * (50% - 24px)); transform: translateX(-50%); display: grid; place-items: center; width: 46px; height: 64px; border: 1px solid #a9e9f2; border-radius: 18px; color: #b6f2f7; background: #204858; font: 22px var(--mono); box-shadow: 0 4px 14px #0004; pointer-events: none; }
+.touch-controls .touch-arrows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.touch-controls .touch-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.touch-controls .touch-actions button { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; height: 48px; padding: 6px; font-size: 11px; font-weight: 550; }
+.touch-controls .touch-arrows button { min-width: 0; height: 102px; padding: 8px; font-size: 22px; }
+.touch-controls button { -webkit-touch-callout: none; }
+.touch-controls [data-control="boost"] .icon, .touch-controls [data-control="jump"] .icon { width: 16px; height: 16px; }
+#touch-cruise[aria-pressed="true"] { color: #c1ffe1; border-color: #9de4bc; background: #21513ee8; }
+.touch-controls[data-hand="left"] { flex-direction: row-reverse; }
+
+@media (any-pointer: coarse), (max-width: 600px) {
+  .touch-controls { display: flex; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: var(--touch-bottom); }
+  .header { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); top: env(safe-area-inset-top); }
+  .header .icon-button, dialog .dialog-close { width: 44px; height: 44px; }
+  .touch-settings select { font-size: 16px; }
+  body:not([data-state="menu"]) #cruise-button { display: none; }
+  .hud-bottom { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 136px); }
+  .jump-indicator, .hud.has-route-tools .jump-indicator { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 250px); margin-bottom: 0; }
+  .menu-footer { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .menu-footer::before { content: '双拇指驾驶 · 横竖屏都能玩'; font-size: 10px; color: #aabbc6; letter-spacing: 0; }
+  .enter-note, .key-guide { display: none; }
+  .countdown > small { font-size: 0; letter-spacing: 0; }
+  .countdown > small::after { content: '使用下方触控驾驶 · 指南内可调整布局'; font-size: 11px; }
+  dialog { max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom))); }
+}
+
+@media (max-width: 600px) {
+  .touch-settings { grid-template-columns: 1fr; padding: 12px; }
+  .touch-settings select { font-size: 16px; }
+  .header { height: 66px; }
+  .header-actions { gap: 8px; }
+  .hud-top { top: calc(env(safe-area-inset-top) + 80px); left: 16px; right: 16px; }
+  .mission-heading strong { font-size: 11px; margin-block: 6px; }
+  .map-panel { display: none; }
+  .combo-panel { top: calc(env(safe-area-inset-top) + 156px); left: 16px; }
+  .rival-panel, .expedition-hud { top: calc(env(safe-area-inset-top) + 156px); right: 16px; width: 132px; padding: 8px; }
+  .rival-heading, .expedition-heading { font-size: 7px; }
+  #rival-delta { font-size: 19px; margin-block: 5px; }
+  .rival-live, #expedition-build, .expedition-hud .contract-list small { display: none; }
+  #rival-split { font-size: 8px; }
+  .flight-direction { top: calc(env(safe-area-inset-top) + 214px); left: 16px; transform: none; align-items: flex-start; }
+  .direction-symbol { display: none; }
+  .flight-cue { width: min(180px, 48vw); min-width: 0; padding: 8px; margin-top: 8px; }
+  .flight-cue strong { font-size: 11px; }
+  .flight-cue small { font-size: 9px; letter-spacing: 0; line-height: 1.5; }
+  .hud-bottom { left: 16px; right: 16px; }
+  .speed-panel { width: 90px; }
+  .speed-panel strong { font-size: 42px; }
+  .speed-ticks, .flight-help { display: none; }
+  #throttle-hint { font-size: 8px; line-height: 1.5; }
+  .resource-panel { width: min(48vw, 190px); margin-right: 0; }
+  .resource-track { margin-top: 7px; }
+  .hull-row { margin-top: 10px; }
+  .jump-indicator, .hud.has-route-tools .jump-indicator { left: 16px; transform: none; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 220px); padding: 5px 8px; font-size: 9px; }
+  .jump-indicator small, .jump-indicator kbd { display: none; }
+  .route-tools { font-size: 8px; }
+  .toast, body:not([data-state="menu"]) .toast { top: calc(env(safe-area-inset-top) + 125px); bottom: auto; max-width: calc(100vw - 32px); font-size: 10px; padding: 7px 10px; }
+  .start-note { width: min(315px, 92%); }
+  .hero { top: max(calc(env(safe-area-inset-top) + 85px), 16%); }
+  .hero h1 { font-size: clamp(36px, 12vw, 51px); }
+  .flight-loadout { bottom: max(76px, calc(env(safe-area-inset-bottom) + 64px)); }
+}
+
+@media (any-pointer: coarse) and (orientation: landscape), (max-width: 600px) and (orientation: landscape) {
+  .header { height: 52px; }
+  .hud-top { top: calc(env(safe-area-inset-top) + 58px); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); }
+  .touch-steer, .touch-controls .touch-arrows button { height: 94px; }
+  .touch-controls .touch-actions button { height: 44px; }
+  .touch-caption { font-size: 8px; }
+  .touch-controls > .touch-steering { width: 144px; }
+  .touch-controls > .touch-action-group { width: 156px; }
+  .hud-bottom { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 20px); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); transform: none; width: auto; }
+  .speed-panel { position: absolute; bottom: 100px; left: 0; width: 144px; text-align: left; }
+  .speed-panel > div:nth-child(2) { justify-content: flex-start; }
+  .speed-panel .eyebrow, .speed-ticks, #throttle-hint { display: none; }
+  .speed-panel strong { font-size: 32px; letter-spacing: -2px; }
+  .resource-panel { width: 160px; margin: 0 auto; }
+  .resource-label > span, .hull-row > span { font-size: 8px; letter-spacing: 0; }
+  .resource-label .icon { display: none; }
+  .hull-row { margin-top: 7px; }
+  .map-panel { display: none; }
+  .jump-indicator, .hud.has-route-tools .jump-indicator { top: 105px; bottom: auto; left: max(16px, env(safe-area-inset-left)); transform: none; margin: 0; padding: 4px 7px; }
+  .hud.has-route-tools .route-tools { position: fixed; top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 118px); left: auto; right: max(16px, env(safe-area-inset-right)); transform: none; width: 156px; margin: 0; padding: 4px; font-size: 7px; gap: 2px; }
+  .route-tools #power-status, .route-tools #challenge-status { display: none; }
+  .flight-direction { top: calc(env(safe-area-inset-top) + 105px); left: 50%; transform: translateX(-50%); align-items: center; }
+  .flight-cue { width: 150px; padding: 5px; margin-top: 5px; }
+  .flight-cue strong { font-size: 10px; }
+  .flight-cue small { font-size: 8px; }
+  .combo-panel { display: none; }
+  .rival-panel, .expedition-hud { top: calc(env(safe-area-inset-top) + 105px); right: max(16px, env(safe-area-inset-right)); width: 132px; padding: 6px; }
+  #rival-split { display: none; }
+  .toast, body:not([data-state="menu"]) .toast { top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 124px); max-width: min(330px, 70vw); font-size: 9px; padding: 5px 8px; }
+}
+
+@media (max-width: 600px) and (max-height: 650px) and (orientation: portrait) {
+  .hero { top: calc(env(safe-area-inset-top) + 76px); }
+  .hero h1 { margin-block: 10px; font-size: 36px; }
+  .hero .primary-button { margin-top: 12px; min-height: 48px; }
+  .hero-copy { font-size: 9px; }
+  .session-best { display: none; }
+  .flight-loadout { bottom: max(64px, calc(env(safe-area-inset-bottom) + 50px)); }
+  .rival-panel, .combo-panel { display: none; }
+  .flight-direction { top: calc(env(safe-area-inset-top) + 154px); }
+}
+
+@media (any-pointer: coarse) and (max-height: 650px) and (orientation: landscape), (max-width: 600px) and (orientation: landscape) {
+  .hero { top: calc(env(safe-area-inset-top) + 62px); left: max(20px, env(safe-area-inset-left)); width: 48%; }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 36px); margin-block: 9px; }
+  .flight-loadout { top: calc(env(safe-area-inset-top) + 80px); bottom: auto; left: auto; right: max(20px, env(safe-area-inset-right)); width: min(240px, 36%); }
+}

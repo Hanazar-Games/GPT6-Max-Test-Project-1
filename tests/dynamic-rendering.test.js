@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { World } from '../src/world.js';
 import { createGame, obstacleLane } from '../src/game.js';
+import { CRAFTS } from '../src/missions.js';
 
 function makeWorld(t) {
   const document = globalThis.document;
@@ -16,6 +17,27 @@ function makeWorld(t) {
   t.after(() => world.clearScene());
   return world;
 }
+
+test('portrait chase framing keeps every craft visible at rest and at racing speed', t => {
+  const world = makeWorld(t), game = createGame(), vertex = new THREE.Vector3();
+  world.loadMission(game);
+  game.status = 'running';
+  for (const aspect of [320 / 568, 390 / 844, 1.6]) for (const speed of [0, 430]) for (const craft of CRAFTS) {
+    world.camera.aspect = aspect;
+    world.cameraReady = false;
+    game.speed = speed;
+    world.setCraft(craft);
+    world.render(game, 0);
+    world.craftBody.traverseVisible(mesh => {
+      if (!mesh.isMesh) return;
+      const positions = mesh.geometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        vertex.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld).project(world.camera);
+        assert.ok(Math.abs(vertex.x) < .98 && Math.abs(vertex.y) < .98 && Math.abs(vertex.z) < 1, `${craft.id}/${aspect}/${speed}: clipped chase model`);
+      }
+    });
+  }
+});
 
 test('impact particles synchronize on failure without advancing frozen effects or uploading idle buffers', t => {
   const world = makeWorld(t), game = createGame();
