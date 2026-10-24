@@ -144,7 +144,8 @@ export class World {
   }
 
   orient(object, frame) {
-    object.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(frame.right.clone().negate(), frame.up, frame.tangent));
+    const basis = this.orientationBasis ??= { matrix: new THREE.Matrix4(), right: new THREE.Vector3() };
+    object.quaternion.setFromRotationMatrix(basis.matrix.makeBasis(basis.right.copy(frame.right).negate(), frame.up, frame.tangent));
   }
 
   place(object, distance, lane = 0, height = 0) {

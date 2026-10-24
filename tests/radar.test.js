@@ -43,8 +43,22 @@ test('every route fits the radar and projected positions agree with the actual 3
 function canvas() {
   const calls = [];
   const context = Object.fromEntries(['clearRect', 'drawImage', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fill', 'arc', 'fillRect', 'closePath'].map(method => [method, (...args) => calls.push([method, ...args])]));
-  return { width: 360, height: 200, calls, getContext: () => context, getClientRects: () => [{}], setAttribute(name, value) { this[name] = value; }, ownerDocument: { createElement: () => canvas() } };
+  return { width: 360, height: 200, calls, writes: 0, getContext: () => context, getClientRects: () => [{}], getAttribute(name) { return this[name] ?? null; }, setAttribute(name, value) { this.writes++; this[name] = value; }, ownerDocument: { createElement: () => canvas() } };
 }
+
+test('radar keeps its accessible label until the displayed progress or next gate changes', () => {
+  const target = canvas(), radar = new RouteRadar(target), game = createGame('cascade');
+  const samples = [{ x: 0, z: 0 }, { x: 10, z: 20 }, { x: 0, z: 0 }];
+  game.status = 'running';
+  radar.draw(game, samples);
+  game.distance = 10; radar.draw(game, samples);
+  assert.equal(target.writes, 1);
+  game.distance = game.mission.length * .1; radar.draw(game, samples);
+  assert.equal(target.writes, 2);
+  game.gates = 1; radar.draw(game, samples);
+  assert.equal(target.writes, 3);
+  assert.match(target['aria-label'], /已飞 10% · 下一座导航门 2/);
+});
 
 test('radar skips hidden and paused canvases and only rebuilds its map when the course changes', () => {
   const target = canvas(), radar = new RouteRadar(target), game = createGame('cascade');

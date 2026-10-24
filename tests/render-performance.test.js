@@ -18,6 +18,23 @@ function makeWorld(t) {
   return world;
 }
 
+test('orientation reuses its basis without cloning or mutating road frame vectors', () => {
+  const world = Object.create(World.prototype), object = new THREE.Object3D();
+  const frame = { right: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0), tangent: new THREE.Vector3(0, 0, -1) };
+  let clones = 0;
+  frame.right.clone = function () { clones++; return new THREE.Vector3().copy(this); };
+  for (let i = 0; i < 1000; i++) {
+    const angle = i / 100;
+    frame.right.set(Math.cos(angle), 0, Math.sin(angle));
+    frame.tangent.set(Math.sin(angle), 0, -Math.cos(angle));
+    const expected = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(-frame.right.x, 0, -frame.right.z), frame.up, frame.tangent));
+    world.orient(object, frame);
+    assert.ok(object.quaternion.angleTo(expected) < 1e-7);
+    assert.deepEqual(frame.right.toArray(), [Math.cos(angle), 0, Math.sin(angle)]);
+  }
+  assert.equal(clones, 0);
+});
+
 test('long-route transforms stay within budget while every animated object keeps its correct pose', t => {
   const world = makeWorld(t);
   let game = createGame('summit');

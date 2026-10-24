@@ -30,6 +30,7 @@ import { FlightInput, KEY_ACTIONS, acceptsGameKey } from './input.js';
 import { getDriveStatus } from './drive-status.js';
 import { mountTrafficSettings } from './traffic-settings.js';
 import { mountTouchControls } from './touch-controls.js';
+import { setText, setHTML, setAttribute, setStyle, setHidden } from './hud.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
 
@@ -155,6 +156,8 @@ const touchControls = mountTouchControls({ root: $('touch-controls'), guide: $('
   onChange: syncControls, onCruise: toggleCruise, onActivate: unlockAudio });
 const panels = ['menu', 'hud', 'countdown', 'pause', 'result'].map($);
 const refs = Object.fromEntries(['sector', 'objective', 'timer', 'timer-fill', 'cargo', 'gates', 'speed', 'energy-value', 'energy-fill', 'hull-value', 'hull-fill', 'next-distance', 'next-label', 'progress', 'score', 'throttle-hint', 'countdown-number'].map((id) => [id, $(id)]));
+const hudHeading = document.querySelector('.mission-heading .eyebrow'), mapMission = document.querySelector('.map-footer span:nth-child(2)');
+const speedTicks = [...document.querySelectorAll('.speed-ticks i')], jumpControl = document.querySelector('[data-control="jump"]');
 const radar = new RouteRadar($('minimap'));
 let world;
 let lastStatus = '';
@@ -167,6 +170,7 @@ let hangarReturnFocus = null;
 let frameTime = performance.now();
 let accumulator = 0;
 let uiTime = 0;
+let hudDirty = true;
 let autoQuality = true;
 let performanceFrames = 0;
 let performanceTime = 0;
@@ -486,6 +490,7 @@ function syncPanels() {
   const status = game.status;
   if (lastStatus === status) return;
   lastStatus = status;
+  hudDirty = true;
   audio.setState(status);
   document.body.dataset.state = status;
   document.querySelector('.header').inert = ['paused', 'won', 'lost'].includes(status);
@@ -600,27 +605,27 @@ function deltaText(delta) { return Math.abs(delta) < 0.005 ? '±0.00s' : `${delt
 
 function updateRival() {
   if (expedition) { renderExpeditionHUD(expedition, game); return; }
-  $('rival-panel').dataset.cup = String(!!cup);
+  setAttribute($('rival-panel'), 'data-cup', !!cup);
   if (cup && raceView) {
-    $('rival-title').textContent = `月环大奖赛 / 第 ${cup.stage + 1} 站`;
-    $('rival-delta').textContent = game.status === 'countdown' ? '准备发车' : `${raceView.place} / 4`;
-    $('rival-panel').dataset.tone = raceView.place === 1 ? 'ahead' : 'neutral';
-    $('rival-split').textContent = `实时名次 · 已获 ${getStandings(cup).find(row => row.id === 'player').points} 积分`;
-    $('rival-live').innerHTML = raceView.rows.filter(row => row.id !== 'player').map(row => `<span class="racer-line"><i style="--racer:${row.color}"></i>${row.name}<b>${row.finished ? '已返航' : `${Math.round(row.distance / game.mission.length * 100)}%`}</b></span>`).join('');
-    $('split-flash').hidden = true;
+    setText($('rival-title'), `月环大奖赛 / 第 ${cup.stage + 1} 站`);
+    setText($('rival-delta'), game.status === 'countdown' ? '准备发车' : `${raceView.place} / 4`);
+    setAttribute($('rival-panel'), 'data-tone', raceView.place === 1 ? 'ahead' : 'neutral');
+    setText($('rival-split'), `实时名次 · 已获 ${getStandings(cup).find(row => row.id === 'player').points} 积分`);
+    setHTML($('rival-live'), raceView.rows.filter(row => row.id !== 'player').map(row => `<span class="racer-line"><i style="--racer:${row.color}"></i>${row.name}<b>${row.finished ? '已返航' : `${Math.round(row.distance / game.mission.length * 100)}%`}</b></span>`).join(''));
+    setHidden($('split-flash'), true);
     return;
   }
   const index = Math.min(game.gates - 1, 5);
   const delta = compareSplit(recorder?.splits, rival?.splits, index);
-  $('rival-title').textContent = rival ? '个人幽灵 / 最快航程' : '个人幽灵 / 首航记录';
-  $('rival-delta').textContent = delta ? deltaText(delta.total) : rival ? '等待分段' : '建立纪录';
-  $('rival-panel').dataset.tone = deltaTone(delta?.total);
-  $('rival-split').textContent = delta ? `导航门 0${index + 1} · ${delta.total < -0.005 ? '累计领先' : delta.total > 0.005 ? '累计落后' : '累计持平'}` : rival ? `目标 ${rival.splits.at(-1).toFixed(2)}s` : '成功返航后解锁追逐';
+  setText($('rival-title'), rival ? '个人幽灵 / 最快航程' : '个人幽灵 / 首航记录');
+  setText($('rival-delta'), delta ? deltaText(delta.total) : rival ? '等待分段' : '建立纪录');
+  setAttribute($('rival-panel'), 'data-tone', deltaTone(delta?.total));
+  setText($('rival-split'), delta ? `导航门 0${index + 1} · ${delta.total < -0.005 ? '累计领先' : delta.total > 0.005 ? '累计落后' : '累计持平'}` : rival ? `目标 ${rival.splits.at(-1).toFixed(2)}s` : '成功返航后解锁追逐');
   if (rival) {
     const distance = ghostPose ? game.distance - ghostPose.distance : null;
-    $('rival-live').textContent = distance === null ? '幽灵已返航 · 继续完成交付' : Math.abs(distance) < 1 ? '当前与幽灵并行' : `当前${distance > 0 ? '领先' : '落后'} ${Math.round(Math.abs(distance))}m`;
-  } else $('rival-live').textContent = game.gates ? `已记录 ${game.gates} / 6 个航标` : '首局也会记录每一段表现';
-  $('split-flash').hidden = game.elapsed >= splitFlashUntil;
+    setText($('rival-live'), distance === null ? '幽灵已返航 · 继续完成交付' : Math.abs(distance) < 1 ? '当前与幽灵并行' : `当前${distance > 0 ? '领先' : '落后'} ${Math.round(Math.abs(distance))}m`);
+  } else setText($('rival-live'), game.gates ? `已记录 ${game.gates} / 6 个航标` : '首局也会记录每一段表现');
+  setHidden($('split-flash'), game.elapsed >= splitFlashUntil);
 }
 
 function formatDistance(distance) {
@@ -628,94 +633,96 @@ function formatDistance(distance) {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} KM` : `${meters} M`;
 }
 
+function formatPercent(value) { return `${Math.round(value * 1000) / 1000}%`; }
+
 function updateRouteTools() {
-  $('route-tools').hidden = !game.mission.tour;
+  setHidden($('route-tools'), !game.mission.tour);
   $('hud').classList.toggle('has-route-tools', !!game.mission.tour);
   if (!game.mission.tour) return;
-  $('power-effects').hidden = game.shieldTime <= 0 && game.magnetTime <= 0 && game.overdriveTime <= 0;
+  setHidden($('power-effects'), game.shieldTime <= 0 && game.magnetTime <= 0 && game.overdriveTime <= 0);
   for (const kind of ['shield', 'magnet', 'overdrive']) {
     const remaining = game[`${kind}Time`], effect = $(`effect-${kind}`);
-    effect.hidden = remaining <= 0;
-    effect.dataset.expiring = String(remaining > 0 && remaining <= 3);
-    effect.style.setProperty('--remaining', `${Math.min(1, remaining / POWERUPS[kind].duration) * 100}%`);
-    $(`${kind}-time`).textContent = `${Math.ceil(remaining)}s`;
+    setHidden(effect, remaining <= 0);
+    setAttribute(effect, 'data-expiring', remaining > 0 && remaining <= 3);
+    setStyle(effect, '--remaining', `${Math.min(1, remaining / POWERUPS[kind].duration) * 100}%`);
+    setText($(`${kind}-time`), `${Math.ceil(remaining)}s`);
   }
   const rewards = getRewardProgress(game);
-  $('power-status').textContent = rewards.nextPowerup ? `补给 ${rewards.powerupsAhead} · ${POWERUPS[rewards.nextPowerup.kind].name} ${formatDistance(rewards.nextPowerup.distance - game.distance)}` : game.powerupsTaken.size === game.course.powerups.length ? '补给已收齐' : '前方无补给';
-  $('challenge-status').textContent = `命中 ${game.challengeHits}/${game.course.challenges.length} · 余 ${rewards.challengesAhead} · 连锁 ${game.challengeChain}`;
+  setText($('power-status'), rewards.nextPowerup ? `补给 ${rewards.powerupsAhead} · ${POWERUPS[rewards.nextPowerup.kind].name} ${formatDistance(rewards.nextPowerup.distance - game.distance)}` : game.powerupsTaken.size === game.course.powerups.length ? '补给已收齐' : '前方无补给');
+  setText($('challenge-status'), `命中 ${game.challengeHits}/${game.course.challenges.length} · 余 ${rewards.challengesAhead} · 连锁 ${game.challengeChain}`);
 }
 
 function updateHUD() {
   const delivery = getDeliveryStatus(game);
   const seconds = Math.floor(game.time);
   const minutes = Math.floor(seconds / 60);
-  refs.timer.innerHTML = `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}<small>.${String(Math.floor(game.time % 1 * 100)).padStart(2, '0')}</small>`;
+  setText(refs.timer.firstChild, `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`);
+  setText(refs.timer.lastElementChild, `.${String(Math.floor(game.time % 1 * 100)).padStart(2, '0')}`);
   refs.timer.classList.toggle('urgent', game.time < 20);
-  refs['timer-fill'].style.width = `${game.time / game.mission.duration * 100}%`;
-  refs.cargo.innerHTML = `${game.collected.size} <small>/ ${game.mission.cargo}</small>`;
+  setStyle(refs['timer-fill'], 'width', formatPercent(game.time / game.mission.duration * 100));
+  setText(refs.cargo.firstChild, `${game.collected.size} `);
+  setText(refs.cargo.lastElementChild, `/ ${game.mission.cargo}`);
   refs.cargo.classList.toggle('complete', game.collected.size >= game.mission.cargo);
   refs.cargo.classList.toggle('shortfall', delivery.shortfall > 0);
-  refs.cargo.setAttribute('aria-label', `已收集 ${game.collected.size} 枚，目标 ${game.mission.cargo} 枚，前方剩余 ${delivery.remaining} 枚`);
-  refs.gates.innerHTML = `${game.gates} <small>/ 6</small>`;
-  refs.speed.textContent = String(Math.round(game.speed * 3.6)).padStart(3, '0');
-  refs['energy-value'].textContent = `${Math.ceil(game.energy)}%`;
-  refs['energy-fill'].style.width = `${game.energy}%`;
+  setAttribute(refs.cargo, 'aria-label', `已收集 ${game.collected.size} 枚，目标 ${game.mission.cargo} 枚，前方剩余 ${delivery.remaining} 枚`);
+  setText(refs.gates.firstChild, `${game.gates} `);
+  setText(refs.speed, String(Math.round(game.speed * 3.6)).padStart(3, '0'));
+  setText(refs['energy-value'], `${Math.ceil(game.energy)}%`);
+  setStyle(refs['energy-fill'], 'width', formatPercent(game.energy));
   const hullPercent = Math.ceil(game.hull / game.craft.hull * 100);
-  refs['hull-value'].textContent = `${hullPercent}%`;
-  refs['hull-fill'].style.width = `${hullPercent}%`;
+  setText(refs['hull-value'], `${hullPercent}%`);
+  setStyle(refs['hull-fill'], 'width', `${hullPercent}%`);
   refs['hull-fill'].classList.toggle('danger', hullPercent < 35);
-  refs.progress.textContent = `${Math.floor(game.distance / game.mission.length * 100)}%`;
-  refs.score.textContent = String(game.score).padStart(5, '0');
-  document.querySelector('.mission-heading .eyebrow').textContent = cup ? `CUP / ${cup.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : `OPERATION / ${game.mission.number} · ${game.craft.model}`;
-  if (expedition) document.querySelector('.mission-heading .eyebrow').textContent = `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}`;
-  document.querySelector('.map-footer span:nth-child(2)').textContent = game.mission.name;
+  setText(refs.progress, `${Math.floor(game.distance / game.mission.length * 100)}%`);
+  setText(refs.score, String(game.score).padStart(5, '0'));
+  setText(hudHeading, expedition ? `EXPEDITION / ${expedition.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : cup ? `CUP / ${cup.stage + 1} OF ${MISSIONS.length} · ${game.craft.model}` : `OPERATION / ${game.mission.number} · ${game.craft.model}`);
+  setText(mapMission, game.mission.name);
   const bridge = bridgeAt(game.mission, game.distance);
   const sectorName = bridge ? `${BRIDGE_NAMES[bridge.kind]} ${String(bridge.id + 1).padStart(2, '0')}` : game.gates === 6 ? '最后一程' : game.mission.name;
-  refs.sector.innerHTML = `${sectorName}<span class="sector-stage">${game.gates === 6 ? '返回基地' : `第 ${String(game.gates + 1).padStart(2, '0')} 区段`}</span>`;
-  refs.objective.textContent = delivery.needed ? `还需 ${delivery.needed} 枚核心 · 前方剩余 ${delivery.remaining} 枚` : game.gates < 6 ? `核心已装载 · 还需 ${6 - game.gates} 座导航门` : '能量已装载 · 沿航线返回基地';
-  refs['next-distance'].textContent = formatDistance((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance);
-  refs['next-label'].textContent = `${game.gates < 6 ? '下一座导航门' : '返航基地'}${delivery.shortfall ? ' · 前方核心不足' : ''}`;
-  refs['next-label'].dataset.warning = String(delivery.shortfall > 0);
+  setHTML(refs.sector, `${sectorName}<span class="sector-stage">${game.gates === 6 ? '返回基地' : `第 ${String(game.gates + 1).padStart(2, '0')} 区段`}</span>`);
+  setText(refs.objective, delivery.needed ? `还需 ${delivery.needed} 枚核心 · 前方剩余 ${delivery.remaining} 枚` : game.gates < 6 ? `核心已装载 · 还需 ${6 - game.gates} 座导航门` : '能量已装载 · 沿航线返回基地');
+  setText(refs['next-distance'], formatDistance((game.course.gates[game.gates]?.distance ?? game.mission.length) - game.distance));
+  setText(refs['next-label'], `${game.gates < 6 ? '下一座导航门' : '返航基地'}${delivery.shortfall ? ' · 前方核心不足' : ''}`);
+  setAttribute(refs['next-label'], 'data-warning', delivery.shortfall > 0);
   const cue = getFlightCue(game);
   const lowGravity = gravityAt(game.course, game.distance) === ENVIRONMENT.lowGravity;
   document.body.classList.toggle('low-gravity', lowGravity);
-  $('flight-cue').dataset.kind = cue.kind;
-  $('flight-cue').dataset.danger = String(cue.danger ?? cue.drifting ?? false);
+  setAttribute($('flight-cue'), 'data-kind', cue.kind);
+  setAttribute($('flight-cue'), 'data-danger', cue.danger ?? cue.drifting ?? false);
   if (cue.kind === 'meteor') {
-    $('cue-action').textContent = `☄ ${cue.phase === 'impact' ? '冲击波' : '陨石落点'} ${cue.distance}m`;
-    $('cue-detail').textContent = cue.drifting ? '惯性正滑向落点 · 横移避让' : cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`;
+    setText($('cue-action'), `☄ ${cue.phase === 'impact' ? '冲击波' : '陨石落点'} ${cue.distance}m`);
+    setText($('cue-detail'), cue.drifting ? '惯性正滑向落点 · 横移避让' : cue.phase === 'impact' ? '横移避让 · 腾空越过冲击波' : `${cue.remaining.toFixed(1)}s 后撞击 · ${cue.danger ? '避开红圈或准备跃升' : '留意红圈与落地时机'}`);
   } else if (cue.kind === 'cargo') {
-    $('cue-action').textContent = { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction];
-    $('cue-detail').textContent = `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`;
+    setText($('cue-action'), { left: '← 左侧核心', right: '右侧核心 →', center: '◇ 核心对准' }[cue.direction]);
+    setText($('cue-detail'), `${formatDistance(cue.distance)} · ${game.height >= 2.3 ? '落回低空后收集' : `还需 ${delivery.needed} 枚`}`);
   } else if (cue.kind === 'powerup' || cue.kind === 'challenge') {
     const title = cue.kind === 'powerup' ? POWERUPS[cue.reward].name : CHALLENGES[cue.reward].name;
-    $('cue-action').textContent = `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`;
-    if (cue.kind === 'powerup') $('cue-detail').textContent = game.height >= 2.3 ? '先回低空 · 高度需低于 2.3m' : '可选补给 · 低空接近自动拾取';
+    setText($('cue-action'), `${cue.direction === 'left' ? '← ' : ''}${title}${cue.direction === 'right' ? ' →' : ''} · ${formatDistance(cue.distance)}`);
+    if (cue.kind === 'powerup') setText($('cue-detail'), game.height >= 2.3 ? '先回低空 · 高度需低于 2.3m' : '可选补给 · 低空接近自动拾取');
     else {
       const alignment = cue.drifting ? `惯性将滑出 · 向${cue.direction === 'left' ? '左' : '右'}修正` : cue.aligned ? cue.projected ? '松开转向 · 预计横向对准' : '横向已对准' : `${cue.projected ? '预计' : '当前'}偏离环心 ${Math.abs(cue.offset).toFixed(1)}m`;
       const speedCue = getSpeedRingCue(game);
       const requirement = cue.reward === 'jump' ? `${getJumpRingCue(game, cue.distance).text}\n高度 2.8–6.2m` : `${speedCue.action === 'ready' ? '速度达标 · 保持低空' : speedCue.text} · 偏差 <${CHALLENGES[cue.reward].width}m`;
-      $('cue-detail').textContent = `${alignment}\n${requirement}`;
+      setText($('cue-detail'), `${alignment}\n${requirement}`);
     }
   } else if (cue.kind === 'gate') {
-    $('cue-action').textContent = (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction];
-    $('cue-detail').textContent = cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`;
+    setText($('cue-action'), (cue.projected ? { left: '← 向左修正', right: '向右修正 →', center: '◎ 松开转向' } : { left: '← 向左对准', right: '向右对准 →', center: '◎ 中央对准' })[cue.direction]);
+    setText($('cue-detail'), cue.drifting ? '惯性可能漏门 · 反向修正' : cue.aligned ? (cue.projected ? cue.direction === 'center' ? '预计对准中央 · 保持速度' : '预计可通过 · 可微调居中' : '当前航向有效 · 中央高速有奖励') : `${cue.projected ? '预计' : '当前'}偏离门中心 ${Math.abs(cue.offset).toFixed(1)}m`);
   } else {
-    $('cue-action').textContent = cue.kind === 'hazard' ? `⚠ ${cue.vehicle ?? (cue.hazard === 'drone' ? '巡逻机' : '岩石')} ${cue.distance}m` : '◇ 返回基地';
-    $('cue-detail').textContent = cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${cue.drifting ? '惯性侧滑，横移修正' : isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞';
+    setText($('cue-action'), cue.kind === 'hazard' ? `⚠ ${cue.vehicle ?? (cue.hazard === 'drone' ? '巡逻机' : '岩石')} ${cue.distance}m` : '◇ 返回基地');
+    setText($('cue-detail'), cue.kind === 'hazard' ? (cue.timeToImpact <= 0.25 ? '立即横移 · 注意航道边缘' : `约 ${cue.timeToImpact.toFixed(1)}s · ${cue.drifting ? '惯性侧滑，横移修正' : isJumpReady(game) ? '跃升或横移' : '横移或制动'}`) : !delivery.needed ? '能量就位，全速返航' : delivery.remaining ? `还需 ${delivery.needed} 枚 · 前方剩余 ${delivery.remaining} 枚` : '前方已无核心 · 暂停可重飞');
   }
   const drive = getDriveStatus(game, { brake: controls.held('brake'), cruise: controls.cruise, lowGravity });
-  refs['throttle-hint'].textContent = drive.text;
-  refs['throttle-hint'].dataset.kind = drive.kind;
+  setText(refs['throttle-hint'], drive.text);
+  setAttribute(refs['throttle-hint'], 'data-kind', drive.kind);
   document.body.classList.toggle('boosting', game.boosting);
-  $('combo-value').textContent = game.combo;
-  $('combo-multiplier').textContent = `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`;
+  setText($('combo-value'), game.combo);
+  setText($('combo-multiplier'), `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`);
   $('combo-panel').classList.toggle('active', game.combo >= 3);
   updateRouteTools();
-  $('jump-status').textContent = game.height > 0 ? `低空跃升 ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪';
-  if (lowGravity && game.height > 0) $('jump-status').textContent = `低重力滑翔 ${game.height.toFixed(1)}m`;
-  document.querySelector('[data-control="jump"]').setAttribute('aria-disabled', String(!isJumpReady(game)));
-  document.querySelectorAll('.speed-ticks i').forEach((tick, i) => tick.classList.toggle('active', i < game.speed / game.craft.boostSpeed * 24));
+  setText($('jump-status'), game.height > 0 ? `${lowGravity ? '低重力滑翔' : '低空跃升'} ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪');
+  setAttribute(jumpControl, 'aria-disabled', !isJumpReady(game));
+  speedTicks.forEach((tick, i) => tick.classList.toggle('active', i < game.speed / game.craft.boostSpeed * 24));
   updateRival();
   radar.draw(game, world.samples, ghostEnabled ? projections : []);
 }
@@ -766,18 +773,27 @@ function frame(now) {
   frameTime = now;
   if (document.hidden) { requestAnimationFrame(frame); return; }
   accumulator += dt;
-  while (accumulator >= 1 / 60) { updateGame(game, controls.read(), 1 / 60); recorder?.capture(game); processEvents(); accumulator -= 1 / 60; }
-  ghostPose = sampleGhost(rival, game.elapsed);
-  raceView = cup ? getRaceView(game, raceField) : null;
-  projections = cup ? raceView.ghosts : ghostPose ? [{ id: 'personal', color: '#b9a3ff', pose: ghostPose }] : [];
+  while (accumulator >= 1 / 60 && (game.status === 'running' || game.status === 'countdown')) {
+    updateGame(game, controls.read(), 1 / 60); recorder?.capture(game); processEvents(); accumulator -= 1 / 60;
+  }
+  const flying = game.status === 'running' || game.status === 'countdown';
+  if (!flying) accumulator = 0;
+  if (flying || hudDirty || lastStatus !== game.status) {
+    ghostPose = sampleGhost(rival, game.elapsed);
+    raceView = cup ? getRaceView(game, raceField) : null;
+    projections = cup ? raceView.ghosts : ghostPose ? [{ id: 'personal', color: '#b9a3ff', pose: ghostPose }] : [];
+  }
   if (game.status === 'countdown') {
     const count = Math.ceil(game.countdown);
     if (count !== lastCountdown) { refs['countdown-number'].textContent = count; audio.tone(330, 0.1); lastCountdown = count; }
   }
   syncPanels();
-  uiTime += dt;
-  if (uiTime > 0.08 && game.status !== 'menu') { updateHUD(); uiTime = 0; }
-  audio.update(game);
+  uiTime = flying ? uiTime + dt : 0;
+  if (hudDirty || uiTime > 0.08) {
+    if (game.status !== 'menu') updateHUD();
+    hudDirty = false; uiTime = 0;
+  }
+  if (flying || game.status === 'menu') audio.update(game);
   world.render(game, dt, ghostEnabled ? projections : []);
   if (autoQuality && ['ultra', 'high', 'balanced'].includes(world.quality) && ['menu', 'running'].includes(game.status)) {
     performanceFrames++;

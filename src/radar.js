@@ -1,4 +1,5 @@
 import { meteorState } from './environment.js';
+import { setAttribute } from './hud.js';
 
 export function createRadarProjection(samples, length) {
   const points = samples.map(point => [point.x, point.z]);
@@ -95,7 +96,7 @@ export class RouteRadar {
     context.fillStyle = '#fff'; context.fill();
     context.beginPath(); context.arc(x, y, 12, 0, Math.PI * 2);
     context.strokeStyle = '#ffffff55'; context.lineWidth = 1; context.stroke();
-    this.canvas.setAttribute('aria-label', `${game.mission.name}航线雷达 · 已飞 ${Math.floor(distance / this.length * 100)}% · ${game.gates < this.gates.length ? `下一座导航门 ${game.gates + 1}` : '目标：返航基地'}；白色箭头为航向，亮色菱形为下一目标。`);
+    setAttribute(this.canvas, 'aria-label', `${game.mission.name}航线雷达 · 已飞 ${Math.floor(distance / this.length * 100)}% · ${game.gates < this.gates.length ? `下一座导航门 ${game.gates + 1}` : '目标：返航基地'}；白色箭头为航向，亮色菱形为下一目标。`);
     return true;
   }
 }

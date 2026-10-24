@@ -1,6 +1,7 @@
 import { MISSIONS, CRAFTS } from './missions.js';
 import { UPGRADES, upgradeCraft } from './upgrades.js';
 import { getContracts } from './expedition.js';
+import { setText, setHTML } from './hud.js';
 
 const $ = id => document.getElementById(id);
 const contractRows = (contracts, settled = false, paid = true) => contracts.map(item => `<li data-done="${item.done}"><span class="contract-check">${item.done ? '✓' : '◇'}</span><span><strong>${item.name}</strong><small>${item.hint}</small></span><b>${Math.min(item.progress, item.target)} / ${item.target}</b><em>${settled && (!paid || !item.done) ? '—' : '+2'}</em></li>`).join('');
@@ -14,11 +15,11 @@ export function mountExpeditionUI() {
 }
 
 export function renderExpeditionHUD(run, game) {
-  $('expedition-stage').textContent = `远征 / ${run.stage + 1} OF ${MISSIONS.length}`;
-  $('expedition-wallet').textContent = `${run.supply} 补给`;
-  $('flight-contracts').innerHTML = contractRows(getContracts(game));
+  setText($('expedition-stage'), `远征 / ${run.stage + 1} OF ${MISSIONS.length}`);
+  setText($('expedition-wallet'), `${run.supply} 补给`);
+  setHTML($('flight-contracts'), contractRows(getContracts(game)));
   const equipped = UPGRADES.filter(item => run.upgrades[item.id]).map(item => `${item.name} ${run.upgrades[item.id]}`);
-  $('expedition-build').textContent = equipped.length ? equipped.join(' · ') : '交付 +2 · 每项委托 +2 · 成功后领取';
+  setText($('expedition-build'), equipped.length ? equipped.join(' · ') : '交付 +2 · 每项委托 +2 · 成功后领取');
 }
 
 export function renderSupply(run) {
