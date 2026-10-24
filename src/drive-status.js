@@ -1,7 +1,7 @@
 const STATUS = {
   brake: { kind: 'brake', text: '制动中 · 松开后恢复驾驶' },
   pad: { kind: 'pad', text: '加速带驱动 · 免费超频中' },
-  overdrive: { kind: 'overdrive', text: '超频道具 · 免费冲刺中，S 可制动' },
+  overdrive: { kind: 'overdrive', text: '超频道具 · 免费冲刺中，可制动' },
   boost: { kind: 'boost', text: '能量冲刺中' },
   locked: { kind: 'locked', text: '松开冲刺键，再按启动' },
   cruise: { kind: 'cruise', text: '巡航油门 · 仍需手动转向' },

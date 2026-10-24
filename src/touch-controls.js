@@ -57,17 +57,18 @@ export function mountTouchControls({ root, guide, controls, icon, isActive, onCh
     const bounds = pad.getBoundingClientRect();
     axis = touchSteer((event.clientX - bounds.left - bounds.width / 2) / Math.max(1, (bounds.width - 48) / 2), sensitivity);
     controls.setSteer(`pointer:${event.pointerId}`, axis);
-    syncPad(); onChange();
+    syncPad();
   };
   pad.addEventListener('pointerdown', event => {
     if (!isActive() || pointer !== null || event.button !== 0) return;
+    controls.release('touch-keyboard', true);
     event.preventDefault(); pad.setPointerCapture(event.pointerId); pointer = event.pointerId;
     move(event); onActivate();
   });
   pad.addEventListener('pointermove', event => { if (event.pointerId === pointer) { event.preventDefault(); move(event); } });
   const releasePad = event => {
     if (event.pointerId !== pointer) return;
-    controls.release(`pointer:${pointer}`, true); pointer = null; axis = 0; syncPad(); onChange();
+    controls.release(`pointer:${pointer}`, true); pointer = null; axis = 0; syncPad();
   };
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(type, releasePad);
   pad.addEventListener('keydown', event => {

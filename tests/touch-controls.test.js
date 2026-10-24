@@ -71,6 +71,17 @@ test('clearing the touch surface releases captures, centres steering and allows 
   assert.equal(controls.read().steer, -1);
 });
 
+test('a touch gesture takes over keyboard slider input without leaving stale steering after release', () => {
+  const { controls, pad } = fixture();
+  pad.emit('keydown', { code: 'ArrowLeft' });
+  assert.ok(controls.read().steer < 0);
+  pad.emit('pointerdown', { pointerId: 1, clientX: 120 });
+  assert.equal(controls.read().steer, 1);
+  pad.emit('pointerup', { pointerId: 1 });
+  assert.equal(controls.read().steer, 0);
+  assert.equal(pad.attributes['aria-valuenow'], '0');
+});
+
 test('touch settings change response and handedness, and a second finger cannot steal steering', () => {
   const { controls, root, nodes, pad } = fixture();
   nodes['#touch-hand'].value = 'left';

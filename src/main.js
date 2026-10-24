@@ -88,7 +88,7 @@ document.querySelector('#app').innerHTML = `
   <div id="impact-flash" class="impact-flash"></div>
   <section id="pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title" aria-describedby="pause-copy" hidden><div class="modal-card"><span class="eyebrow">FLIGHT ON HOLD</span><h2 id="pause-title">星海可以等一会。</h2><p id="pause-copy">任务已暂停。准备好后，继续你的航程。</p><button id="resume" class="primary-button"><span>继续飞行</span>${icon('arrow')}</button><button id="restart-pause" class="secondary-button">重新挑战</button><button id="back-pause" class="text-button">返回基地</button></div></section>
   <section id="result" class="overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" aria-describedby="result-copy" hidden><div class="modal-card result-card"><span id="result-eyebrow" class="eyebrow">MISSION COMPLETE</span><div id="result-symbol" class="result-symbol">✦</div><h2 id="result-title" tabindex="-1">能量送达，欢迎回家。</h2><p id="result-copy"></p><div class="result-stats"><div><strong id="result-score">0</strong><span>任务得分</span></div><div><strong id="result-time">0</strong><span>飞行用时</span></div><div><strong id="result-cargo">0</strong><span>收集核心</span></div></div><div id="result-details" class="result-details"></div><div id="result-medals" class="result-medals"></div><div id="result-rating" class="result-rating"></div><button id="retry" class="primary-button"><span>再飞一次</span>${icon('arrow')}</button><button id="next-mission" class="secondary-button" hidden>下一条航线 →</button><button id="back-result" class="text-button">返回基地</button></div></section>
-  <dialog id="guide" aria-describedby="guide-copy"><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p id="guide-copy">在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
+  <dialog id="guide" aria-describedby="guide-copy"><div class="guide-toolbar"><span>飞行指南与设置</span><button id="close-guide" class="icon-button dialog-close" aria-label="关闭操作指南">${icon('close')}</button></div><span class="eyebrow">PILOT BRIEFING</span><h2>你的第一次星际飞行。</h2><p id="guide-copy">在 ${MISSIONS[0].duration} 秒内完成山路，穿过 6 座橙色导航门，<br>带回至少 6 枚蓝色能量核心。</p><div class="guide-keys"><div><span><kbd>W</kbd> / <kbd>↑</kbd></span><span>按住加速，松开减速</span></div><div><span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>左右移动，躲避岩石</span></div><div><span><kbd>S</kbd> / <kbd>↓</kbd></span><span>快速制动</span></div><div><span><kbd>SPACE</kbd></span><span>能量冲刺，松开自动充能</span></div><div><span><kbd>ESC</kbd> / <kbd>P</kbd></span><span>暂停 / 继续</span></div></div><div class="guide-tip">航向会自动跟随环线，你负责加速与左右避障。蓝色核心可修复艇体并补充冲刺能量；漏过导航门会返回门前并扣除 4 秒。触屏设备使用屏幕下方按钮。</div><div class="quality-setting"><span>画面质量<small>切换到流畅模式可降低设备负担</small></span><button id="quality" class="setting-button" aria-label="切换画面质量">精致 <span>↔</span></button></div><button id="guide-ready" class="primary-button"><span>收到，准备出发</span>${icon('arrow')}</button></dialog>
   <div id="error" class="overlay" hidden><div class="modal-card"><span class="eyebrow">CONNECTION INTERRUPTED</span><h2>月面连接未能建立。</h2><p id="error-copy">请启用浏览器硬件加速，或换用支持 WebGL 2 的现代浏览器。</p><button id="reload" class="primary-button"><span>重新连接</span>${icon('arrow')}</button></div></div>
   <dialog id="hangar" aria-labelledby="hangar-title"><button id="close-hangar" class="icon-button dialog-close" aria-label="关闭任务机库">${icon('close')}</button><span class="eyebrow">FLIGHT DECK / 自由选择，立即出发</span><h2 id="hangar-title">每一次出发，都有新选择。</h2><div class="hangar-columns"><section><div class="hangar-section-title"><span>01</span> 选择航线</div><div id="mission-options" class="selection-list"></div></section><section><div class="hangar-section-title"><span>02</span> 选择悬浮艇</div><div id="craft-options" class="selection-list"></div></section></div><div id="hangar-summary" class="hangar-summary"></div><button id="confirm-hangar" class="primary-button"><span>确认飞行配置</span>${icon('arrow')}</button></dialog>
 `;
@@ -368,7 +368,7 @@ function toggleCruise() {
   controls.toggleCruise();
   syncControls();
   audio.event(controls.cruise ? 'cruise-on' : 'cruise-off');
-  toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '巡航油门已关闭 · 可手动加速或制动', 'cyan');
+  toast(controls.cruise ? '巡航油门已开启 · 手动转向，制动解除' : '巡航油门已关闭 · 可手动加速或制动', 'cyan');
 }
 
 function launch() {
@@ -460,6 +460,12 @@ function pause() {
   if (game.status !== 'paused') unlockAudio();
   syncPanels();
   if (['running', 'countdown'].includes(game.status)) $('pause-button').focus({ preventScroll: true });
+}
+
+function interruptFlight() {
+  guidePaused = false;
+  if (['running', 'countdown'].includes(game.status)) pause();
+  else clearInput();
 }
 
 function failureAdvice() {
@@ -719,7 +725,7 @@ function processEvents() {
     if (controls.cruise && ['impact', 'miss'].includes(event.type)) { controls.cruise = false; syncControls(); }
     if (!event.chained) audio.event(event.type, event.kind ?? event.source);
     world.event(event, game);
-    if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，S 或制动解除' : '出发！按住 W / ↑ 加速，或按 C 开启巡航油门');
+    if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，制动解除' : '出发！加速前进，手动转向并留意前方');
     if (event.type === 'powerup') toast(`${POWERUPS[event.kind].name} · ${POWERUPS[event.kind].description}`, 'cyan');
     if (event.type === 'shield-block') toast('护盾抵挡撞击 · 护盾已消耗', 'cyan');
     if (event.type === 'challenge') toast(`${CHALLENGES[event.kind].name}命中 · ${game.challengeChain} 连锁 · +${event.points}`, 'cyan');
@@ -731,10 +737,10 @@ function processEvents() {
       $('split-flash').dataset.tone = deltaTone(delta?.sector);
       splitFlashUntil = game.elapsed + 4;
     }
-    if (event.type === 'pad' && !event.chained) toast(game.mission.special === 'boost' ? '连续加速航线 · 免费超频接力，S 可制动' : '绿色加速带 · 免费超频 1.8 秒', 'cyan');
+    if (event.type === 'pad' && !event.chained) toast(game.mission.special === 'boost' ? '连续加速航线 · 免费超频接力，可制动' : '绿色加速带 · 免费超频 1.8 秒', 'cyan');
     if (event.type === 'dodge') toast('空中避障！  ·  +120', 'cyan');
     if (event.type === 'meteor-warning') toast('陨石正在接近 · 注意红色落点与撞击倒计时', 'warning', 1);
-    if (event.type === 'low-gravity') toast('进入低重力区 · F 延长跃升，腾空出区可获奖励', 'cyan');
+    if (event.type === 'low-gravity') toast('进入低重力区 · 跃升滞空更久，腾空出区可获奖励', 'cyan');
     if (event.type === 'meteor-dodge') toast('踏星而行！跃过冲击波 · +180', 'cyan');
     if (event.type === 'glide') toast('引力旅人！腾空离开低重力区 · +200', 'cyan');
     if (event.type === 'miss') toast('未穿过导航门 · 已返回门前，时间 −4 秒', 'warning');
@@ -994,17 +1000,15 @@ window.addEventListener('keydown', (event) => {
   }
 });
 window.addEventListener('keyup', event => { controls.release(event.code); syncControls(); });
-const pauseOnLeave = () => { audio.setBackground(true); clearInput(); if (['running', 'countdown'].includes(game.status)) pause(); };
+const pauseOnLeave = () => { audio.setBackground(true); interruptFlight(); };
 window.addEventListener('blur', pauseOnLeave);
 window.addEventListener('focus', () => audio.setBackground(document.hidden));
 window.addEventListener('pagehide', pauseOnLeave);
 window.addEventListener('pageshow', () => audio.setBackground(document.hidden));
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseOnLeave(); else audio.setBackground(!document.hasFocus()); frameTime = performance.now(); accumulator = 0; });
 window.addEventListener('resize', () => world?.resize());
-window.addEventListener('orientationchange', () => {
-  clearInput();
-  if (['running', 'countdown'].includes(game.status)) pause();
-});
+window.addEventListener('orientationchange', interruptFlight);
+window.screen.orientation?.addEventListener('change', interruptFlight);
 
 syncPanels();
 syncControls();

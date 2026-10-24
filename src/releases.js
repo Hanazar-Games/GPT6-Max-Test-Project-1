@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 手机驾驶与操作优化</h2>
-      <p id="release-copy">横竖屏都能玩，滑动转向与巡航按键更适合双拇指驾驶。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 暂停恢复与触控细节修正</h2>
+      <p id="release-copy">切回游戏后保持暂停，长设置页与触控转向更顺手。</p>
+      <ul class="release-list">
+        <li><strong>暂停恢复更稳妥</strong>设置中切到后台或旋转屏幕后，关闭指南仍保持暂停，需主动点击继续。</li>
+        <li><strong>长设置页随时关闭</strong>顶部工具栏始终可见，扩大手机机库按钮，驾驶提示适用于键盘与触屏。</li>
+        <li><strong>转向衔接更准确</strong>修复键盘转触屏后的残留方向，减少滑动时重复更新按钮；1.16.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>63 个版本</span></summary>
+      <article><h3>v1.16.0 · 手机驾驶与操作优化</h3>
+      <p>横竖屏都能玩，滑动转向与巡航按键更适合双拇指驾驶。</p>
       <ul class="release-list">
         <li><strong>手机双手驾驶</strong>滑动转向、松手回正，右手点按巡航后可持续加速，再配合冲刺、跃升与制动。</li>
         <li><strong>操作按习惯调整</strong>指南内可切换左右手布局、左右按键、按住加速和转向灵敏度；旋转屏幕自动暂停并清空输入。</li>
         <li><strong>手机画面更清楚</strong>重排横竖屏仪表与安全区，修复宽翼飞船竖屏裁切；触屏默认均衡画质，1.15.3 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>62 个版本</span></summary>
+      </article>
       <article><h3>v1.15.3 · 车流与粒子上传优化</h3>
       <p>道路车辆减少重复数据上传，碰撞粒子在任务结束时也能正确显示。</p>
       <ul class="release-list">
