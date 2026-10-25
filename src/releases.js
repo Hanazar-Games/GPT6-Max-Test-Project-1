@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 机库操作与声音恢复修正</h2>
-      <p id="release-copy">机库滚动时随时关闭，声音启用失败后可独立重试。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 可控漂移与精细转弯设置</h2>
+      <p id="release-copy">更容易收漂，变线弧度和横向手感可以细调。</p>
+      <ul class="release-list">
+        <li><strong>漂移更可控</strong>松手更快收漂，反打先消除原方向侧滑；制动同时收紧横向惯性，低速转向更平顺。</li>
+        <li><strong>七项精细参数</strong>均衡、精准、漂移三种预设；转弯半径系数、横移幅度、抓地、反打、高速稳定和小幅输入曲线均可细调，支持滑杆与精确数值输入。</li>
+        <li><strong>配置沿用与预判同步</strong>机库可直接进入驾驶设置；飞行中保存于重飞或下一站生效。过门与危险预判同步新惯性，不同配置的纪录与电脑航迹分别计算；1.16.3 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>66 个版本</span></summary>
+      <article><h3>v1.16.3 · 机库操作与声音恢复修正</h3>
+      <p>机库滚动时随时关闭，声音启用失败后可独立重试。</p>
       <ul class="release-list">
         <li><strong>机库随时关闭</strong>顶部工具栏保持可见，浏览长列表或交通设置后仍可直接关闭，返回原入口。</li>
         <li><strong>声音独立重试</strong>启用失败后点击「重新启用声音」，保留音乐和音效音量；静音开关继续单独控制。</li>
         <li><strong>键盘操作保持连贯</strong>重试成功后焦点回到静音开关，避免按钮收起后焦点丢失；1.16.2 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>65 个版本</span></summary>
+      </article>
       <article><h3>v1.16.2 · 仪表更新与运行开销优化</h3>
       <p>减少重复界面更新与临时对象，保留画质、模型和飞行节奏。</p>
       <ul class="release-list">

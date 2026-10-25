@@ -1,7 +1,8 @@
 import { trafficAllowed, trafficKey } from './traffic.js';
+import { drivingKey } from './flight-motion.js';
 
 export const MAX_GHOST_SAMPLES = 2400;
-export const flightKey = game => `${game.mission.id}/${game.craft.id}/${trafficAllowed(game.mission) ? trafficKey(game.trafficSettings) : 'off'}`;
+export const flightKey = game => `${game.mission.id}/${game.craft.id}/${trafficAllowed(game.mission) ? trafficKey(game.trafficSettings) : 'off'}/${drivingKey(game.drivingSettings)}`;
 const poseFor = game => ({ time: game.elapsed, distance: game.distance, lane: game.lane, height: game.height, speed: game.speed, lateralSpeed: game.lateralSpeed });
 
 export class FlightRecorder {

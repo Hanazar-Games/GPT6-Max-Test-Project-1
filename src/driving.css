@@ -1,0 +1,20 @@
+.driving-settings { margin: 0 0 22px; border: 1px solid var(--line); color: #cbdde6; font-size: 12px; }
+.driving-settings summary { padding: 16px; min-height: 48px; cursor: pointer; line-height: 1.6; }
+.driving-settings summary span { color: #9de7ef; margin-left: 10px; font-size: 11px; }
+.driving-content { display: grid; gap: 18px; padding: 0 16px 16px; }
+.driving-content p, .driving-content small { margin: 0; color: #9fb7c6; font-size: 11px; line-height: 1.8; }
+.driving-preset { display: grid; gap: 8px; }
+.driving-settings select, .driving-settings input[type="number"] { min-width: 0; min-height: 44px; padding: 8px; border: 1px solid #adc7d34a; border-radius: 4px; color: #e2edf2; background: #0b1825; font: 12px var(--mono); color-scheme: dark; }
+.driving-field { display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 4px 12px; align-items: center; }
+.driving-field label, .driving-field small { grid-column: 1 / -1; }
+.driving-field label { display: flex; justify-content: space-between; gap: 8px; }
+.driving-field output { color: #9de7ef; font: 12px var(--mono); }
+.driving-field input[type="range"] { width: 100%; min-width: 0; min-height: 44px; margin: 0; accent-color: #99e7ec; }
+.driving-actions { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.driving-actions button { min-height: 44px; margin: 0; }
+.driving-settings :is(input, select, button, summary):focus-visible { outline: 2px solid #a6edff; outline-offset: 3px; }
+#driving-settings { scroll-margin-top: 84px; }
+#driving-status { color: #a5e4eb; }
+@media (any-pointer: coarse), (max-width: 600px) {
+  .driving-settings select, .driving-settings input[type="number"] { font-size: 16px; }
+}

@@ -2,7 +2,7 @@ import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
 import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
-import { STEERING_RESPONSE, ROAD_HALF_WIDTH, coastingLane } from './flight-motion.js';
+import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral } from './flight-motion.js';
 import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficDistance } from './traffic.js';
 
 export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
@@ -21,7 +21,7 @@ export function getJumpRingCue(game, distance) {
   return distance <= game.speed * .65 ? { action: 'jump', text: '现在跃升 · F / 跃升键' } : { action: 'approach', text: '接近后准备跃升' };
 }
 
-export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}, trafficOptions = {}) {
+export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}, trafficOptions = {}, drivingOptions = {}) {
   const mission = MISSIONS.find(item => item.id === missionId);
   const base = CRAFTS.find(item => item.id === craftId);
   if (!mission || !base) throw new RangeError('Unknown mission or craft');
@@ -29,7 +29,8 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
   const craft = upgradeCraft(base, upgrades);
   const trafficSettings = normalizeTrafficSettings(trafficOptions);
   return {
-    mission, craft, upgrades, trafficSettings, course: { ...makeCourse(mission), traffic: makeTraffic(mission, trafficSettings) },
+    mission, craft, upgrades, trafficSettings, drivingSettings: normalizeDrivingSettings(drivingOptions),
+    course: { ...makeCourse(mission), traffic: makeTraffic(mission, trafficSettings) },
     status: 'menu', previousStatus: 'running', countdown: 3,
     distance: 0, lane: 0, lateralSpeed: 0, speed: 0,
     time: mission.duration, hull: craft.hull, energy: 100, boosting: false, boostLocked: false,
@@ -45,7 +46,7 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
 }
 
 export function startGame(game) {
-  Object.assign(game, createGame(game.mission.id, game.craft.id, game.upgrades, game.trafficSettings), { status: 'countdown' });
+  Object.assign(game, createGame(game.mission.id, game.craft.id, game.upgrades, game.trafficSettings, game.drivingSettings), { status: 'countdown' });
 }
 
 export function togglePause(game) {
@@ -231,9 +232,7 @@ export function updateGame(game, input, delta) {
   game.speed += Math.sign(targetSpeed - game.speed) * Math.min(Math.abs(targetSpeed - game.speed), acceleration * dt);
   game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
 
-  const steer = Math.max(-1, Math.min(1, input.steer || 0));
-  game.lateralSpeed += (steer * (game.speed > 1 ? game.craft.handling : 6) - game.lateralSpeed) * Math.min(1, dt * STEERING_RESPONSE);
-  game.lane += game.lateralSpeed * dt;
+  advanceLateral(game, input, dt);
   if (Math.abs(game.lane) > PHYSICS.width) {
     game.lane = Math.sign(game.lane) * PHYSICS.width;
     game.lateralSpeed = 0;

@@ -9,6 +9,7 @@ import './delivery.css';
 import './cruise.css';
 import './rewards.css';
 import './mobile.css';
+import './driving.css';
 import { createGame, startGame, updateGame, togglePause, getDebrief, getDeliveryStatus, getFlightCue, getJumpRingCue, isJumpReady, PHYSICS } from './game.js';
 import { MISSIONS, CRAFTS } from './missions.js';
 import { MISSION_CATEGORIES, filterMissions, filterCrafts, minimumDriveLabel } from './catalogue.js';
@@ -30,6 +31,7 @@ import { FlightInput, KEY_ACTIONS, acceptsGameKey } from './input.js';
 import { getDriveStatus } from './drive-status.js';
 import { mountTrafficSettings } from './traffic-settings.js';
 import { mountTouchControls } from './touch-controls.js';
+import { mountDrivingSettings } from './driving-settings.js';
 import { setText, setHTML, setAttribute, setStyle, setHidden } from './hud.js';
 
 const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
@@ -102,9 +104,9 @@ $('guide').querySelector('h2').id = 'guide-title';
 $('guide-ready').insertAdjacentHTML('beforebegin', '<fieldset class="audio-settings"><legend>声音设置</legend><label for="music-volume">背景音乐 <output id="music-level" for="music-volume">45%</output><input id="music-volume" type="range" min="0" max="100" value="45" aria-valuetext="45%"></label><label for="sfx-volume">引擎与音效 <output id="sfx-level" for="sfx-volume">80%</output><input id="sfx-volume" type="range" min="0" max="100" value="80" aria-valuetext="80%"></label><button id="audio-toggle" class="setting-button" aria-pressed="false">静音全部声音</button><small id="audio-status" role="status">首次操作后启用声音。暂停时停止播放，音量设置在刷新后恢复默认。</small></fieldset>');
 $('audio-toggle').insertAdjacentHTML('afterend', '<button id="audio-retry" type="button" class="setting-button" aria-describedby="audio-status" hidden>重新启用声音</button>');
 $('quality').closest('.quality-setting').insertAdjacentHTML('afterend', `<fieldset id="performance-settings" class="performance-settings" aria-labelledby="performance-title"><legend id="performance-title">性能参数</legend><div class="performance-field"><label for="performance-profile">性能档位</label><select id="performance-profile"><option value="custom">自定义</option>${PERFORMANCE_LEVELS.map(id => `<option value="${id}">${PERFORMANCE_PRESETS[id].label}</option>`).join('')}</select></div><div class="performance-field performance-range"><label for="performance-scale">渲染比例 <output id="performance-scale-value" for="performance-scale">150%</output></label><input id="performance-scale" type="range" min="60" max="200" step="5" value="150" aria-valuetext="150%"></div><div class="performance-checks"><label><input id="performance-shadows" type="checkbox" checked> 动态阴影</label><label><input id="performance-bloom" type="checkbox" checked> 环境泛光</label></div><small id="performance-status" role="status">精致 · 渲染比例 150% · 阴影与泛光开启</small></fieldset>`);
-$('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">声音设置与操作指南</button>');
+$('restart-pause').insertAdjacentHTML('afterend', '<button id="pause-settings" class="secondary-button">驾驶、声音与操作设置</button>');
 $('resume').insertAdjacentHTML('afterend', '<dl id="pause-progress" class="pause-progress" aria-label="当前航程"></dl><p id="pause-cargo-note"></p>');
-$('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">声音设置与操作指南</button>');
+$('back-result').insertAdjacentHTML('beforebegin', '<button id="result-settings" class="text-button">驾驶、声音与操作设置</button>');
 $('sound').setAttribute('aria-pressed', 'false');
 $('pause-button').insertAdjacentHTML('beforebegin', '<button id="cruise-button" type="button" aria-pressed="false" aria-label="开启巡航油门" aria-keyshortcuts="C" title="巡航油门 · C 切换，制动或暂停后解除" hidden><span>巡航油门</span><kbd>C</kbd></button>');
 $('countdown').querySelector('small').textContent = '按住 W / ↑ 加速，或按 C 开启巡航油门';
@@ -115,6 +117,7 @@ $('error').setAttribute('aria-describedby', 'error-copy');
 $('error').querySelector('h2').id = 'error-title';
 const ghostSetting = suffix => `<div class="quality-setting ghost-setting"><span>航迹投影<small>显示个人幽灵与赛事对手 · 关闭仍保留成绩对比</small></span><button id="ghost-toggle${suffix}" class="setting-button" aria-label="航迹投影" aria-pressed="true">开启 <span>◈</span></button></div>`;
 $('hangar-summary').insertAdjacentHTML('afterend', `${ghostSetting('')}<p id="ghost-availability" class="ghost-availability"></p>`);
+$('ghost-availability').insertAdjacentHTML('afterend', '<button id="hangar-driving-settings" type="button" class="secondary-button">驾驶手感与转弯半径</button>');
 $('guide-ready').insertAdjacentHTML('beforebegin', ghostSetting('-guide'));
 $('result-rating').insertAdjacentHTML('beforebegin', '<div id="result-challenge" class="result-challenge"></div><details id="split-review" class="split-review"><summary>分段飞行报告 <span>展开查看 ↓</span></summary><table><thead><tr><th scope="col">航标</th><th scope="col">累计用时</th><th scope="col">累计差距</th><th scope="col">本段差距</th></tr></thead><tbody id="result-splits"></tbody></table><p>对比本次起飞前的个人最快航程；负值表示更快。</p></details>');
 $('hangar-title').insertAdjacentHTML('afterend', `<div id="mode-options" class="mode-options" aria-label="飞行模式"><button data-mode="delivery" aria-pressed="true"><span>自由速递<small>自由选择航线 · 挑战个人幽灵</small></span><b>↗</b></button><button data-mode="cup" aria-pressed="false"><span>月环大奖赛<small>${MISSIONS.length} 站连赛 · 四艇竞速 · 争夺月环杯</small></span>${icon('trophy')}</button></div><div id="cup-brief" class="cup-brief" hidden><strong>一款飞船，${MISSIONS.length} 站征途。</strong><p>从${MISSIONS[0].planet}到${MISSIONS.at(-1).planet}，依次挑战 ${MISSIONS.length} 颗星球。每站须完成交付，四艇按用时排名，依次获得 12 / 9 / 6 / 3 积分。失败可重试本站，晋级后恢复装甲与能量。</p><div class="cup-entrants">${RACERS.map(racer => `<span style="--racer:${racer.color}"><i></i>${racer.name}<small>${racer.style}</small></span>`).join('')}</div><small>电脑对手使用相同飞船与规则；投影互不碰撞。中途返回基地或刷新会结束赛事。</small></div>`);
@@ -175,6 +178,16 @@ let hudDirty = true;
 let autoQuality = true;
 let performanceFrames = 0;
 let performanceTime = 0;
+let drivingOptions = game.drivingSettings;
+mountDrivingSettings({ guide: $('guide'), settings: drivingOptions, getStatus: () => game.status, onApply: settings => {
+  const previous = drivingOptions;
+  drivingOptions = settings;
+  if (game.status !== 'menu') return true;
+  if (!world) { game.drivingSettings = settings; updateLoadout(); return true; }
+  if (configure(game.mission.id, game.craft.id, game.upgrades)) return true;
+  drivingOptions = previous;
+  return false;
+} });
 let trafficOptions = game.trafficSettings;
 const trafficSettings = mountTrafficSettings(trafficOptions, settings => {
   const previous = trafficOptions;
@@ -321,7 +334,7 @@ function showError(message) {
 function configure(missionId, craftId, upgrades = {}) {
   if (game.status !== 'menu' || !world) return false;
   const changedMission = game.mission.id !== missionId;
-  Object.assign(game, createGame(missionId, craftId, upgrades, trafficOptions));
+  Object.assign(game, createGame(missionId, craftId, upgrades, trafficOptions, drivingOptions));
   try {
     if (changedMission) world.loadMission(game);
     else world.setCraft(game.craft);
@@ -393,8 +406,11 @@ function launch() {
       if (!configure(MISSIONS[0].id, cup.craftId)) { cup = null; return; }
     }
     if (cup.status !== 'racing') return;
+  }
+  game.drivingSettings = drivingOptions;
+  if (mode === 'cup') {
     const key = flightKey(game);
-    if (!fields.has(key)) fields.set(key, buildField(game.mission.id, game.craft.id, game.trafficSettings));
+    if (!fields.has(key)) fields.set(key, buildField(game.mission.id, game.craft.id, game.trafficSettings, game.drivingSettings));
     raceField = fields.get(key);
   }
   clearInput();
@@ -961,6 +977,12 @@ const openGuide = () => {
   $('guide').showModal();
 };
 for (const id of ['help', 'pause-settings', 'result-settings']) $(id).addEventListener('click', openGuide);
+$('hangar-driving-settings').addEventListener('click', () => {
+  openGuide();
+  $('driving-settings').open = true;
+  $('driving-settings').scrollIntoView({ block: 'start' });
+  $('driving-preset').focus({ preventScroll: true });
+});
 const closeGuide = () => $('guide').close();
 $('close-guide').addEventListener('click', closeGuide);
 $('guide-ready').addEventListener('click', closeGuide);

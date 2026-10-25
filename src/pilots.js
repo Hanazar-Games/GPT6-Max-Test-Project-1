@@ -3,7 +3,7 @@ import { FlightRecorder } from './ghost.js';
 import { meteorState, ENVIRONMENT } from './environment.js';
 import { firstAtOrAfter } from './route-rewards.js';
 import { TRAFFIC_SPEED, trafficNear } from './traffic.js';
-import { STEERING_RESPONSE } from './flight-motion.js';
+import { steeringResponse } from './flight-motion.js';
 
 export const RACERS = Object.freeze([
   Object.freeze({ id: 'aurora', name: '迎光', color: '#8ee9f5', coast: 0, offset: -1.4, style: '持续推进' }),
@@ -44,12 +44,13 @@ export function pilotInput(game, racer) {
   let target = desired;
   if (threats.length) for (const lane of [-11, -7, 0, 7, 11]) if (cost(lane) < cost(target)) target = lane;
   const jump = game.height === 0 && threats.some(threat => threat.arrival > 0.35 && threat.arrival < 0.65 && Math.abs(futureLane(target, threat.arrival) - threat.lane) < threat.radius);
-  return { accelerate: game.elapsed % 8 < 8 - racer.coast, steer: Math.max(-1, Math.min(1, (target - game.lane - game.lateralSpeed / STEERING_RESPONSE) * 0.6)), jump };
+  const steer = Math.max(-1, Math.min(1, (target - game.lane - game.lateralSpeed / steeringResponse(game)) * .6));
+  return { accelerate: game.elapsed % 8 < 8 - racer.coast, steer: Math.sign(steer) * Math.abs(steer) ** (1 / game.drivingSettings.inputCurve), jump };
 }
 
-export function buildField(missionId, craftId, trafficSettings) {
+export function buildField(missionId, craftId, trafficSettings, drivingSettings) {
   return Object.freeze(RACERS.map(racer => {
-    const game = createGame(missionId, craftId, {}, trafficSettings);
+    const game = createGame(missionId, craftId, {}, trafficSettings, drivingSettings);
     startGame(game);
     const recorder = new FlightRecorder(game);
     for (let step = 0; step < (game.mission.duration + 4) * 60 && ['countdown', 'running'].includes(game.status); step++) {
