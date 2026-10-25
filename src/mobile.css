@@ -7,9 +7,10 @@
 .touch-settings input { width: 100%; min-height: 44px; margin: 8px 0 0; accent-color: #99e7ec; }
 .touch-settings output { float: right; color: #99e7ec; }
 .touch-settings :is(input, select):focus-visible, .touch-steer:focus-visible { outline: 2px solid #a6edff; outline-offset: 3px; }
-#guide { --guide-top: 40px; --guide-inline: 40px; scroll-padding-block: 84px 20px; }
-.guide-toolbar { position: sticky; top: calc(0px - var(--guide-top)); z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: calc(0px - var(--guide-top)) calc(0px - var(--guide-inline)) 24px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: #0e1d2b; color: #b4cbd8; font-size: 11px; }
-#guide .dialog-close { position: static; flex-shrink: 0; width: 44px; height: 44px; }
+#guide { --dialog-top: 40px; --dialog-inline: 40px; scroll-padding-block: 84px 20px; }
+#hangar { --dialog-top: 34px; --dialog-inline: 34px; scroll-padding-top: 84px; }
+.dialog-toolbar { position: sticky; top: calc(0px - var(--dialog-top)); z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: calc(0px - var(--dialog-top)) calc(0px - var(--dialog-inline)) 24px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: #0e1d2b; color: #b4cbd8; font-size: 11px; }
+:is(#guide, #hangar) .dialog-close { position: static; flex-shrink: 0; width: 44px; height: 44px; }
 .touch-controls { --touch-bottom: max(12px, env(safe-area-inset-bottom)); align-items: flex-end; gap: 16px; user-select: none; -webkit-user-select: none; }
 .touch-controls > .touch-steering, .touch-controls > .touch-action-group { display: flex; flex-direction: column; gap: 8px; width: clamp(126px, 36vw, 166px); }
 .touch-controls > .touch-action-group { width: clamp(136px, 40vw, 180px); }
@@ -43,8 +44,13 @@
   dialog { max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom))); }
 }
 
+@media (max-width: 800px) {
+  #hangar { --dialog-top: 29px; --dialog-inline: 29px; }
+}
+
 @media (max-width: 600px) {
-  #guide { --guide-top: 32px; --guide-inline: 24px; }
+  #guide { --dialog-top: 32px; --dialog-inline: 24px; }
+  #hangar { --dialog-inline: 20px; }
   .touch-settings { grid-template-columns: 1fr; padding: 12px; }
   .touch-settings select { font-size: 16px; }
   .header { height: 66px; }

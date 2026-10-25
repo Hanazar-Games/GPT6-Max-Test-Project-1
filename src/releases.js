@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 仪表更新与运行开销优化</h2>
-      <p id="release-copy">减少重复界面更新与临时对象，保留画质、模型和飞行节奏。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 机库操作与声音恢复修正</h2>
+      <p id="release-copy">机库滚动时随时关闭，声音启用失败后可独立重试。</p>
+      <ul class="release-list">
+        <li><strong>机库随时关闭</strong>顶部工具栏保持可见，浏览长列表或交通设置后仍可直接关闭，返回原入口。</li>
+        <li><strong>声音独立重试</strong>启用失败后点击「重新启用声音」，保留音乐和音效音量；静音开关继续单独控制。</li>
+        <li><strong>键盘操作保持连贯</strong>重试成功后焦点回到静音开关，避免按钮收起后焦点丢失；1.16.2 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>65 个版本</span></summary>
+      <article><h3>v1.16.2 · 仪表更新与运行开销优化</h3>
+      <p>减少重复界面更新与临时对象，保留画质、模型和飞行节奏。</p>
       <ul class="release-list">
         <li><strong>仪表只更新变化</strong>计时器与文字复用原有节点，远征委托和赛事列表按内容更新，减少重复重建。</li>
         <li><strong>暂停减少空转</strong>暂停与结算时停止重复模拟、输入读取、仪表和音频参数更新；画面仍正常绘制。</li>
         <li><strong>模型朝向减少分配</strong>飞船与车流复用朝向计算的矩阵和向量，保留细节与特效；1.16.1 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>64 个版本</span></summary>
+      </article>
       <article><h3>v1.16.1 · 暂停恢复与触控细节修正</h3>
       <p>切回游戏后保持暂停，长设置页与触控转向更顺手。</p>
       <ul class="release-list">
