@@ -18,6 +18,26 @@ function makeWorld(t) {
   return world;
 }
 
+test('landing suspension compresses the craft body, smooths pitch and freezes during pause', t => {
+  const world = makeWorld(t), game = createGame();
+  world.loadMission(game);
+  Object.assign(game, { status: 'running', height: .4, verticalSpeed: -11, elapsed: 1 });
+  world.render(game, 1 / 60);
+  const airbornePitch = world.craftBody.rotation.x;
+  Object.assign(game, { height: 0, verticalSpeed: 0, elapsed: 1.05, lastLanding: { time: 1, speed: 11 } });
+  world.render(game, 1 / 60);
+  assert.ok(world.craftBody.position.y < Math.sin(world.clock * 3.5) * .13);
+  assert.ok(world.craftBody.rotation.x > airbornePitch && world.craftBody.rotation.x < 0);
+  game.status = 'paused';
+  const position = world.craftBody.position.clone(), rotation = world.craftBody.rotation.clone();
+  world.render(game, .1);
+  assert.ok(world.craftBody.position.equals(position));
+  assert.ok(world.craftBody.rotation.equals(rotation));
+  Object.assign(game, { status: 'running', elapsed: 3 });
+  world.render(game, 1 / 60);
+  assert.equal(world.craftBody.position.y, Math.sin(world.clock * 3.5) * .13);
+});
+
 test('portrait chase framing keeps every craft visible at rest and at racing speed', t => {
   const world = makeWorld(t), game = createGame(), vertex = new THREE.Vector3();
   world.loadMission(game);

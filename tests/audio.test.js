@@ -35,6 +35,33 @@ async function setup() {
 }
 const running = { status: 'running', speed: 36, boosting: false };
 
+test('landing strength follows impact speed within a quiet, bounded effects envelope', async () => {
+  const audio = await setup(), tones = [];
+  audio.tone = (...args) => tones.push(args);
+  for (const speed of [2, 11, 100]) audio.event('land', speed);
+  assert.equal(tones.length, 3);
+  assert.ok(tones[0][5] < tones[1][5] && tones[1][5] < tones[2][5]);
+  for (const tone of tones) {
+    assert.equal(tone[4], 'sfx');
+    assert.ok(tone[5] >= .08 && tone[5] <= .3);
+    assert.ok(tone[1] >= .08 && tone[1] <= .16);
+  }
+});
+
+test('landing cues obey effects mute, pause and background state', async () => {
+  const audio = await setup();
+  audio.update(running);
+  audio.event('land', 11);
+  assert.ok([...audio.voices].some(voice => voice.bus === 'sfx'));
+  for (const stop of [() => audio.setVolume('sfx', 0), () => audio.setState('paused'), () => audio.setBackground(true), () => audio.toggle()]) {
+    stop();
+    audio.event('land', 50);
+    assert.ok([...audio.voices].every(voice => voice.bus !== 'sfx'));
+    audio.setVolume('sfx', .8); audio.setState('running'); audio.setBackground(false);
+    if (!audio.enabled) audio.toggle();
+  }
+});
+
 test('audio unlock failure is recoverable without a partially initialized graph', async () => {
   let attempts = 0;
   const audio = new AudioEngine(() => { if (!attempts++) throw new Error('unavailable'); return new Context(); });

@@ -1,6 +1,8 @@
 import { coastingLane } from './flight-motion.js';
+import { VERTICAL_PHYSICS, verticalAt, flightHeight } from './vertical-motion.js';
+export { gravityAt } from './vertical-motion.js';
 
-export const ENVIRONMENT = Object.freeze({ gravity: 17, lowGravity: 8, warning: 2.6, blast: 1, damage: 22, clearance: 3.2, craftRadius: 1.1 });
+export const ENVIRONMENT = Object.freeze({ gravity: VERTICAL_PHYSICS.gravity, lowGravity: VERTICAL_PHYSICS.lowGravity, warning: 2.6, blast: 1, damage: 22, clearance: 3.2, craftRadius: 1.1 });
 
 export function makeEnvironment(mission) {
   const scale = mission.length / 1800;
@@ -10,10 +12,6 @@ export function makeEnvironment(mission) {
     .map(([distance, lane], id) => ({ id, distance: distance * scale, lane, radius: 5, first: distance * scale / 175 + id * 0.3, period: 10 - mission.difficulty * 0.8 }))
     .sort((a, b) => a.distance - b.distance);
   return { gravityZones, meteors };
-}
-
-export function gravityAt(course, distance) {
-  return course.gravityZones.some(zone => distance >= zone.start && distance < zone.end) ? ENVIRONMENT.lowGravity : ENVIRONMENT.gravity;
 }
 
 export function meteorState(meteor, elapsed) {
@@ -27,7 +25,7 @@ export function meteorState(meteor, elapsed) {
   return { phase: remaining <= ENVIRONMENT.warning + 1e-8 ? 'warning' : 'idle', impactAt: next, remaining, progress: Math.max(0, 1 - remaining / ENVIRONMENT.warning) };
 }
 
-export function meteorContact(meteor, before, after) {
+export function meteorContact(meteor, before, after, heightAt = fraction => before.height + (after.height - before.height) * fraction) {
   const dt = after.elapsed - before.elapsed;
   if (dt <= 0) return null;
   const dx = after.distance - before.distance;
@@ -47,8 +45,9 @@ export function meteorContact(meteor, before, after) {
     const from = Math.max(0, entry, (start - before.elapsed) / dt);
     const to = Math.min(1, exit, (start + ENVIRONMENT.blast - before.elapsed) / dt);
     if (from >= to) continue;
-    const t = after.height >= before.height ? from : to;
-    return { height: before.height + (after.height - before.height) * t, elapsed: before.elapsed + dt * t };
+    const startHeight = heightAt(from), endHeight = heightAt(to);
+    const t = startHeight <= endHeight ? from : to;
+    return { height: Math.min(startHeight, endHeight), elapsed: before.elapsed + dt * t };
   }
   return null;
 }
@@ -66,14 +65,14 @@ export function getMeteorCue(game) {
     const horizon = game.speed > 0 ? Math.min(6, Math.max(0, distance + radius) / game.speed) : ENVIRONMENT.warning + ENVIRONMENT.blast;
     const finalLane = coastingLane(game, horizon);
     if (Math.min(game.lane, finalLane) < meteor.lane + radius && Math.max(game.lane, finalLane) > meteor.lane - radius) {
-      let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
-      let verticalSpeed = game.verticalSpeed;
+      let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height, verticalSpeed: game.verticalSpeed };
       for (let time = 0; time < horizon; time += 1 / 60) {
         const dt = Math.min(1 / 60, horizon - time);
-        verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) * dt : 0;
+        const distance = before.distance + game.speed * dt;
+        const motion = verticalAt(game.course, before, distance, dt);
         const after = { elapsed: before.elapsed + dt, distance: before.distance + game.speed * dt,
-          lane: coastingLane(game, time + dt), height: Math.max(0, before.height + verticalSpeed * dt) };
-        const contact = meteorContact(meteor, before, after);
+          lane: coastingLane(game, time + dt), height: motion.height, verticalSpeed: motion.verticalSpeed };
+        const contact = meteorContact(meteor, before, after, fraction => flightHeight(game.course, before, after, fraction));
         if (contact && contact.height < ENVIRONMENT.clearance) { timeToImpact = contact.elapsed - game.elapsed; break; }
         before = after;
       }

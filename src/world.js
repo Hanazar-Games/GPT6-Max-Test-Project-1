@@ -17,6 +17,7 @@ import { partitionLandscape } from './landscape-chunks.js';
 import { RewardView } from './reward-view.js';
 import { pickupRange } from './route-rewards.js';
 import { TrafficView } from './traffic-view.js';
+import { landingOffset } from './vertical-motion.js';
 
 export const PERFORMANCE_PRESETS = Object.freeze({
   ultra: { label: '极致', pixelRatio: 2, shadows: true, bloom: true },
@@ -614,15 +615,15 @@ export class World {
     const { point, right } = frame;
     this.craft.position.copy(point);
     this.orient(this.craft, frame);
-    this.craftBody.position.y = Math.sin(this.clock * 3.5) * 0.13;
+    this.craftBody.position.y = Math.sin(this.clock * 3.5) * .13 * (1 - Math.min(1, game.height / 1.5)) + landingOffset(game);
     this.magnetRing.visible = pickupRange(game) > 3.7 && game.height < 2.3;
     this.magnetRing.scale.setScalar(pickupRange(game));
     this.shieldBubble.visible = game.shieldTime > 0;
     this.overdriveHalo.visible = game.overdriveTime > 0;
     this.overdriveHalo.scale.setScalar(1 + Math.sin(game.elapsed * 9) * .04);
     this.magnetRing.material.opacity = 0.25 + Math.sin(this.clock * 2) * 0.08;
-    this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * 0.009, Math.min(1, dt * 7));
-    this.craftBody.rotation.x = -game.speed * 0.0004 + game.verticalSpeed * 0.013;
+    this.craftBody.rotation.z = THREE.MathUtils.lerp(this.craftBody.rotation.z, game.lateralSpeed * .009, !this.cameraReady ? 1 : animated ? 1 - Math.exp(-dt * 7) : 0);
+    this.craftBody.rotation.x = THREE.MathUtils.lerp(this.craftBody.rotation.x, -game.speed * .0004 + game.verticalSpeed * .013, !this.cameraReady ? 1 : animated ? 1 - Math.exp(-dt * 10) : 0);
     this.craft.visible = game.immunity <= 0 || Math.sin(this.clock * 35) > -0.6;
     for (let index = 0; index < this.ghosts.length; index++) {
       const ghost = this.ghosts[index];

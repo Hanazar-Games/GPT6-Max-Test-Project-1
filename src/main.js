@@ -737,7 +737,7 @@ function updateHUD() {
   setText($('combo-multiplier'), `×${Math.min(3, 1 + Math.floor(Math.max(0, game.combo - 1) / 3) * 0.5).toFixed(1)}`);
   $('combo-panel').classList.toggle('active', game.combo >= 3);
   updateRouteTools();
-  setText($('jump-status'), game.height > 0 ? `${lowGravity ? '低重力滑翔' : '低空跃升'} ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪');
+  setText($('jump-status'), game.height > 0 ? `${lowGravity ? '低重力' : ''}${game.verticalSpeed > .5 ? '上升' : game.verticalSpeed < -.5 ? '回落' : '顶点'} ${game.height.toFixed(1)}m` : game.jumpCooldown > 0 ? `冷却 ${game.jumpCooldown.toFixed(1)}s` : game.energy < PHYSICS.jumpCost ? '能量不足' : '跃升就绪');
   setAttribute(jumpControl, 'aria-disabled', !isJumpReady(game));
   speedTicks.forEach((tick, i) => tick.classList.toggle('active', i < game.speed / game.craft.boostSpeed * 24));
   updateRival();
@@ -747,7 +747,7 @@ function updateHUD() {
 function processEvents() {
   for (const event of game.events) {
     if (controls.cruise && ['impact', 'miss'].includes(event.type)) { controls.cruise = false; syncControls(); }
-    if (!event.chained) audio.event(event.type, event.kind ?? event.source);
+    if (!event.chained) audio.event(event.type, event.kind ?? event.source ?? event.speed);
     world.event(event, game);
     if (event.type === 'launch') toast(controls.cruise ? '巡航油门已开启 · 手动转向，制动解除' : '出发！加速前进，手动转向并留意前方');
     if (event.type === 'powerup') toast(`${POWERUPS[event.kind].name} · ${POWERUPS[event.kind].description}`, 'cyan');

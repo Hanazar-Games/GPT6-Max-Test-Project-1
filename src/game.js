@@ -1,6 +1,7 @@
 import { MISSIONS, CRAFTS, makeCourse } from './missions.js';
 import { upgradeLevels, upgradeCraft } from './upgrades.js';
-import { ENVIRONMENT, gravityAt, meteorState, meteorContact, getMeteorCue } from './environment.js';
+import { ENVIRONMENT, meteorState, meteorContact, getMeteorCue } from './environment.js';
+import { VERTICAL_PHYSICS, verticalAt, flightHeight } from './vertical-motion.js';
 import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
 import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral } from './flight-motion.js';
 import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficDistance } from './traffic.js';
@@ -18,7 +19,8 @@ export function getJumpRingCue(game, distance) {
   if (game.speed < 1) return { action: 'accelerate', text: '先加速接近，再跃升' };
   if (game.speed < (game.boosting ? game.craft.boostSpeed : game.craft.speed)) return { action: 'accelerate', text: '保持加速 · 稳速后再跃升' };
   if (distance < game.speed * .4) return { action: 'late', text: '距离过近 · 本环可略过' };
-  return distance <= game.speed * .65 ? { action: 'jump', text: '现在跃升 · F / 跃升键' } : { action: 'approach', text: '接近后准备跃升' };
+  const height = verticalAt(game.course, { distance: game.distance, height: 0, verticalSpeed: VERTICAL_PHYSICS.jumpSpeed }, game.distance + distance, distance / game.speed).height;
+  return height >= 2.8 && height <= 6.2 ? { action: 'jump', text: '现在跃升 · F / 跃升键' } : { action: 'approach', text: '接近后准备跃升' };
 }
 
 export function createGame(missionId = 'tranquility', craftId = 'scout', levels = {}, trafficOptions = {}, drivingOptions = {}) {
@@ -35,7 +37,7 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
     distance: 0, lane: 0, lateralSpeed: 0, speed: 0,
     time: mission.duration, hull: craft.hull, energy: 100, boosting: false, boostLocked: false,
     gates: 0, collected: new Set(), score: 0, immunity: 0,
-    height: 0, verticalSpeed: 0, jumpCooldown: 0, jumpHeld: false,
+    height: 0, verticalSpeed: 0, jumpCooldown: 0, jumpHeld: false, lastLanding: null,
     combo: 0, maxCombo: 0, perfectGates: 0, airDodges: 0, impacts: 0,
     missedPickups: new Set(), passedObstacles: new Set(), pendingObstacleDodges: new Set(), activatedPads: new Set(), padBoost: 0,
     meteorDodges: 0, glides: 0, resolvedMeteors: new Set(), pendingMeteorDodges: new Set(), clearedZones: new Set(), meteorWarnings: new Set(),
@@ -84,7 +86,7 @@ export function obstacleLane(obstacle, elapsed) {
   return obstacle.kind === 'drone' ? Math.sin(elapsed * obstacle.frequency + obstacle.phase) * 10 : obstacle.lane;
 }
 
-function courseContact(obstacle, before, after, forward = obstacle.kind === 'traffic' ? obstacle.length / 2 + 3 : 3, lateral = obstacle.radius + 1.1) {
+function courseContact(course, obstacle, before, after, forward = obstacle.kind === 'traffic' ? obstacle.length / 2 + 3 : 3, lateral = obstacle.radius + 1.1) {
   const distanceAt = time => obstacle.kind === 'traffic' ? trafficDistance(obstacle, time) : obstacle.distance;
   let entry = 0;
   let exit = 1;
@@ -101,8 +103,9 @@ function courseContact(obstacle, before, after, forward = obstacle.kind === 'tra
     exit = Math.min(exit, Math.max(a, b));
     if (entry >= exit) return null;
   }
-  const time = after.height >= before.height ? entry : exit;
-  return { height: before.height + (after.height - before.height) * time, elapsed: before.elapsed + (after.elapsed - before.elapsed) * time };
+  const startHeight = flightHeight(course, before, after, entry), endHeight = flightHeight(course, before, after, exit);
+  const time = startHeight <= endHeight ? entry : exit;
+  return { height: Math.min(startHeight, endHeight), elapsed: before.elapsed + (after.elapsed - before.elapsed) * time };
 }
 
 export function getDeliveryStatus(game) {
@@ -122,13 +125,13 @@ export function getFlightCue(game) {
   const threats = trafficNear(game.course.traffic, game.elapsed, game.mission.length, game.distance - 65, game.distance + game.speed * 1.6 + 65);
   for (let i = firstAtOrAfter(obstacles, game.distance - 3); i < obstacles.length && obstacles[i].distance <= game.distance + game.speed * 1.6 + 3; i++) threats.push(obstacles[i]);
   for (const obstacle of threats) {
-    let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height };
-    let verticalSpeed = game.verticalSpeed;
+    let before = { elapsed: game.elapsed, distance: game.distance, lane: game.lane, height: game.height, verticalSpeed: game.verticalSpeed };
     for (let step = 0; step < 96; step++) {
-      verticalSpeed = before.height > 0 || verticalSpeed > 0 ? verticalSpeed - gravityAt(game.course, before.distance) / 60 : 0;
+      const distance = before.distance + game.speed / 60;
+      const motion = verticalAt(game.course, before, distance, 1 / 60);
       const after = { elapsed: before.elapsed + 1 / 60, distance: before.distance + game.speed / 60,
-        lane: coastingLane(game, (step + 1) / 60), height: Math.max(0, before.height + verticalSpeed / 60) };
-      const contact = courseContact(obstacle, before, after);
+        lane: coastingLane(game, (step + 1) / 60), height: motion.height, verticalSpeed: motion.verticalSpeed };
+      const contact = courseContact(game.course, obstacle, before, after);
       if (contact && contact.height < (obstacle.clearance ?? 2.5)) {
         const time = contact.elapsed - game.elapsed;
         if (time < timeToImpact) { timeToImpact = time; hazard = obstacle; }
@@ -192,6 +195,7 @@ export function updateGame(game, input, delta) {
     return;
   }
   const dt = Math.max(0, Math.min(delta, 0.1, game.status === 'running' ? game.time : Infinity));
+  if (!(dt > 0)) return;
   if (game.status === 'countdown') {
     game.countdown = Math.max(0, game.countdown - dt);
     if (game.countdown <= 0) {
@@ -211,17 +215,13 @@ export function updateGame(game, input, delta) {
   game.magnetTime = Math.max(0, game.magnetTime - dt);
   game.overdriveTime = Math.max(0, game.overdriveTime - dt);
   if ((input.jumpPressed || input.jump && !game.jumpHeld) && isJumpReady(game)) {
-    game.verticalSpeed = 11;
+    game.verticalSpeed = VERTICAL_PHYSICS.jumpSpeed;
     game.energy -= PHYSICS.jumpCost;
     game.jumpCooldown = PHYSICS.jumpCooldown;
     game.events.push({ type: 'jump' });
   }
   game.jumpHeld = !!input.jump;
-  if (game.height > 0 || game.verticalSpeed > 0) {
-    game.verticalSpeed -= gravityAt(game.course, game.distance) * dt;
-    game.height = Math.max(0, game.height + game.verticalSpeed * dt);
-    if (game.height === 0) { game.verticalSpeed = 0; game.events.push({ type: 'land' }); }
-  }
+  previous.verticalSpeed = game.verticalSpeed;
   if (!input.boost || input.boostReleased) game.boostLocked = false;
   else if (game.energy <= 1) game.boostLocked = true;
   const freeBoost = game.padBoost > 0 || game.overdriveTime > 0;
@@ -242,11 +242,18 @@ export function updateGame(game, input, delta) {
 
   const before = game.distance;
   game.distance = Math.min(game.mission.length, game.distance + game.speed * dt);
+  const motion = verticalAt(game.course, previous, game.distance, dt);
+  game.height = motion.height;
+  game.verticalSpeed = motion.verticalSpeed;
+  if (motion.landed) {
+    game.lastLanding = { time: previous.elapsed + motion.landingTime, speed: motion.landingSpeed };
+    game.events.push({ type: 'land', speed: motion.landingSpeed });
+  }
   const crosses = (distance, margin = 0) => before <= distance + margin && game.distance >= distance - margin;
 
   for (let i = firstAtOrAfter(game.course.powerups, before - 3); i < game.course.powerups.length && game.course.powerups[i].distance <= game.distance + 3; i++) {
     const item = game.course.powerups[i];
-    if (game.powerupsTaken.has(item.id) || !(courseContact(item, previous, game, 3, 4)?.height < 2.3)) continue;
+    if (game.powerupsTaken.has(item.id) || !(courseContact(game.course, item, previous, game, 3, 4)?.height < 2.3)) continue;
     game.powerupsTaken.add(item.id);
     if (item.kind === 'shield') game.shieldTime = POWERUPS.shield.duration;
     if (item.kind === 'magnet') game.magnetTime = POWERUPS.magnet.duration;
@@ -257,7 +264,7 @@ export function updateGame(game, input, delta) {
   }
   for (let i = firstAtOrAfter(game.course.pickups, before - 4); i < game.course.pickups.length && game.course.pickups[i].distance <= game.distance + 2; i++) {
     const pickup = game.course.pickups[i];
-    if (!game.collected.has(pickup.id) && courseContact(pickup, previous, game, 2, pickupRange(game))?.height < 2.3) {
+    if (!game.collected.has(pickup.id) && courseContact(game.course, pickup, previous, game, 2, pickupRange(game))?.height < 2.3) {
       game.collected.add(pickup.id);
       game.energy = Math.min(100, game.energy + 22);
       game.hull = Math.min(game.craft.hull, game.hull + 4);
@@ -273,7 +280,7 @@ export function updateGame(game, input, delta) {
   }
   for (let i = firstAtOrAfter(game.course.obstacles, before - 3); i < game.course.obstacles.length && game.course.obstacles[i].distance <= game.distance + 3; i++) {
     const obstacle = game.course.obstacles[i];
-    const contact = courseContact(obstacle, previous, game);
+    const contact = courseContact(game.course, obstacle, previous, game);
     if (contact?.height < 2.5) {
       impact(game, obstacle.kind === 'drone' ? 28 : 24);
       game.passedObstacles.add(obstacle.id);
@@ -289,14 +296,14 @@ export function updateGame(game, input, delta) {
     }
   }
   for (const vehicle of trafficNear(game.course.traffic, game.elapsed, game.mission.length, before - 30, game.distance + 30)) {
-    if (courseContact(vehicle, previous, game)?.height < vehicle.clearance) {
+    if (courseContact(game.course, vehicle, previous, game)?.height < vehicle.clearance) {
       impact(game, vehicle.damage, 'traffic');
       if (game.status === 'lost') return;
     }
   }
   for (let i = firstAtOrAfter(game.course.pads, before - 3); i < game.course.pads.length && game.course.pads[i].distance <= game.distance + 3; i++) {
     const pad = game.course.pads[i];
-    if (!input.brake && !game.activatedPads.has(pad.id) && courseContact(pad, previous, game, 3, (pad.width ?? 8) / 2)?.height < 0.5) {
+    if (!input.brake && !game.activatedPads.has(pad.id) && courseContact(game.course, pad, previous, game, 3, (pad.width ?? 8) / 2)?.height < 0.5) {
       const chained = game.padBoost > 0;
       game.activatedPads.add(pad.id);
       game.padBoost = 1.8;
@@ -318,7 +325,7 @@ export function updateGame(game, input, delta) {
     if (state.phase === 'impact' && previous.elapsed < state.impactAt && game.elapsed >= state.impactAt && Math.abs(meteor.distance - game.distance) < 140) {
       game.events.push({ type: 'meteor-strike', distance: meteor.distance, lane: meteor.lane });
     }
-    const contact = meteorContact(meteor, previous, game);
+    const contact = meteorContact(meteor, previous, game, fraction => flightHeight(game.course, previous, game, fraction));
     if (contact?.height < ENVIRONMENT.clearance) {
       impact(game, ENVIRONMENT.damage, 'meteor');
       game.resolvedMeteors.add(meteor.id);
@@ -338,7 +345,7 @@ export function updateGame(game, input, delta) {
     if (before < zone.start && game.distance >= zone.start) game.events.push({ type: 'low-gravity' });
     if (before < zone.end && game.distance >= zone.end && !game.clearedZones.has(zone.id)) {
       game.clearedZones.add(zone.id);
-      const height = previous.height + (game.height - previous.height) * (zone.end - before) / (game.distance - before);
+      const height = flightHeight(game.course, previous, game, (zone.end - before) / (game.distance - before));
       if (height >= ENVIRONMENT.clearance) {
         game.glides++;
         game.score += 200;
@@ -353,7 +360,7 @@ export function updateGame(game, input, delta) {
     game.challengesResolved.add(ring.id);
     const fraction = (ring.distance - before) / (game.distance - before);
     const lane = previous.lane + (game.lane - previous.lane) * fraction;
-    const height = previous.height + (game.height - previous.height) * fraction;
+    const height = flightHeight(game.course, previous, game, fraction);
     const challenge = CHALLENGES[ring.kind];
     const success = Math.abs(lane - ring.lane) < challenge.width && (ring.kind === 'jump' ? height >= 2.8 && height <= 6.2 : height < 2.3 && game.speed >= game.craft.speed * .9);
     if (success) {
@@ -383,6 +390,7 @@ export function updateGame(game, input, delta) {
       game.lateralSpeed = 0;
       game.height = 0;
       game.verticalSpeed = 0;
+      game.lastLanding = null;
       game.padBoost = 0;
       game.overdriveTime = 0;
       game.combo = 0;

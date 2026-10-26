@@ -7,14 +7,22 @@ export function mountReleases() {
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 可控漂移与精细转弯设置</h2>
-      <p id="release-copy">更容易收漂，变线弧度和横向手感可以细调。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 重力轨迹与柔和落地</h2>
+      <p id="release-copy">跃升与下落更一致，高速穿越低重力区和着地过渡更自然。</p>
+      <ul class="release-list">
+        <li><strong>重力按途经区域计算</strong>不同时间步长保持一致的垂直轨迹，高速跨越整段低重力区也不会漏算；保留原有漂移和转弯设置。</li>
+        <li><strong>判定与预警同步</strong>碰撞、穿环与导航共用飞行轨迹，修复落地后误发滑翔奖励、下落贴近加速带漏触发；跃升建议考虑前方重力。</li>
+        <li><strong>落地反馈更柔和</strong>飞船随着地力度轻微缓冲，俯仰平滑恢复，音效区分轻重；仪表显示上升、顶点与回落。暂停冻结，重飞清除；1.17.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>67 个版本</span></summary>
+      <article><h3>v1.17.0 · 可控漂移与精细转弯设置</h3>
+      <p>更容易收漂，变线弧度和横向手感可以细调。</p>
       <ul class="release-list">
         <li><strong>漂移更可控</strong>松手更快收漂，反打先消除原方向侧滑；制动同时收紧横向惯性，低速转向更平顺。</li>
         <li><strong>七项精细参数</strong>均衡、精准、漂移三种预设；转弯半径系数、横移幅度、抓地、反打、高速稳定和小幅输入曲线均可细调，支持滑杆与精确数值输入。</li>
         <li><strong>配置沿用与预判同步</strong>机库可直接进入驾驶设置；飞行中保存于重飞或下一站生效。过门与危险预判同步新惯性，不同配置的纪录与电脑航迹分别计算；1.16.3 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>66 个版本</span></summary>
+      </article>
       <article><h3>v1.16.3 · 机库操作与声音恢复修正</h3>
       <p>机库滚动时随时关闭，声音启用失败后可独立重试。</p>
       <ul class="release-list">

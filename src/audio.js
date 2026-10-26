@@ -182,7 +182,10 @@ export class AudioEngine {
     else if (type === 'impact' || type === 'miss') { alertTone(75, .3); alertTone(48, .3, .06, 'sawtooth'); }
     if (type === 'launch') { this.tone(440); this.tone(880, 0.4, 0.12); }
     if (type === 'jump') { this.tone(180, 0.16, 0, 'triangle'); this.tone(540, 0.25, 0.08); }
-    if (type === 'land') this.tone(65, 0.12, 0, 'triangle');
+    if (type === 'land') {
+      const strength = Math.max(0, Math.min(1, (Number.isFinite(kind) ? kind : 11) / 18));
+      this.tone(80 - strength * 25, .08 + strength * .08, 0, 'triangle', 'sfx', .08 + strength * .2);
+    }
     if (type === 'pad') { this.tone(330, 0.15); this.tone(660, 0.2, 0.08); this.tone(990, 0.25, 0.16); }
     if (type === 'dodge') { this.tone(1040, 0.2); this.tone(1560, 0.3, 0.07); }
     if (type === 'meteor-warning') { alertTone(520, .11); alertTone(520, .11, .2); }
