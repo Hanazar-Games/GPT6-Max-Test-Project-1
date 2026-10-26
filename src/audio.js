@@ -123,8 +123,9 @@ export class AudioEngine {
     const now = this.context.currentTime;
     for (const voice of this.voices) {
       if (bus && voice.bus !== bus) continue;
+      const level = voice.start >= now ? 0 : voice.gain.gain.value;
       voice.gain.gain.cancelScheduledValues(now);
-      voice.gain.gain.setValueAtTime(voice.start > now ? 0 : voice.gain.gain.value, now);
+      voice.gain.gain.setValueAtTime(level, now);
       voice.gain.gain.linearRampToValueAtTime(0, now + 0.02);
       voice.oscillator.stop(now + 0.025);
       this.voices.delete(voice);

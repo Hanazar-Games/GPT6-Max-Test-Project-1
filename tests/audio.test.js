@@ -35,6 +35,20 @@ async function setup() {
 }
 const running = { status: 'running', speed: 36, boosting: false };
 
+test('cancelling a just-started sound cannot restore the default gain and create a burst', async () => {
+  const audio = await setup();
+  audio.event('land', 11);
+  const voice = [...audio.voices][0], gain = voice.gain.gain, starts = [];
+  assert.equal(voice.start, audio.context.currentTime);
+  gain.value = 1;
+  gain.cancelScheduledValues = () => { gain.value = 1; };
+  gain.setValueAtTime = (value, time) => { starts.push({ value, time }); gain.value = value; };
+  audio.stopVoices();
+  assert.deepEqual(starts, [{ value: 0, time: 0 }]);
+  assert.ok(voice.oscillator.stopped <= .03);
+  assert.equal(audio.voices.size, 0);
+});
+
 test('landing strength follows impact speed within a quiet, bounded effects envelope', async () => {
   const audio = await setup(), tones = [];
   audio.tone = (...args) => tones.push(args);

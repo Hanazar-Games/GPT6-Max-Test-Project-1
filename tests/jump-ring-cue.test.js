@@ -34,6 +34,26 @@ test('navigation preserves precise ring distance at the jump-window boundary', (
   assert.equal(getJumpRingCue(game, cue.distance).action, 'late');
 });
 
+test('airborne advice forecasts ring height during descent, ascent and gravity transitions', () => {
+  for (const { height, verticalSpeed, arrival, zones, text, hits } of [
+    { height: 3, verticalSpeed: -4, arrival: .2, zones: [], text: /预计高度不足/, hits: 0 },
+    { height: 7, verticalSpeed: -5, arrival: .3, zones: [], text: /预计高度达标/, hits: 1 },
+    { height: 5, verticalSpeed: 5, arrival: .4, zones: [{ start: 0, end: 10000 }], text: /预计高度偏高/, hits: 0 },
+    { height: 5, verticalSpeed: 0, arrival: .5, zones: [{ start: 0, end: 34 }], text: /预计高度达标/, hits: 1 },
+  ]) {
+    const game = flight();
+    Object.assign(game, { height, verticalSpeed });
+    game.course.gravityZones = zones;
+    game.course.challenges = [{ id: 0, kind: 'jump', lane: 0, distance: game.speed * arrival }];
+    const snapshot = structuredClone(game), cue = getJumpRingCue(game, game.speed * arrival);
+    assert.deepEqual(game, snapshot);
+    assert.equal(cue.action, 'airborne');
+    assert.match(cue.text, text);
+    for (let i = 0; i <= Math.ceil(arrival * 60); i++) updateGame(game, { accelerate: true }, 1 / 60);
+    assert.equal(game.challengeHits, hits);
+  }
+});
+
 test('acceleration and entering boost defer jump advice until the speed settles', () => {
   const game = flight();
   game.speed = 40;

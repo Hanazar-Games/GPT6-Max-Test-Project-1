@@ -6,15 +6,24 @@ export function mountReleases() {
   document.querySelector('.menu-footer').insertAdjacentHTML('beforeend', `<button id="open-releases" class="release-link" aria-haspopup="dialog">v${version} · 更新公告</button>`);
   document.querySelector('#app').insertAdjacentHTML('beforeend', `
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
+      <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 重力轨迹与柔和落地</h2>
-      <p id="release-copy">跃升与下落更一致，高速穿越低重力区和着地过渡更自然。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 导航、声音与公告修正</h2>
+      <p id="release-copy">空中穿环引导更准确，声音停止更平顺，长公告随时可关闭。</p>
+      <ul class="release-list">
+        <li><strong>按到达高度提示穿环</strong>结合升降速度和前方重力，显示预计高度达标、不足或偏高，避免回落时仍被提示对准。</li>
+        <li><strong>避免停止时音量突跳</strong>修复音符刚开始就暂停或静音时的短促音量尖峰，配乐与音效仍可独立调节。</li>
+        <li><strong>长公告随时返回</strong>顶部关闭按钮在滚动历史时保持可见，关闭后恢复入口焦点；1.18.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>68 个版本</span></summary>
+      <article><h3>v1.18.0 · 重力轨迹与柔和落地</h3>
+      <p>跃升与下落更一致，高速穿越低重力区和着地过渡更自然。</p>
       <ul class="release-list">
         <li><strong>重力按途经区域计算</strong>不同时间步长保持一致的垂直轨迹，高速跨越整段低重力区也不会漏算；保留原有漂移和转弯设置。</li>
         <li><strong>判定与预警同步</strong>碰撞、穿环与导航共用飞行轨迹，修复落地后误发滑翔奖励、下落贴近加速带漏触发；跃升建议考虑前方重力。</li>
         <li><strong>落地反馈更柔和</strong>飞船随着地力度轻微缓冲，俯仰平滑恢复，音效区分轻重；仪表显示上升、顶点与回落。暂停冻结，重飞清除；1.17.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>67 个版本</span></summary>
+      </article>
       <article><h3>v1.17.0 · 可控漂移与精细转弯设置</h3>
       <p>更容易收漂，变线弧度和横向手感可以细调。</p>
       <ul class="release-list">
@@ -606,7 +615,7 @@ export function mountReleases() {
     dialog.querySelector('#release-title').focus({ preventScroll: true });
     dialog.scrollTop = 0;
   });
-  document.querySelector('#close-releases').addEventListener('click', () => dialog.close());
+  for (const id of ['close-releases', 'close-releases-top']) document.getElementById(id).addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
     const target = returnFocus;
     returnFocus = null;

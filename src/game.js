@@ -13,7 +13,11 @@ export function isJumpReady(game) {
 }
 
 export function getJumpRingCue(game, distance) {
-  if (game.height > 0) return { action: 'airborne', text: game.height > 6.2 ? '高度偏高 · 等待回落' : '跃升中 · 对准环心' };
+  if (game.height > 0) {
+    if (game.speed < 1) return { action: 'airborne', text: '加速接近 · 注意回落高度' };
+    const height = verticalAt(game.course, game, game.distance + distance, distance / game.speed).height;
+    return { action: 'airborne', text: height < 2.8 ? '预计高度不足 · 本环可略过' : height > 6.2 ? '预计高度偏高 · 本环可略过' : '预计高度达标 · 对准环心' };
+  }
   if (game.jumpCooldown > 0) return { action: 'cooldown', text: `跃升冷却 ${game.jumpCooldown.toFixed(1)}s` };
   if (game.energy < PHYSICS.jumpCost) return { action: 'energy', text: '能量不足 · 本环可略过' };
   if (game.speed < 1) return { action: 'accelerate', text: '先加速接近，再跃升' };

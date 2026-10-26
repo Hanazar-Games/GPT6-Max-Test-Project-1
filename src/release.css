@@ -1,5 +1,6 @@
 .release-link { border: 0; background: transparent; color: #c6d5df; font: 10px var(--mono); padding: 10px 0 10px 12px; white-space: nowrap; }
 .release-link:hover { color: var(--orange); }
+#close-releases-top span { font-size: 24px; line-height: 1; }
 #releases h2 { margin-top: 22px; }
 .release-list, .release-history ul { padding-left: 18px; color: #acbfce; font-size: 12px; line-height: 1.9; }
 .release-list li { margin-bottom: 16px; }
