@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 导航、声音与公告修正</h2>
-      <p id="release-copy">空中穿环引导更准确，声音停止更平顺，长公告随时可关闭。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 机库响应与界面性能优化</h2>
+      <p id="release-copy">机库选择与筛选更轻快，长列表保持位置，键盘操作更连贯。</p>
+      <ul class="release-list">
+        <li><strong>机库卡片持续复用</strong>航线缩略图与飞船卡片只生成一次，换艇、换图和应用设置保留原卡片、键盘焦点与列表位置。</li>
+        <li><strong>筛选排序减少开销</strong>只更新变化的选中与显隐状态，排序只移动顺序变化的卡片；搜索、空结果与模式切换继续可用。</li>
+        <li><strong>配置更新更轻量</strong>文字与指南按变化更新，重复选择当前配置不再重建游戏和模型；1.18.1 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>69 个版本</span></summary>
+      <article><h3>v1.18.1 · 导航、声音与公告修正</h3>
+      <p>空中穿环引导更准确，声音停止更平顺，长公告随时可关闭。</p>
       <ul class="release-list">
         <li><strong>按到达高度提示穿环</strong>结合升降速度和前方重力，显示预计高度达标、不足或偏高，避免回落时仍被提示对准。</li>
         <li><strong>避免停止时音量突跳</strong>修复音符刚开始就暂停或静音时的短促音量尖峰，配乐与音效仍可独立调节。</li>
         <li><strong>长公告随时返回</strong>顶部关闭按钮在滚动历史时保持可见，关闭后恢复入口焦点；1.18.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>68 个版本</span></summary>
+      </article>
       <article><h3>v1.18.0 · 重力轨迹与柔和落地</h3>
       <p>跃升与下落更一致，高速穿越低重力区和着地过渡更自然。</p>
       <ul class="release-list">

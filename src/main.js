@@ -33,8 +33,7 @@ import { mountTrafficSettings } from './traffic-settings.js';
 import { mountTouchControls } from './touch-controls.js';
 import { mountDrivingSettings } from './driving-settings.js';
 import { setText, setHTML, setAttribute, setStyle, setHidden } from './hud.js';
-
-const routePreviews = new Map(MISSIONS.map(mission => [mission.id, createRoute(mission).getSpacedPoints(90)]));
+import { createSelectionList } from './selection-list.js';
 
 const icons = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -138,6 +137,7 @@ $('craft-options').insertAdjacentHTML('beforebegin', `
 `);
 $('result-details').insertAdjacentHTML('beforebegin', '<div id="environment-result" class="environment-result"></div>');
 const game = createGame();
+const optionViews = mountLoadoutOptions();
 const records = new Map();
 const fields = new Map();
 let mode = 'delivery';
@@ -197,89 +197,92 @@ const trafficSettings = mountTrafficSettings(trafficOptions, settings => {
   return false;
 });
 
-function updateLoadout() {
-  const { mission, craft } = game;
-  trafficSettings.updateMission(mission);
-  const scrollPositions = ['mission-options', 'craft-options'].map(id => $(id).scrollTop);
-  document.body.dataset.mode = mode;
-  document.body.dataset.biome = mission.biome;
-  document.documentElement.style.setProperty('--mission', mission.color);
-  $('mission-caption').textContent = mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mission.special ? `${mission.name} · ${mission.label}` : mission.name;
-  $('mission-number').textContent = mission.number;
-  $('spec-time').textContent = mission.endurance ? `${Math.floor(mission.duration / 60)}:${String(mission.duration % 60).padStart(2, '0')}` : mission.duration;
-  $('spec-time-unit').textContent = mission.endurance ? '分:秒' : '秒';
-  $('spec-length').textContent = (mission.length / 1000).toFixed(1);
-  $('loadout-mission').textContent = mode === 'cup' ? `月环大奖赛 · ${MISSIONS.length} 站征途` : mission.name;
-  $('loadout-craft').textContent = `${craft.model} ${craft.name} · ${craft.role}`;
-  $('scene-craft').textContent = `${craft.model} · ${craft.name}`;
-  $('region-label').textContent = mission.region;
-  $('planet-profile').textContent = `${mission.planet} / ${(mission.length / 1000).toFixed(1)} KM 山路`;
-  const best = records.get(flightKey(game));
-  $('session-best').textContent = best ? `会话最佳 ${best.score} 分 · 最快 ${best.time.toFixed(1)}s` : '新的航程，等你留下纪录。';
-  $('ghost-availability').textContent = best ? `幽灵已就绪 · ${best.time.toFixed(2)}s · 再次出发，挑战自己的最快航程。` : '此配置尚无幽灵。成功返航一次即可建立；纪录随页面刷新清空。';
-  if (mode === 'cup') {
-    $('session-best').textContent = `${MISSIONS.length} 站积分决胜 · 每站交付后晋级`;
-    $('ghost-availability').textContent = `同级竞速 · 迎光、钴蓝、余烬均驾驶${craft.name}。计时不含倒计时与暂停。`;
-  }
-  if (mode === 'expedition') {
-    $('mission-caption').textContent = '远征补给 · 让每一程都有收获';
-    $('loadout-mission').textContent = `远征补给 · ${MISSIONS.length} 站改装之旅`;
-    $('session-best').textContent = '沿途接委托 · 补给换升级 · 穿越星海';
-    $('ghost-availability').textContent = '远征独立计分，升级不影响普通航线纪录。进度仅保留到本次远征结束。';
-  }
-  $('cup-brief').hidden = mode !== 'cup';
-  $('expedition-brief').hidden = mode !== 'expedition';
-  $('mode-options').querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
-  document.querySelector('.hangar-columns .hangar-section-title').innerHTML = `<span>01</span> ${mode !== 'delivery' ? `${MISSIONS.length} 站航程 / 依次挑战` : '选择航线'}`;
-  document.querySelector('#open-hangar small').textContent = '选择模式、航线与悬浮艇';
-  if (world) $('start').innerHTML = `<span>${mode === 'cup' ? '出战月环大奖赛' : '开始飞行'}<small>${mode === 'cup' ? 'MANY WORLDS. ONE CHAMPION.' : 'LET’S MAKE A DELIVERY'}</small></span>${icon('arrow')}`;
-  if (world && mode === 'expedition') $('start').innerHTML = `<span>开启远征补给<small>DELIVER. UPGRADE. EXPLORE.</small></span>${icon('arrow')}`;
-  $('guide').querySelector('p').textContent = `在 ${mission.duration} 秒内完成 ${mission.name}，穿过 6 座导航门，带回至少 ${mission.cargo} 枚蓝色能量核心。`;
-  $('route-guide').textContent = {
-    boost: '本航线无障碍与陨石。全路宽加速带连续提供免费超频，保持低空接力；S 可制动。核心与导航门在中央，航道边缘仍会损伤艇体。',
-    hazard: '本航线没有加速带，密集岩障之间留有交替缺口，跟随蓝色核心横移避让；F 可跃过障碍，注意陨石红圈并为跃升保留能量。',
-    garden: '本航线无障碍与陨石。沿中央收集核心、通过导航门，绿色加速带提供短时免费冲刺；航道边缘仍会损伤艇体。',
-  }[mission.special] ?? '绿色加速带提供免费超频，F 可跃过障碍；留意岩石、巡逻机和陨石预警。';
-  if (mission.bridges.length) $('route-guide').textContent += ` 本航线长 ${mission.length / 1000} 公里，沿途有 ${mission.bridges.length} 座斜拉桥、悬索桥与峡谷高架桥；上下山与桥面均需主动驾驶，桥上保留障碍与导航门。`;
-  if (mission.tour) $('route-guide').textContent += ' 本线道具自动拾取：蓝色护盾 12 秒内挡一次撞击；紫色磁吸持续 8 秒；绿色维修恢复 35 装甲、30 能量。金色极速环需低空达到巡航速度的 90%，紫色跃升环需在 F 跃升后以 2.8–6.2 米高度穿过；左右容差 3.5 米。挑战环只奖分与能量，连续命中加分，漏环或受撞中断连锁，不影响交付晋级。';
-  if (mission.advanced) $('route-guide').textContent += ' 进阶补给：黄色电池恢复 60 能量，橙色超频提供 5 秒免费冲刺，可制动，受损或漏门解除。青色精准环需低于 2.3 米、达到巡航速度的 90%，偏离环心小于 1.5 米；命中奖励 450 分，成功交付且命中三次可获「定心领航」。';
-  if (mission.tour) $('route-guide').textContent += ' 临近挑战环时，方向提示按当前速度与松开转向后的惯性预估横向位置；加速、制动或继续转向会改变结果，高度与速度仍需满足穿环要求。';
-  const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
-  $('guide').querySelector('.environment-guide').hidden = !meteors && !gravity;
-  $('meteor-help').hidden = !meteors;
-  $('gravity-help').hidden = !gravity;
+function mountLoadoutOptions() {
   $('mission-options').innerHTML = MISSIONS.map(option => {
-    const preview = routePreviews.get(option.id);
+    const preview = createRoute(option).getSpacedPoints(90);
     const xs = preview.map(point => point.x), zs = preview.map(point => point.z);
     const minX = Math.min(...xs), minZ = Math.min(...zs);
     const scale = Math.min(85 / (Math.max(...xs) - minX), 45 / (Math.max(...zs) - minZ));
     const points = preview.map(({ x, z }) => `${5 + (x - minX) * scale},${5 + (z - minZ) * scale}`).join(' ');
-    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="${option.id === mission.id}" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ` <i>·</i> ${minimumDriveLabel(option)}` : ''}${option.bridges.length ? ` <i>·</i> ${option.bridges.length} 座桥` : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
+    return `<button class="mission-option" data-mission="${option.id}" aria-pressed="false" style="--choice:${option.color}"><span class="option-index">${option.number}</span><div><span class="option-label">${option.planet} / ${option.layout} · ${option.endurance ? '长途 / ' : ''}${option.label}</span><strong>${option.name}</strong><p>${option.description}</p><small>${option.duration} 秒 <i>·</i> ${(option.length / 1000).toFixed(1)} 公里 <i>·</i> ${option.cargo} 枚核心${option.endurance ? ` <i>·</i> ${minimumDriveLabel(option)}` : ''}${option.bridges.length ? ` <i>·</i> ${option.bridges.length} 座桥` : ''}</small></div><svg viewBox="0 0 95 55" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="selection-check">✓</span></button>`;
   }).join('');
-  document.querySelectorAll('[data-mission]').forEach(button => { button.disabled = mode !== 'delivery'; });
-  $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="${option.id === craft.id}" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / Math.max(...CRAFTS.map(craft => craft.boostSpeed)) * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / Math.max(...CRAFTS.map(craft => craft.hull)) * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / Math.max(...CRAFTS.map(craft => craft.handling)) * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
+  const maxima = Object.fromEntries(['boostSpeed', 'hull', 'handling'].map(key => [key, Math.max(...CRAFTS.map(craft => craft[key]))]));
+  $('craft-options').innerHTML = CRAFTS.map(option => `<button class="craft-option" data-craft="${option.id}" aria-pressed="false" style="--choice:${option.color}">${craftIcon(option.id)}<div class="craft-option-copy"><span class="option-label">${option.model} / ${option.role}</span><strong>${option.name}</strong><p>${option.description}</p><small class="craft-energy">巡航 ${Math.round(option.speed * 3.6)} km/h · 充能 ${option.recharge}/s</small><div class="craft-stats"><span>极速 <b>${Math.round(option.boostSpeed * 3.6)}</b><i style="--stat:${option.boostSpeed / maxima.boostSpeed * 100}%"></i></span><span>装甲 <b>${option.hull}</b><i style="--stat:${option.hull / maxima.hull * 100}%"></i></span><span>机动 <b>${option.handling}</b><i style="--stat:${option.handling / maxima.handling * 100}%"></i></span></div></div><span class="selection-check">✓</span></button>`).join('');
+  return { missions: createSelectionList($('mission-options'), 'mission'), crafts: createSelectionList($('craft-options'), 'craft') };
+}
+
+function updateLoadout() {
+  const { mission, craft } = game;
+  trafficSettings.updateMission(mission);
+  setAttribute(document.body, 'data-mode', mode);
+  setAttribute(document.body, 'data-biome', mission.biome);
+  setStyle(document.documentElement, '--mission', mission.color);
+  setText($('mission-caption'), mode === 'cup' ? '月环大奖赛 · 向冠军出发' : mode === 'expedition' ? '远征补给 · 让每一程都有收获' : mission.special ? `${mission.name} · ${mission.label}` : mission.name);
+  setText($('mission-number'), mission.number);
+  setText($('spec-time'), mission.endurance ? `${Math.floor(mission.duration / 60)}:${String(mission.duration % 60).padStart(2, '0')}` : mission.duration);
+  setText($('spec-time-unit'), mission.endurance ? '分:秒' : '秒');
+  setText($('spec-length'), (mission.length / 1000).toFixed(1));
+  setText($('loadout-mission'), mode === 'cup' ? `月环大奖赛 · ${MISSIONS.length} 站征途` : mode === 'expedition' ? `远征补给 · ${MISSIONS.length} 站改装之旅` : mission.name);
+  setText($('loadout-craft'), `${craft.model} ${craft.name} · ${craft.role}`);
+  setText($('scene-craft'), `${craft.model} · ${craft.name}`);
+  setText($('region-label'), mission.region);
+  setText($('planet-profile'), `${mission.planet} / ${(mission.length / 1000).toFixed(1)} KM 山路`);
+  const best = records.get(flightKey(game));
+  let bestLabel = best ? `会话最佳 ${best.score} 分 · 最快 ${best.time.toFixed(1)}s` : '新的航程，等你留下纪录。';
+  let ghostLabel = best ? `幽灵已就绪 · ${best.time.toFixed(2)}s · 再次出发，挑战自己的最快航程。` : '此配置尚无幽灵。成功返航一次即可建立；纪录随页面刷新清空。';
+  if (mode === 'cup') {
+    bestLabel = `${MISSIONS.length} 站积分决胜 · 每站交付后晋级`;
+    ghostLabel = `同级竞速 · 迎光、钴蓝、余烬均驾驶${craft.name}。计时不含倒计时与暂停。`;
+  }
+  if (mode === 'expedition') {
+    bestLabel = '沿途接委托 · 补给换升级 · 穿越星海';
+    ghostLabel = '远征独立计分，升级不影响普通航线纪录。进度仅保留到本次远征结束。';
+  }
+  setText($('session-best'), bestLabel);
+  setText($('ghost-availability'), ghostLabel);
+  setHidden($('cup-brief'), mode !== 'cup');
+  setHidden($('expedition-brief'), mode !== 'expedition');
+  $('mode-options').querySelectorAll('[data-mode]').forEach(button => setAttribute(button, 'aria-pressed', button.dataset.mode === mode));
+  setHTML(document.querySelector('.hangar-columns .hangar-section-title'), `<span>01</span> ${mode !== 'delivery' ? `${MISSIONS.length} 站航程 / 依次挑战` : '选择航线'}`);
+  setText(document.querySelector('#open-hangar small'), '选择模式、航线与悬浮艇');
+  if (world) setHTML($('start'), `<span>${mode === 'cup' ? '出战月环大奖赛' : mode === 'expedition' ? '开启远征补给' : '开始飞行'}<small>${mode === 'cup' ? 'MANY WORLDS. ONE CHAMPION.' : mode === 'expedition' ? 'DELIVER. UPGRADE. EXPLORE.' : 'LET’S MAKE A DELIVERY'}</small></span>${icon('arrow')}`);
+  setText($('guide-copy'), `在 ${mission.duration} 秒内完成 ${mission.name}，穿过 6 座导航门，带回至少 ${mission.cargo} 枚蓝色能量核心。`);
+  let routeGuide = {
+    boost: '本航线无障碍与陨石。全路宽加速带连续提供免费超频，保持低空接力；S 可制动。核心与导航门在中央，航道边缘仍会损伤艇体。',
+    hazard: '本航线没有加速带，密集岩障之间留有交替缺口，跟随蓝色核心横移避让；F 可跃过障碍，注意陨石红圈并为跃升保留能量。',
+    garden: '本航线无障碍与陨石。沿中央收集核心、通过导航门，绿色加速带提供短时免费冲刺；航道边缘仍会损伤艇体。',
+  }[mission.special] ?? '绿色加速带提供免费超频，F 可跃过障碍；留意岩石、巡逻机和陨石预警。';
+  if (mission.bridges.length) routeGuide += ` 本航线长 ${mission.length / 1000} 公里，沿途有 ${mission.bridges.length} 座斜拉桥、悬索桥与峡谷高架桥；上下山与桥面均需主动驾驶，桥上保留障碍与导航门。`;
+  if (mission.tour) routeGuide += ' 本线道具自动拾取：蓝色护盾 12 秒内挡一次撞击；紫色磁吸持续 8 秒；绿色维修恢复 35 装甲、30 能量。金色极速环需低空达到巡航速度的 90%，紫色跃升环需在 F 跃升后以 2.8–6.2 米高度穿过；左右容差 3.5 米。挑战环只奖分与能量，连续命中加分，漏环或受撞中断连锁，不影响交付晋级。';
+  if (mission.advanced) routeGuide += ' 进阶补给：黄色电池恢复 60 能量，橙色超频提供 5 秒免费冲刺，可制动，受损或漏门解除。青色精准环需低于 2.3 米、达到巡航速度的 90%，偏离环心小于 1.5 米；命中奖励 450 分，成功交付且命中三次可获「定心领航」。';
+  if (mission.tour) routeGuide += ' 临近挑战环时，方向提示按当前速度与松开转向后的惯性预估横向位置；加速、制动或继续转向会改变结果，高度与速度仍需满足穿环要求。';
+  setText($('route-guide'), routeGuide);
+  const meteors = game.course.meteors.length > 0, gravity = game.course.gravityZones.length > 0;
+  setHidden($('guide').querySelector('.environment-guide'), !meteors && !gravity);
+  setHidden($('meteor-help'), !meteors);
+  setHidden($('gravity-help'), !gravity);
   const estimate = mission.special === 'boost' ? `持续加速约 ${(mission.length / craft.boostSpeed / 60).toFixed(1)} 分钟` : mission.endurance ? `用时参考 ${(mission.length / craft.boostSpeed / 60).toFixed(1)}–${Math.ceil(mission.length / craft.speed / 60)} 分钟` : `建议用时 ${mission.par}s`;
-  $('hangar-summary').innerHTML = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${estimate}</small>`;
-  if (mode === 'cup') $('hangar-summary').innerHTML = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
-  if (mode === 'expedition') $('hangar-summary').innerHTML = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
+  let summary = `<span>${mission.name} <b>×</b> ${craft.name}</span><small>穿过 6 座导航门 · 收集 ${mission.cargo} 枚核心 · ${estimate}</small>`;
+  if (mode === 'cup') summary = `<span>月环大奖赛 <b>×</b> ${craft.name}</span><small>${(MISSIONS.reduce((sum, item) => sum + item.length, 0) / 1000).toFixed(1)} 公里 · ${MISSIONS.length * 6} 座导航门 · 同款飞船完成 ${MISSIONS.length} 站</small>`;
+  if (mode === 'expedition') summary = `<span>远征补给 <b>×</b> ${craft.name}</span><small>${MISSIONS.length * 3} 项沿途委托 · ${MISSIONS.length - 1} 次中途改装 · 每项升级最多两级</small>`;
+  setHTML($('hangar-summary'), summary);
   updateMissionCatalogue();
   updateCraftCatalogue();
-  ['mission-options', 'craft-options'].forEach((id, index) => { $(id).scrollTop = scrollPositions[index]; });
 }
 
 function updateMissionCatalogue() {
   const search = $('mission-search');
-  search.disabled = mode !== 'delivery';
+  if (search.disabled !== (mode !== 'delivery')) search.disabled = mode !== 'delivery';
   const category = search.disabled ? 'all' : missionCategory;
   for (const button of $('mission-categories').children) {
-    button.disabled = search.disabled;
-    button.setAttribute('aria-pressed', String(button.dataset.category === category));
+    if (button.disabled !== search.disabled) button.disabled = search.disabled;
+    setAttribute(button, 'aria-pressed', button.dataset.category === category);
   }
   const visible = new Set(filterMissions(search.disabled ? '' : search.value, category).map(mission => mission.id));
-  for (const button of $('mission-options').children) button.hidden = !visible.has(button.dataset.mission);
-  $('mission-count').textContent = search.disabled ? `${MISSIONS.length} 条航线 · 按顺序挑战，航线筛选暂不可用` : `${visible.size} / ${MISSIONS.length} 条航线 · 已选${game.mission.planet}${visible.has(game.mission.id) ? '' : '（筛选外）'}`;
-  $('mission-empty').hidden = visible.size > 0;
-  $('reset-missions').hidden = search.disabled || (category === 'all' && !search.value.trim());
+  optionViews.missions.update({ selectedId: game.mission.id, visibleIds: visible, disabled: search.disabled });
+  setText($('mission-count'), search.disabled ? `${MISSIONS.length} 条航线 · 按顺序挑战，航线筛选暂不可用` : `${visible.size} / ${MISSIONS.length} 条航线 · 已选${game.mission.planet}${visible.has(game.mission.id) ? '' : '（筛选外）'}`);
+  setHidden($('mission-empty'), visible.size > 0);
+  setHidden($('reset-missions'), search.disabled || (category === 'all' && !search.value.trim()));
 }
 
 function syncPerformanceSettings() {
@@ -311,12 +314,10 @@ function applyCustomPerformance() {
 function updateCraftCatalogue() {
   const crafts = filterCrafts($('craft-search').value, $('craft-sort').value);
   const visible = new Set(crafts.map(craft => craft.id));
-  const buttons = new Map([...$('craft-options').children].map(button => [button.dataset.craft, button]));
-  for (const [id, button] of buttons) button.hidden = !visible.has(id);
-  for (const craft of crafts) $('craft-options').append(buttons.get(craft.id));
-  $('craft-count').textContent = `${crafts.length} / ${CRAFTS.length} 款飞船 · 已选${game.craft.name}${visible.has(game.craft.id) ? '' : '（筛选外）'}`;
-  $('craft-empty').hidden = crafts.length > 0;
-  $('reset-crafts').hidden = !$('craft-search').value.trim() && $('craft-sort').value === 'catalogue';
+  optionViews.crafts.update({ selectedId: game.craft.id, visibleIds: visible, order: filterCrafts('', $('craft-sort').value).map(craft => craft.id) });
+  setText($('craft-count'), `${crafts.length} / ${CRAFTS.length} 款飞船 · 已选${game.craft.name}${visible.has(game.craft.id) ? '' : '（筛选外）'}`);
+  setHidden($('craft-empty'), crafts.length > 0);
+  setHidden($('reset-crafts'), !$('craft-search').value.trim() && $('craft-sort').value === 'catalogue');
 }
 
 function showError(message) {
@@ -884,7 +885,7 @@ $('reset-crafts').addEventListener('click', () => {
 });
 $('mode-options').addEventListener('click', event => {
   const button = event.target.closest('[data-mode]');
-  if (!button || game.status !== 'menu') return;
+  if (!button || game.status !== 'menu' || button.dataset.mode === mode) return;
   mode = button.dataset.mode;
   configure(mode !== 'delivery' ? MISSIONS[0].id : game.mission.id, game.craft.id);
 });
@@ -897,11 +898,17 @@ for (const button of [$('ghost-toggle'), $('ghost-toggle-guide')]) button.addEve
 });
 $('mission-options').addEventListener('click', event => {
   const option = event.target.closest('[data-mission]');
-  if (option && mode === 'delivery') { configure(option.dataset.mission, game.craft.id); document.querySelector(`[data-mission="${game.mission.id}"]`).focus({ preventScroll: true }); }
+  if (option && mode === 'delivery') {
+    if (option.dataset.mission !== game.mission.id) configure(option.dataset.mission, game.craft.id);
+    option.focus({ preventScroll: true });
+  }
 });
 $('craft-options').addEventListener('click', event => {
   const option = event.target.closest('[data-craft]');
-  if (option) { configure(game.mission.id, option.dataset.craft); document.querySelector(`[data-craft="${game.craft.id}"]`).focus({ preventScroll: true }); }
+  if (option) {
+    if (option.dataset.craft !== game.craft.id) configure(game.mission.id, option.dataset.craft);
+    option.focus({ preventScroll: true });
+  }
 });
 $('next-mission').addEventListener('click', () => {
   const next = MISSIONS[MISSIONS.findIndex(mission => mission.id === game.mission.id) + 1];

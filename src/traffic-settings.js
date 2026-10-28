@@ -71,5 +71,5 @@ export function mountTrafficSettings(settings, onApply) {
   $('apply-traffic').addEventListener('click', apply);
   $('reset-traffic').addEventListener('click', () => { draft = JSON.parse(applied); render(); });
   render();
-  return { apply, updateMission(value) { mission = value; render(); } };
+  return { apply, updateMission(value) { if (mission === value) return; mission = value; render(); } };
 }
