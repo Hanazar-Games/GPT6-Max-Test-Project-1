@@ -3,8 +3,8 @@ import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, meteorState, meteorContact, getMeteorCue } from './environment.js';
 import { VERTICAL_PHYSICS, verticalAt, flightHeight } from './vertical-motion.js';
 import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
-import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral } from './flight-motion.js';
-import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficDistance } from './traffic.js';
+import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral, forwardMotion } from './flight-motion.js';
+import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficPose } from './traffic.js';
 
 export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
 
@@ -34,9 +34,10 @@ export function createGame(missionId = 'tranquility', craftId = 'scout', levels 
   const upgrades = upgradeLevels(levels);
   const craft = upgradeCraft(base, upgrades);
   const trafficSettings = normalizeTrafficSettings(trafficOptions);
+  const course = makeCourse(mission);
   return {
     mission, craft, upgrades, trafficSettings, drivingSettings: normalizeDrivingSettings(drivingOptions),
-    course: { ...makeCourse(mission), traffic: makeTraffic(mission, trafficSettings) },
+    course: { ...course, traffic: makeTraffic(mission, trafficSettings, course.obstacles) },
     status: 'menu', previousStatus: 'running', countdown: 3,
     distance: 0, lane: 0, lateralSpeed: 0, speed: 0,
     time: mission.duration, hull: craft.hull, energy: 100, boosting: false, boostLocked: false,
@@ -87,15 +88,25 @@ function impact(game, damage, source = 'obstacle') {
 }
 
 export function obstacleLane(obstacle, elapsed) {
+  if (obstacle.kind === 'traffic') return trafficPose(obstacle, elapsed).lane;
   return obstacle.kind === 'drone' ? Math.sin(elapsed * obstacle.frequency + obstacle.phase) * 10 : obstacle.lane;
 }
 
 function courseContact(course, obstacle, before, after, forward = obstacle.kind === 'traffic' ? obstacle.length / 2 + 3 : 3, lateral = obstacle.radius + 1.1) {
-  const distanceAt = time => obstacle.kind === 'traffic' ? trafficDistance(obstacle, time) : obstacle.distance;
   let entry = 0;
   let exit = 1;
-  const intervals = [
-    [before.distance - distanceAt(before.elapsed), after.distance - distanceAt(after.elapsed), forward],
+  let intervals;
+  if (obstacle.kind === 'traffic') {
+    const relative = craft => {
+      const pose = trafficPose(obstacle, craft.elapsed), cos = 1 / Math.hypot(1, pose.slope), sin = pose.slope * cos;
+      const distance = craft.distance - pose.distance, lane = craft.lane - pose.lane;
+      return { forward: distance * cos + lane * sin, lateral: lane * cos - distance * sin,
+        length: obstacle.length / 2 + 3 * cos + 1.1 * Math.abs(sin), width: obstacle.radius + 1.1 * cos + 3 * Math.abs(sin) };
+    };
+    const start = relative(before), end = relative(after);
+    intervals = [[start.forward, end.forward, Math.max(start.length, end.length)], [start.lateral, end.lateral, Math.max(start.width, end.width)]];
+  } else intervals = [
+    [before.distance - obstacle.distance, after.distance - obstacle.distance, forward],
     [before.lane - obstacleLane(obstacle, before.elapsed), after.lane - obstacleLane(obstacle, after.elapsed), lateral],
   ];
   for (const [start, end, radius] of intervals) {
@@ -233,7 +244,8 @@ export function updateGame(game, input, delta) {
   game.boosting = !input.brake && (manualBoost || freeBoost);
   const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
   const acceleration = input.brake ? 260 : targetSpeed > game.speed ? (game.boosting ? 210 : 130) : 48;
-  game.speed += Math.sign(targetSpeed - game.speed) * Math.min(Math.abs(targetSpeed - game.speed), acceleration * dt);
+  const forward = forwardMotion(game.speed, targetSpeed, acceleration, dt);
+  game.speed = forward.speed;
   game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
 
   advanceLateral(game, input, dt);
@@ -245,7 +257,7 @@ export function updateGame(game, input, delta) {
   if (game.status === 'lost') return;
 
   const before = game.distance;
-  game.distance = Math.min(game.mission.length, game.distance + game.speed * dt);
+  game.distance = Math.min(game.mission.length, game.distance + forward.distance);
   const motion = verticalAt(game.course, previous, game.distance, dt);
   game.height = motion.height;
   game.verticalSpeed = motion.verticalSpeed;

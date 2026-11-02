@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 机库响应与界面性能优化</h2>
-      <p id="release-copy">机库选择与筛选更轻快，长列表保持位置，键盘操作更连贯。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 车流绕障与前进物理优化</h2>
+      <p id="release-copy">道路车流会提前平滑绕障，飞船起步和停车距离更一致。</p>
+      <ul class="release-list">
+        <li><strong>车流提前绕过岩石</strong>保持车距，优先向路肩平滑避让，车尾通过后再回到车道；模型朝向、碰撞与预警同步。</li>
+        <li><strong>加减速位移更准确</strong>按完整加速和制动过程计算距离，正确衔接巡航、冲刺与停止；保留极速、漂移和重力参数。</li>
+        <li><strong>电脑驾驶预判更完整</strong>考虑相遇时的车道、转弯宽度、漂移和高度，必要时制动；1.18.2 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>70 个版本</span></summary>
+      <article><h3>v1.18.2 · 机库响应与界面性能优化</h3>
+      <p>机库选择与筛选更轻快，长列表保持位置，键盘操作更连贯。</p>
       <ul class="release-list">
         <li><strong>机库卡片持续复用</strong>航线缩略图与飞船卡片只生成一次，换艇、换图和应用设置保留原卡片、键盘焦点与列表位置。</li>
         <li><strong>筛选排序减少开销</strong>只更新变化的选中与显隐状态，排序只移动顺序变化的卡片；搜索、空结果与模式切换继续可用。</li>
         <li><strong>配置更新更轻量</strong>文字与指南按变化更新，重复选择当前配置不再重建游戏和模型；1.18.1 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>69 个版本</span></summary>
+      </article>
       <article><h3>v1.18.1 · 导航、声音与公告修正</h3>
       <p>空中穿环引导更准确，声音停止更平顺，长公告随时可关闭。</p>
       <ul class="release-list">

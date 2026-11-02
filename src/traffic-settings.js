@@ -7,7 +7,7 @@ export function mountTrafficSettings(settings, onApply) {
     <details id="traffic-settings" class="traffic-settings">
       <summary>道路 NPC 交通 <span id="traffic-summary"></span></summary>
       <div class="traffic-content">
-        <p>勾选允许出现的车型，拖动比例后，其余已选车型自动分配剩余份额，总计 100%；比例为 0 时取消该车型。车辆沿两侧车道行驶，会发生碰撞。</p>
+        <p>勾选允许出现的车型，拖动比例后，其余已选车型自动分配剩余份额，总计 100%；比例为 0 时取消该车型。车辆保持间距，提前平滑绕过路侧岩石，再回到车道；仍会与飞船碰撞。</p>
         <label class="traffic-density" for="traffic-density">车流密度 <output id="traffic-density-value" for="traffic-density"></output></label>
         <input id="traffic-density" type="range" min="0" max="12" step="1" aria-describedby="traffic-status">
         <fieldset><legend>车型与生成比例</legend>${Object.entries(TRAFFIC_TYPES).map(([type, { name }]) => `

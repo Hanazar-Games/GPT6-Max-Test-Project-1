@@ -2,9 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { TrafficView, makeTrafficModel } from '../src/traffic-view.js';
-import { TRAFFIC_TYPES, TRAFFIC_ROAD_HEIGHT, makeTraffic } from '../src/traffic.js';
+import { TRAFFIC_TYPES, TRAFFIC_ROAD_HEIGHT, makeTraffic, trafficPose, TRAFFIC_SPEED } from '../src/traffic.js';
 import { createGame } from '../src/game.js';
 import { World } from '../src/world.js';
+
+test('turning trucks face their actual lane trajectory and retain the same pose while paused', () => {
+  const world = Object.assign(Object.create(World.prototype), { scene: new THREE.Scene(), renderer: { renderLists: { dispose() {} } },
+    frame: (distance, lane, height) => ({ point: new THREE.Vector3(-lane, height, distance), right: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0), tangent: new THREE.Vector3(0, 0, 1) }) });
+  const game = createGame(), rock = { distance: 500, lane: 11, radius: 2.8, kind: 'rock' };
+  const vehicle = makeTraffic(game.mission, { density: 12, mix: { semi: 100 } }, [rock]).find(vehicle => vehicle.lane === 11);
+  game.course.traffic = [vehicle];
+  game.elapsed = (415 - vehicle.distance) / TRAFFIC_SPEED;
+  game.distance = 375;
+  const pose = trafficPose(vehicle, game.elapsed), view = new TrafficView(world, game), matrix = new THREE.Matrix4();
+  try {
+    view.render(game);
+    const mesh = view.batches.find(batch => batch.type === 'semi').meshes[0].mesh;
+    assert.equal(mesh.count, 1);
+    mesh.getMatrixAt(0, matrix);
+    assert.ok(Math.abs(matrix.elements[12] + pose.lane) < 1e-5);
+    assert.ok(Math.abs(matrix.elements[8] + pose.slope / Math.hypot(1, pose.slope)) < 1e-7);
+    assert.ok(Math.abs(matrix.elements[10] - 1 / Math.hypot(1, pose.slope)) < 1e-7);
+    const version = mesh.instanceMatrix.version;
+    game.status = 'paused'; view.render(game);
+    assert.equal(mesh.instanceMatrix.version, version);
+  } finally { world.clearScene(); }
+});
 
 test('NPC models retain distinct vehicle dimensions, grounded wheels and a bounded material budget', () => {
   for (const [type, spec] of Object.entries(TRAFFIC_TYPES)) {

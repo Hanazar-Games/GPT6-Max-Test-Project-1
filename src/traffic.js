@@ -1,4 +1,5 @@
 import { firstAtOrAfter } from './route-rewards.js';
+import { createTrafficPaths, sampleTrafficPath } from './traffic-path.js';
 
 export const TRAFFIC_SPEED = 24;
 export const TRAFFIC_ROAD_HEIGHT = -.36;
@@ -42,18 +43,24 @@ export function setTrafficShare(settings, type, value) {
 export const trafficAllowed = mission => !mission.special || mission.special === 'hazard';
 export const trafficKey = ({ density, mix } = DEFAULT_TRAFFIC_SETTINGS) => density && (mix.car || mix.van || mix.truck || mix.semi) ? `${density}:${mix.car}:${mix.van}:${mix.truck}:${mix.semi}` : 'off';
 export const trafficDistance = (vehicle, elapsed) => vehicle.distance + (elapsed - (vehicle.at ?? 0)) * TRAFFIC_SPEED;
+export function trafficPose(vehicle, elapsed) {
+  const distance = trafficDistance(vehicle, elapsed);
+  return { distance, ...sampleTrafficPath(vehicle.path, distance, vehicle.lane) };
+}
 
-export function makeTraffic(mission, settings) {
+export function makeTraffic(mission, settings, obstacles = []) {
   const { density, mix } = normalizeTrafficSettings(settings);
   const count = Math.floor(mission.length * density / 1000);
   if (!trafficAllowed(mission) || !count || !Object.values(mix).some(Boolean)) return [];
+  const paths = createTrafficPaths(obstacles, mission.length);
   let seed = (mission.seed ^ 0x7a3f215b) >>> 0;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const fleet = Object.entries(allocate(mix, count)).flatMap(([type, count]) => Array(count).fill(type));
   for (let i = fleet.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [fleet[i], fleet[j]] = [fleet[j], fleet[i]]; }
   return fleet.map((type, id) => ({ ...TRAFFIC_TYPES[type], id, type, kind: 'traffic',
     radius: TRAFFIC_TYPES[type].width / 2, clearance: TRAFFIC_TYPES[type].height + TRAFFIC_ROAD_HEIGHT - 1.3,
-    distance: (id + .5 + (random() - .5) * .3) * mission.length / count, lane: id % 2 ? 11 : -11, tint: Math.floor(random() * 6) }));
+    distance: (id + .5 + (random() - .5) * .3) * mission.length / count, lane: id % 2 ? 11 : -11,
+    path: paths.get(id % 2 ? 11 : -11), tint: Math.floor(random() * 6) }));
 }
 
 export function trafficNear(vehicles = [], elapsed, length, from, to) {
@@ -62,7 +69,8 @@ export function trafficNear(vehicles = [], elapsed, length, from, to) {
   for (let lap = Math.floor(start / length); lap <= Math.floor(end / length); lap++) {
     const offset = lap * length;
     for (let i = firstAtOrAfter(vehicles, Math.max(0, start - offset)); i < vehicles.length && vehicles[i].distance <= end - offset; i++) {
-      result.push({ ...vehicles[i], distance: vehicles[i].distance + offset + travel, at: elapsed });
+      const distance = vehicles[i].distance + offset + travel;
+      result.push({ ...vehicles[i], distance, at: elapsed, ...sampleTrafficPath(vehicles[i].path, distance, vehicles[i].lane) });
     }
   }
   return result;

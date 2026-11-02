@@ -102,7 +102,9 @@ export class TrafficView {
         this.sphere.center.copy(frame.point).addScaledVector(frame.up, vehicle.height / 2);
         this.sphere.radius = Math.hypot(vehicle.width, vehicle.height, vehicle.length) / 2;
         if (this.world.viewFrustum && !this.world.viewFrustum.intersectsSphere(this.sphere)) continue;
-        this.transform.position.copy(frame.point); this.world.orient(this.transform, frame); this.transform.updateMatrix();
+        this.transform.position.copy(frame.point); this.world.orient(this.transform, frame);
+        this.transform.rotateY(-Math.atan(vehicle.slope));
+        this.transform.updateMatrix();
         transforms.setMatrixAt(count, this.transform.matrix);
         if (tints[count] !== vehicle.tint) {
           paint.setColorAt(count, this.color.set(this.palette[vehicle.tint]));

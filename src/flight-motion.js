@@ -32,6 +32,12 @@ export function normalizeDrivingSettings(settings = {}) {
 export const drivingKey = settings => drivingSignatures.get(settings) ?? drivingKey(normalizeDrivingSettings(settings));
 export const steeringResponse = game => STEERING_RESPONSE / game.drivingSettings.turnRadius;
 
+export function forwardMotion(speed, target, acceleration, dt) {
+  const ramp = Math.min(dt, Math.abs(target - speed) / acceleration);
+  const change = Math.sign(target - speed) * acceleration;
+  return { speed: speed + change * ramp, distance: speed * ramp + change * ramp ** 2 / 2 + target * (dt - ramp) };
+}
+
 function integrate(game, target, response, dt) {
   const change = -Math.expm1(-response * dt), initial = game.lateralSpeed;
   game.lane += target * dt + (initial - target) * change / response;
