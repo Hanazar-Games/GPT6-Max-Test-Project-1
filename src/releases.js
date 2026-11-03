@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 车流绕障与前进物理优化</h2>
-      <p id="release-copy">道路车流会提前平滑绕障，飞船起步和停车距离更一致。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 驾驶设置与操作体验优化</h2>
+      <p id="release-copy">驾驶参数更容易细调，草稿可撤销，键盘与手机操作更连贯。</p>
+      <ul class="release-list">
+        <li><strong>草稿随时撤销</strong>显示待应用项数，可返回上次应用的配置；恢复默认仍需确认，未修改时避免重复应用。</li>
+        <li><strong>精确输入更顺手</strong>保留正在键入的小数，离开输入框后校准；展示范围与步进，手机使用对应数字键盘，空值会提示补全。</li>
+        <li><strong>操作反馈更清楚</strong>应用、撤销与恢复默认后保持可见焦点；飞行中保存仍于重飞或下一站生效，1.19.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>71 个版本</span></summary>
+      <article><h3>v1.19.0 · 车流绕障与前进物理优化</h3>
+      <p>道路车流会提前平滑绕障，飞船起步和停车距离更一致。</p>
       <ul class="release-list">
         <li><strong>车流提前绕过岩石</strong>保持车距，优先向路肩平滑避让，车尾通过后再回到车道；模型朝向、碰撞与预警同步。</li>
         <li><strong>加减速位移更准确</strong>按完整加速和制动过程计算距离，正确衔接巡航、冲刺与停止；保留极速、漂移和重力参数。</li>
         <li><strong>电脑驾驶预判更完整</strong>考虑相遇时的车道、转弯宽度、漂移和高度，必要时制动；1.18.2 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>70 个版本</span></summary>
+      </article>
       <article><h3>v1.18.2 · 机库响应与界面性能优化</h3>
       <p>机库选择与筛选更轻快，长列表保持位置，键盘操作更连贯。</p>
       <ul class="release-list">
