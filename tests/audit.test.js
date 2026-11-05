@@ -261,7 +261,7 @@ test('manual boost resumes its energy cost after a pad expires', () => {
   updateGame(game, { boost: true }, 1 / 60);
   assert.equal(game.padBoost, 0);
   assert.equal(game.boosting, true);
-  assert.equal(game.energy, 40 - 25 / 60);
+  assert.equal(game.energy, 40 + game.craft.recharge * .01 - 25 * (1 / 60 - .01));
 });
 
 test('braking on a powered pad slows the craft without consuming boost energy', () => {

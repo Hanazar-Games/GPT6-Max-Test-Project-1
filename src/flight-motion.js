@@ -31,11 +31,45 @@ export function normalizeDrivingSettings(settings = {}) {
 
 export const drivingKey = settings => drivingSignatures.get(settings) ?? drivingKey(normalizeDrivingSettings(settings));
 export const steeringResponse = game => STEERING_RESPONSE / game.drivingSettings.turnRadius;
+const TIME_EPSILON = 1e-12;
+const remainingTime = (duration, elapsed) => duration > elapsed + TIME_EPSILON ? duration - elapsed : 0;
 
 export function forwardMotion(speed, target, acceleration, dt) {
   const ramp = Math.min(dt, Math.abs(target - speed) / acceleration);
   const change = Math.sign(target - speed) * acceleration;
   return { speed: speed + change * ramp, distance: speed * ramp + change * ramp ** 2 / 2 + target * (dt - ramp) };
+}
+
+function propel(game, input, boosting, dt) {
+  const target = input.brake ? 0 : boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
+  const acceleration = input.brake ? 260 : target > game.speed ? (boosting ? 210 : 130) : 48;
+  const motion = forwardMotion(game.speed, target, acceleration, dt);
+  game.speed = motion.speed;
+  return motion.distance;
+}
+
+export function advancePropulsion(game, input, dt) {
+  if (!(dt > 0)) return 0;
+  if (!input.boost || input.boostReleased) game.boostLocked = false;
+  if (input.boost && game.energy <= 1) game.boostLocked = true;
+  const freeTime = input.brake ? 0 : Math.min(dt, Math.max(game.padBoost, game.overdriveTime));
+  let distance = freeTime > 0 ? propel(game, input, true, freeTime) : 0;
+  game.energy = Math.min(100, game.energy + game.craft.recharge * freeTime);
+  let remaining = remainingTime(dt, freeTime);
+  if (remaining > 0 && input.boost && !input.brake && !game.boostLocked && game.energy > 1) {
+    const available = (game.energy - 1) / 25;
+    const manualTime = Math.min(remaining, available);
+    distance += propel(game, input, true, manualTime);
+    game.energy -= 25 * manualTime;
+    if (available <= remaining + TIME_EPSILON) { game.energy = 1; game.boostLocked = true; }
+    remaining = remainingTime(remaining, manualTime);
+  }
+  if (remaining > 0) distance += propel(game, input, false, remaining);
+  game.energy = Math.min(100, game.energy + game.craft.recharge * remaining);
+  game.padBoost = remainingTime(game.padBoost, dt);
+  game.overdriveTime = remainingTime(game.overdriveTime, dt);
+  game.boosting = !input.brake && (game.padBoost > 0 || game.overdriveTime > 0 || !!input.boost && !game.boostLocked && game.energy > 1);
+  return distance;
 }
 
 function integrate(game, target, response, dt) {

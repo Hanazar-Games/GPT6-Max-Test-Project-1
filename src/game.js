@@ -3,7 +3,7 @@ import { upgradeLevels, upgradeCraft } from './upgrades.js';
 import { ENVIRONMENT, meteorState, meteorContact, getMeteorCue } from './environment.js';
 import { VERTICAL_PHYSICS, verticalAt, flightHeight } from './vertical-motion.js';
 import { POWERUPS, CHALLENGES, firstAtOrAfter, pickupRange, rewardCue } from './route-rewards.js';
-import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral, forwardMotion } from './flight-motion.js';
+import { ROAD_HALF_WIDTH, coastingLane, normalizeDrivingSettings, advanceLateral, advancePropulsion } from './flight-motion.js';
 import { makeTraffic, normalizeTrafficSettings, trafficNear, trafficPose } from './traffic.js';
 
 export const PHYSICS = Object.freeze({ width: ROAD_HALF_WIDTH, jumpCost: 18, jumpCooldown: 1.6, gravity: ENVIRONMENT.gravity });
@@ -224,11 +224,9 @@ export function updateGame(game, input, delta) {
   game.time = Math.max(0, game.time - dt);
   game.elapsed += dt;
   game.immunity = Math.max(0, game.immunity - dt);
-  game.padBoost = Math.max(0, game.padBoost - dt);
   game.jumpCooldown = Math.max(0, game.jumpCooldown - dt);
   game.shieldTime = Math.max(0, game.shieldTime - dt);
   game.magnetTime = Math.max(0, game.magnetTime - dt);
-  game.overdriveTime = Math.max(0, game.overdriveTime - dt);
   if ((input.jumpPressed || input.jump && !game.jumpHeld) && isJumpReady(game)) {
     game.verticalSpeed = VERTICAL_PHYSICS.jumpSpeed;
     game.energy -= PHYSICS.jumpCost;
@@ -237,16 +235,7 @@ export function updateGame(game, input, delta) {
   }
   game.jumpHeld = !!input.jump;
   previous.verticalSpeed = game.verticalSpeed;
-  if (!input.boost || input.boostReleased) game.boostLocked = false;
-  else if (game.energy <= 1) game.boostLocked = true;
-  const freeBoost = game.padBoost > 0 || game.overdriveTime > 0;
-  const manualBoost = !!input.boost && !input.brake && !game.boostLocked && !freeBoost && game.energy > 1;
-  game.boosting = !input.brake && (manualBoost || freeBoost);
-  const targetSpeed = input.brake ? 0 : game.boosting ? game.craft.boostSpeed : input.accelerate ? game.craft.speed : 0;
-  const acceleration = input.brake ? 260 : targetSpeed > game.speed ? (game.boosting ? 210 : 130) : 48;
-  const forward = forwardMotion(game.speed, targetSpeed, acceleration, dt);
-  game.speed = forward.speed;
-  game.energy = Math.max(0, Math.min(100, game.energy + (manualBoost ? -25 : game.craft.recharge) * dt));
+  const travel = advancePropulsion(game, input, dt);
 
   advanceLateral(game, input, dt);
   if (Math.abs(game.lane) > PHYSICS.width) {
@@ -257,7 +246,7 @@ export function updateGame(game, input, delta) {
   if (game.status === 'lost') return;
 
   const before = game.distance;
-  game.distance = Math.min(game.mission.length, game.distance + forward.distance);
+  game.distance = Math.min(game.mission.length, game.distance + travel);
   const motion = verticalAt(game.course, previous, game.distance, dt);
   game.height = motion.height;
   game.verticalSpeed = motion.verticalSpeed;

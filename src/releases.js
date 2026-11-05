@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 驾驶设置与操作体验优化</h2>
-      <p id="release-copy">驾驶参数更容易细调，草稿可撤销，键盘与手机操作更连贯。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 推进物理与冲刺修正</h2>
+      <p id="release-copy">冲刺按实际剩余时长推进，免费效果、能量消耗与减速衔接更准确。</p>
+      <ul class="release-list">
+        <li><strong>剩余冲刺准确计算</strong>修复低能量时多冲一帧、加速带与超频提前结束的问题；到期后接回手动冲刺或普通驾驶。</li>
+        <li><strong>能量按实际使用扣除</strong>免费期间回充，手动冲刺只扣使用时长；能量不足后松键重启，制动始终优先。</li>
+        <li><strong>到期反馈保持同步</strong>清除浮点余量，避免冲刺状态与尾焰多留一帧；覆盖全部飞船的推进回归，1.19.1 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>72 个版本</span></summary>
+      <article><h3>v1.19.1 · 驾驶设置与操作体验优化</h3>
+      <p>驾驶参数更容易细调，草稿可撤销，键盘与手机操作更连贯。</p>
       <ul class="release-list">
         <li><strong>草稿随时撤销</strong>显示待应用项数，可返回上次应用的配置；恢复默认仍需确认，未修改时避免重复应用。</li>
         <li><strong>精确输入更顺手</strong>保留正在键入的小数，离开输入框后校准；展示范围与步进，手机使用对应数字键盘，空值会提示补全。</li>
         <li><strong>操作反馈更清楚</strong>应用、撤销与恢复默认后保持可见焦点；飞行中保存仍于重飞或下一站生效，1.19.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>71 个版本</span></summary>
+      </article>
       <article><h3>v1.19.0 · 车流绕障与前进物理优化</h3>
       <p>道路车流会提前平滑绕障，飞船起步和停车距离更一致。</p>
       <ul class="release-list">
