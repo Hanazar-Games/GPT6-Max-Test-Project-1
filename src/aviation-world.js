@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { AIR_GATES, islandHeight } from './aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from './airport.js';
 import { createAirport } from './airport-view.js';
+import { createRunway } from './runway-view.js';
 import { cockpitSeat, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
 
@@ -33,6 +34,7 @@ export class AviationWorld {
     sunlight.position.set(-6000, 10000, -8000); this.scene.add(sunlight);
     this.aircraftRoot = new THREE.Group(); this.scene.add(this.aircraftRoot);
     this.cameraMode = 0;
+    this.viewSettings = { cockpitFov: 68, chaseDistance: 1, speedFov: true };
     this.lookTarget = 0; this.lookAngle = 0;
     this.quality = matchMedia('(any-pointer: coarse)').matches ? .75 : 1.25;
     this.buildEnvironment();
@@ -69,22 +71,8 @@ export class AviationWorld {
     }
     terrain.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); terrain.computeVertexNormals();
     this.mesh(terrain, 0xffffff, [0, 0, 0], [1, 1, 1], { vertexColors: true });
-    this.boxes(0x6d7a72, [[0, .1, -600, 450, .15, 4800]]);
-    this.boxes(0x303e49, [[0, .3, -600, RUNWAY.width, .3, 4400]], { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-    const markings = [], lights = [];
-    for (let z = -2700; z < 1520; z += 110) markings.push([0, .5, z, 2, .05, 44]);
-    for (const x of [-48, 48]) markings.push([x, .5, -600, 1, .05, 4360]);
-    for (const end of [-2680, 1480]) for (let x = -35; x <= 35; x += 10) markings.push([x, .51, end, 5, .05, 70]);
-    for (let z = -2780; z < 1600; z += 90) for (const x of [-55, 55]) lights.push([x, .8, z, 1.6, 1.2, 1.6]);
-    this.boxes(0xe4e9dd, markings, { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); this.boxes(0x71d3ee, lights, { emissive: 0x3b9dc2, emissiveIntensity: .8 });
-    for (const [number, z, angle] of [['36', 1360, -Math.PI / 2], ['18', -2560, Math.PI / 2]]) {
-      const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
-      const context = canvas.getContext('2d'); context.fillStyle = '#e3e8dd'; context.font = 'bold 170px monospace'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(number, 128, 132);
-      const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(32, 42), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 }));
-      sign.position.set(0, .55, z); sign.rotation.set(-Math.PI / 2, 0, angle + Math.PI / 2); this.scene.add(sign);
-    }
-    this.scene.add(createAirport());
+    this.boxes(0x6d7a72, [[0, .1, RUNWAY.center, 450, .15, RUNWAY.length + 400]]);
+    this.scene.add(createRunway(), createAirport());
     const trees = [], trunks = [];
     for (let i = 0; i < 230; i++) {
       const angle = i * 2.39996, radius = 1600 + i * 83 % 6000;
@@ -115,7 +103,7 @@ export class AviationWorld {
     this.shadow = this.mesh(new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2), 0x1e3441, [0, .65, 0], [30, 1, 15], { transparent: true, opacity: .17, depthWrite: false });
     const beaconPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 160, 0)];
     this.beacon = new THREE.Line(new THREE.BufferGeometry().setFromPoints(beaconPoints), new THREE.LineBasicMaterial({ color: 0xa0f9ed, transparent: true, opacity: .65 }));
-    this.beacon.position.z = 1100; this.scene.add(this.beacon);
+    this.beacon.position.z = RUNWAY.start - 180; this.scene.add(this.beacon);
   }
 
   async setAircraft(aircraft) {
@@ -150,6 +138,7 @@ export class AviationWorld {
 
   render(flight, dt, input = {}, look = null) {
     const length = flight.aircraft.length;
+    const view = this.viewSettings;
     const inside = this.cameraMode === 2 && flight.status !== 'ready';
     this.water.position.set(flight.x, -12, flight.z);
     this.aircraftRoot.position.set(flight.x, flight.y + (flight.onGround ? Math.max(0, Math.sin(flight.pitch)) * length * .12 : 0), flight.z);
@@ -172,7 +161,7 @@ export class AviationWorld {
     forward.set(Math.sin(flight.heading), 0, -Math.cos(flight.heading));
     target.copy(this.aircraftRoot.position).addScaledVector(forward, length * .12);
     if (flight.status === 'ready') offset.set(length * 1.4, length * .5, -length * 1.1);
-    else offset.set(length * (this.cameraMode ? .15 : .4), length * (this.cameraMode ? .24 : .52), length * (this.cameraMode ? 1.05 : 1.8)).applyAxisAngle(UP, -flight.heading);
+    else offset.set(length * (this.cameraMode ? .15 : .4), length * (this.cameraMode ? .24 : .52), length * (this.cameraMode ? 1.05 : 1.8)).multiplyScalar(view.chaseDistance).clampLength(Math.hypot(length, flight.aircraft.span) / 2 + this.camera.near + 2, Infinity).applyAxisAngle(UP, -flight.heading);
     if (this.cockpit) this.cockpit.visible = inside;
     if (inside && this.cockpit) {
       offset.set(...cockpitSeat(flight.aircraft)).applyQuaternion(this.aircraftRoot.quaternion);
@@ -190,8 +179,9 @@ export class AviationWorld {
       this.camera.position.lerp(desired, this.resetCamera ? 1 : 1 - Math.exp(-dt * 5));
       this.camera.up.set(0, 1, 0); this.camera.lookAt(target);
     }
-    const fov = inside ? 68 : 55 + Math.min(18, flight.speed / flight.aircraft.maxSpeed * 18);
+    const fov = inside ? view.cockpitFov : 55 + (view.speedFov ? Math.min(18, flight.speed / flight.aircraft.maxSpeed * 18) : 0);
     if (Math.abs(this.camera.fov - fov) > .1) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
+    if (inside && Math.abs(this.cockpitCamera.fov - fov) > .1) { this.cockpitCamera.fov = fov; this.cockpitCamera.updateProjectionMatrix(); }
     this.resetCamera = false;
     this.renderer.info.reset();
     this.renderer.render(this.scene, this.camera);

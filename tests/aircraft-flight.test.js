@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AIRCRAFT, AIR_GATES, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight } from '../src/aircraft-flight.js';
-import { AIRPORT_BUILDINGS } from '../src/airport.js';
+import { AIRCRAFT, AIR_GATES, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from '../src/aircraft-flight.js';
+import { AIRPORT_BUILDINGS, RUNWAY } from '../src/airport.js';
 
 function advance(flight, input, seconds, step = 1 / 60) {
   for (let time = 0; time < seconds - 1e-9; time += step) updateAircraftFlight(flight, input, Math.min(step, seconds - time));
@@ -114,7 +114,7 @@ test('airport and city buildings collide, while flying above their roofs is clea
 });
 
 test('runway stays flat, every gate clears terrain and gate collection cannot repeat', () => {
-  for (let z = -2800; z <= 1600; z += 50) assert.equal(islandHeight(0, z), 0);
+  for (let z = RUNWAY.end; z <= RUNWAY.start; z += 50) assert.equal(islandHeight(0, z), 0);
   for (const gate of AIR_GATES) assert.ok(gate.y - islandHeight(gate.x, gate.z) > gate.radius);
   const flight = createAircraftFlight('su30', true);
   Object.assign(flight, { x: 0, y: 180, z: -1999, speed: 220 });
@@ -123,4 +123,65 @@ test('runway stays flat, every gate clears terrain and gate collection cannot re
   Object.assign(flight, { z: -1999 });
   updateAircraftFlight(flight, {}, 1 / 30);
   assert.equal(flight.gates, 1);
+});
+
+test('both runway directions spawn inside the threshold and can take off and land', () => {
+  for (const aircraft of AIRCRAFT) for (const runwayDirection of ['18', '36']) {
+    const flight = createAircraftFlight(aircraft.id, false, { runwayDirection });
+    assert.ok(flight.z > RUNWAY.end + 100 && flight.z < RUNWAY.start - 100);
+    assert.equal(Math.sign(Math.cos(flight.heading)), runwayDirection === '18' ? -1 : 1);
+    const initialZ = flight.z;
+    flight.status = 'running'; flight.throttle = 1;
+    advance(flight, { pitch: 1 }, 30);
+    assert.equal(flight.status, 'running'); assert.equal(flight.onGround, false);
+    assert.equal(Math.sign(flight.z - initialZ), runwayDirection === '18' ? 1 : -1);
+    Object.assign(flight, { x: 0, z: RUNWAY.center, y: aircraft.gearHeight + .01, speed: 65, pitch: .03, roll: 0, verticalSpeed: -2, gearDown: true, throttle: 0 });
+    advance(flight, { brake: true }, 6);
+    assert.equal(flight.status, 'completed');
+  }
+});
+
+test('flaps lower stall and rotation speeds, add drag and retract above their safe speed', () => {
+  for (const aircraft of AIRCRAFT) {
+    const clean = createAircraftFlight(aircraft.id, true);
+    const deployed = createAircraftFlight(aircraft.id, true);
+    for (const flight of [clean, deployed]) Object.assign(flight, { speed: aircraft.stall * .9, y: 1000, throttle: 0 });
+    assert.equal(setAircraftFlaps(deployed, 2), true);
+    assert.ok(aircraftEnvelope(deployed).stall < aircraftEnvelope(clean).stall);
+    assert.ok(aircraftEnvelope(deployed).takeoff < aircraft.takeoff);
+    advance(clean, {}, .1); advance(deployed, {}, .1);
+    assert.equal(clean.stalling, true); assert.equal(deployed.stalling, false);
+    assert.ok(deployed.speed < clean.speed);
+    deployed.speed = aircraft.flapLimit + 10;
+    updateAircraftFlight(deployed, {}, 1 / 60);
+    assert.equal(deployed.flaps, 0); assert.ok(deployed.events.includes('flaps-limit'));
+    assert.equal(setAircraftFlaps(deployed, 1), false);
+    assert.equal(setAircraftFlaps(deployed, -1), false);
+    assert.equal(setAircraftFlaps(deployed, NaN), false);
+    updateAircraftFlight(deployed, {}, 1 / 60);
+    assert.equal(deployed.events.includes('flaps-limit'), false);
+  }
+});
+
+test('independent speed brake slows flight, survives pause and resets for a new flight', () => {
+  for (const aircraft of AIRCRAFT) {
+    const clean = createAircraftFlight(aircraft.id, true), braking = createAircraftFlight(aircraft.id, true);
+    assert.equal(toggleAircraftSpeedBrake(braking), true);
+    advance(clean, {}, 3); advance(braking, {}, 3);
+    assert.ok(braking.speed < clean.speed - 10);
+    toggleAircraftPause(braking);
+    const snapshot = structuredClone(braking);
+    advance(braking, {}, 2);
+    assert.deepEqual(braking, { ...snapshot, events: [] });
+    assert.equal(toggleAircraftSpeedBrake(braking), true); assert.equal(braking.speedBrake, false);
+    braking.status = 'crashed';
+    assert.equal(toggleAircraftSpeedBrake(braking), false); assert.equal(setAircraftFlaps(braking, 1), false);
+    assert.equal(createAircraftFlight(aircraft.id).speedBrake, false);
+    const ground = createAircraftFlight(aircraft.id);
+    Object.assign(ground, { status: 'running', speed: aircraft.takeoff + 5, throttle: 1 });
+    toggleAircraftSpeedBrake(ground); advance(ground, { pitch: 1 }, .5);
+    assert.equal(ground.onGround, true, 'speed brake must prevent takeoff');
+    toggleAircraftSpeedBrake(ground); advance(ground, { pitch: 1 }, .5);
+    assert.equal(ground.onGround, false);
+  }
 });

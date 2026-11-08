@@ -56,6 +56,7 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
     camera: new THREE.PerspectiveCamera(68, 1, 8, 65000), gateMeshes: [], cameraMode: 2,
     shadow: new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial()),
     displayTime: -100, resetCamera: false, lookTarget: 0, lookAngle: 0,
+    viewSettings: { cockpitFov: 68, chaseDistance: 1, speedFov: true },
     renderer: { info: { reset() {} }, autoClear: true, clearDepth() {}, render(scene, camera) { passes.push({ scene, near: camera.near, far: camera.far }); } },
   });
   world.render(flight, 1 / 60);
@@ -66,11 +67,24 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
   assert.equal(model.visible, false); assert.equal(cockpit.visible, true);
   assert.deepEqual(passes.map(pass => [pass.near, pass.far]), [[8, 65000], [.06, 8]], 'interior and distant terrain need separate depth ranges');
   assert.equal(world.renderer.autoClear, true);
+  world.viewSettings.cockpitFov = 90; world.render(flight, 1 / 60);
+  assert.equal(world.camera.fov, 90); assert.equal(world.cockpitCamera.fov, 90);
+  assert.equal(world.camera.projectionMatrix.elements[5], world.cockpitCamera.projectionMatrix.elements[5]);
   world.render(flight, 1, {}, .95);
   assert.ok(world.lookAngle > .9);
   world.setCameraMode(0); world.render(flight, 1 / 60);
   assert.equal(model.visible, true); assert.equal(cockpit.visible, false); assert.equal(world.camera.near, 8);
   assert.equal(world.lookTarget, 0);
+  world.viewSettings.speedFov = false; world.render(flight, 1 / 60);
+  assert.equal(world.camera.fov, 55);
+  const close = world.camera.position.distanceTo(world.aircraftRoot.position);
+  world.viewSettings.chaseDistance = 1.6; world.resetCamera = true; world.render(flight, 1 / 60);
+  assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) > close * 1.5);
+  world.viewSettings.speedFov = true; world.render(flight, 1 / 60);
+  assert.ok(world.camera.fov > 55);
+  world.viewSettings.chaseDistance = .7; world.setCameraMode(1); world.render(flight, 1 / 60);
+  const clearance = Math.hypot(flight.aircraft.length, flight.aircraft.span) / 2 + world.camera.near + 2;
+  assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) >= clearance - 1e-8, 'closest follow camera must not clip the fighter tail');
   disposeAircraftObject(cockpit); disposeAircraftObject(world.shadow);
 });
 

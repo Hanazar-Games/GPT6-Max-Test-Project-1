@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 驾驶舱与机场升级</h2>
-      <p id="release-copy">坐进飞机内部，观察实时仪表；调整操纵手感，从更完整的海岛机场出发。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 跑道细化与飞行系统</h2>
+      <p id="release-copy">从双向海岸跑道出发，用襟翼和减速板管理飞行，调整适合自己的镜头。</p>
+      <ul class="release-list">
+        <li><strong>机场跑道细化</strong>采用 4,000 × 60 米、两侧各 15 米道肩的游戏设计尺寸，增加进近灯、方向性阈值灯、接地点标线、滑行道蓝灯、等待线与风向袋；机库可选 18 / 36 双向起飞。</li>
+        <li><strong>更多飞行系统</strong>F 切换收起 / 起飞 / 着陆三档襟翼，改变低速升力与阻力，超速自动收起；B 独立开关减速板，保留按住制动。仪表同步显示状态、参考速度和剩余跑道。</li>
+        <li><strong>镜头自由调整</strong>新增 50°–90° 驾驶舱视场角、70%–160% 跟随距离和速度扩角开关，舱内与远景投影同步；手机系统按钮紧凑排列。1.21.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>75 个版本</span></summary>
+      <article><h3>v1.21.0 · 驾驶舱与机场升级</h3>
+      <p>坐进飞机内部，观察实时仪表；调整操纵手感，从更完整的海岛机场出发。</p>
       <ul class="release-list">
         <li><strong>两套原创简化驾驶舱</strong>A380 四屏仪表与四油门手柄、Su-30 三屏仪表与双油门手柄，操纵杆、起落架手柄随飞行变化。V 进入或离开，Z / X 按住侧看，R 回正；手机提供观察按钮。</li>
         <li><strong>操纵设置与手机适配</strong>经典飞行 / WASD 升降预设、40%–150% 灵敏度和反向升降，提示同步更新。修正同向别名键叠加、横屏导航遮挡及驾驶舱远景海岸闪烁。</li>
         <li><strong>更完整的机场</strong>细化玻璃航站楼、四组登机桥、停机坪、机库、塔台、停车区与油库，增加滑行联络道及地面引导线。建筑碰撞同步布局，跑道与滑行道留出净空；1.20.0 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>74 个版本</span></summary>
+      </article>
       <article><h3>v1.20.0 · 海岛机场与空中载具</h3>
       <p>A380 与 Su-30 加入飞机机库，从海岸跑道起飞，探索真正的三维天空。</p>
       <ul class="release-list">

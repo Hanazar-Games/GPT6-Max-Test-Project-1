@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { batchMeshes } from './model-utils.js';
+import { RUNWAY } from './airport.js';
 
 export function cockpitSeat(aircraft) {
   return aircraft.id === 'a380' ? [-1.15, 2.2, -aircraft.length * .36] : [0, .55, -aircraft.length * .24];
 }
 
 export function cockpitInstruments(flight) {
-  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
+  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), flaps: flight.flaps, speedBrake: flight.speedBrake, warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
 }
 
 export function createAircraftCockpit(aircraft, texture = null) {
@@ -101,11 +102,12 @@ export function drawCockpitDisplay(ctx, flight) {
     const barX = third + 18 + i * (tile - 35) / (airliner ? 4 : 2);
     ctx.fillStyle = '#163b3e'; ctx.fillRect(barX, 135, 24, 96); ctx.fillStyle = '#8bdeb3'; ctx.fillRect(barX, 231 - data.throttle * .96, 24, data.throttle * .96);
   }
+  text(`FLAP ${data.flaps}  BRK ${data.speedBrake ? 'ON' : 'OFF'}`, third + 14, height - 65, 18, data.speedBrake ? '#ffcf86' : '#96efb0');
   text(`RINGS ${flight.gates}/6`, third + 14, height - 39, 20);
   if (airliner) {
     const fourth = gap * 4 + tile * 3;
     text('NAV / ISLAND', fourth + 14, 47, 20); text(`HDG ${data.heading}`, fourth + 14, 102, 28);
-    text(`HOME`, fourth + 14, 153, 18, '#7da6b4'); text(`${(Math.hypot(flight.x, flight.z + 600) / 1000).toFixed(1)} KM`, fourth + 14, 190, 27);
+    text(`HOME`, fourth + 14, 153, 18, '#7da6b4'); text(`${(Math.hypot(flight.x, flight.z - RUNWAY.center) / 1000).toFixed(1)} KM`, fourth + 14, 190, 27);
     text('RWY 18 / 36', fourth + 14, 235, 21); text(flight.onGround ? 'GROUND' : 'AIRBORNE', fourth + 14, height - 39, 20, '#96efb0');
   }
 }

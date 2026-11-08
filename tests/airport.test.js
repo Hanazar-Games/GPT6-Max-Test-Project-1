@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { AIRPORT_BUILDINGS, RUNWAY, TAXIWAYS } from '../src/airport.js';
 import { createAirport } from '../src/airport-view.js';
+import { createRunway } from '../src/runway-view.js';
 import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 import { disposeAircraftObject } from '../src/aircraft-models.js';
 
@@ -53,4 +54,25 @@ test('elevated jetways collide at cabin height and permit flight above', () => {
     updateAircraftFlight(above, {}, 1 / 120);
     assert.equal(above.status, 'running');
   }
+});
+
+test('runway uses shared dimensions, batched markings, approach and taxiway lights', () => {
+  assert.equal(RUNWAY.length, 4000); assert.equal(RUNWAY.width, 60); assert.equal(RUNWAY.shoulder, 15);
+  assert.equal(RUNWAY.start - RUNWAY.end, RUNWAY.length);
+  assert.equal(RUNWAY.center, (RUNWAY.start + RUNWAY.end) / 2);
+  const runway = createRunway(); runway.updateMatrixWorld(true);
+  const surface = runway.getObjectByName('runway-surface');
+  assert.ok(surface);
+  const bounds = new THREE.Box3().setFromObject(surface);
+  assert.equal(bounds.min.z, RUNWAY.end); assert.equal(bounds.max.z, RUNWAY.start);
+  assert.equal(bounds.max.x - bounds.min.x, RUNWAY.width);
+  for (const name of ['runway-markings', 'runway-shoulders', 'runway-approach-lights', 'runway-edge-lights', 'taxiway-edge-lights']) assert.ok(runway.getObjectByName(name), name);
+  let meshes = 0;
+  runway.traverse(object => { if (object.isMesh) { meshes++; assert.ok(object.geometry.attributes.position.array.every(Number.isFinite)); } });
+  assert.ok(meshes <= 12, `runway needs ${meshes} batches`);
+  const resources = new Set(), disposed = new Map();
+  runway.traverse(object => { if (object.isMesh) { resources.add(object.geometry); resources.add(object.material); } });
+  for (const resource of resources) resource.addEventListener('dispose', () => disposed.set(resource, (disposed.get(resource) ?? 0) + 1));
+  disposeAircraftObject(runway);
+  assert.equal(disposed.size, resources.size); assert.ok([...disposed.values()].every(count => count === 1));
 });
