@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 海岛机场与空中载具</h2>
-      <p id="release-copy">A380 与 Su-30 加入飞机机库，从海岸跑道起飞，探索真正的三维天空。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 驾驶舱与机场升级</h2>
+      <p id="release-copy">坐进飞机内部，观察实时仪表；调整操纵手感，从更完整的海岛机场出发。</p>
+      <ul class="release-list">
+        <li><strong>两套原创简化驾驶舱</strong>A380 四屏仪表与四油门手柄、Su-30 三屏仪表与双油门手柄，操纵杆、起落架手柄随飞行变化。V 进入或离开，Z / X 按住侧看，R 回正；手机提供观察按钮。</li>
+        <li><strong>操纵设置与手机适配</strong>经典飞行 / WASD 升降预设、40%–150% 灵敏度和反向升降，提示同步更新。修正同向别名键叠加、横屏导航遮挡及驾驶舱远景海岸闪烁。</li>
+        <li><strong>更完整的机场</strong>细化玻璃航站楼、四组登机桥、停机坪、机库、塔台、停车区与油库，增加滑行联络道及地面引导线。建筑碰撞同步布局，跑道与滑行道留出净空；1.20.0 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>74 个版本</span></summary>
+      <article><h3>v1.20.0 · 海岛机场与空中载具</h3>
+      <p>A380 与 Su-30 加入飞机机库，从海岸跑道起飞，探索真正的三维天空。</p>
       <ul class="release-list">
         <li><strong>两架可驾驶飞机</strong>新加坡航空 A380 与原创低多边形 Su-30，拥有不同极速与操控响应；可独立收放起落架，切换三种机位。</li>
         <li><strong>起飞、飞行与返航</strong>海岛跑道、航站楼、城市、群山与云层，配套六环训练、失速重力、着陆制动和建筑碰撞；也可直接从空中试飞。</li>
         <li><strong>键盘与手机操纵</strong>油门、升降、滚转、方向舵与触屏操纵杆，暂停清理输入与声音；模型按需加载，退出释放资源。1.19.2 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>73 个版本</span></summary>
+      </article>
       <article><h3>v1.19.2 · 推进物理与冲刺修正</h3>
       <p>冲刺按实际剩余时长推进，免费效果、能量消耗与减速衔接更准确。</p>
       <ul class="release-list">

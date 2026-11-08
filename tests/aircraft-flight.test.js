@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AIRCRAFT, AIR_GATES, AIRPORT_BUILDINGS, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight } from '../src/aircraft-flight.js';
+import { AIRCRAFT, AIR_GATES, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight } from '../src/aircraft-flight.js';
+import { AIRPORT_BUILDINGS } from '../src/airport.js';
 
 function advance(flight, input, seconds, step = 1 / 60) {
   for (let time = 0; time < seconds - 1e-9; time += step) updateAircraftFlight(flight, input, Math.min(step, seconds - time));
