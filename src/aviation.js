@@ -1,12 +1,18 @@
 import './aviation.css';
-import { AIRCRAFT, AIR_GATES, AIRCRAFT_PHYSICS_DEFAULTS, AIRCRAFT_PHYSICS_LIMITS, setAircraftPhysics, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from './aircraft-flight.js';
+import { AIRCRAFT, AIR_GATES, AIRCRAFT_PHYSICS_DEFAULTS, AIRCRAFT_PHYSICS_LIMITS, AIRCRAFT_PRESETS, setAircraftPhysics, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from './aircraft-flight.js';
 import { AviationWorld } from './aviation-world.js';
 import { aircraftInput, aircraftKeyBinding, aircraftControlHelp } from './aircraft-controls.js';
 import { RUNWAY } from './airport.js';
 
 const cameraNames = ['追随机位', '近距跟随', '驾驶舱'];
 const flapNames = ['收起', '起飞', '着陆'];
-const physicsFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['gravity', '重力强度']];
+const maneuverFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['flightPath', '航迹跟随响应'], ['pitchLimit', '辅助俯仰幅度'], ['bankLimit', '辅助滚转幅度'], ['gravity', '重力强度']];
+const powerFields = [['thrust', '发动机推力'], ['mass', '机体质量'], ['drag', '气动阻力'], ['lift', '升力系数'], ['maxSpeed', '速度上限'], ['airBrake', '空中减速强度'], ['wheelBrake', '轮刹强度']];
+const physicsFields = [...maneuverFields, ...powerFields];
+const physicsControls = (fields, note) => fields.map(([key, label]) => {
+  const [low, high] = AIRCRAFT_PHYSICS_LIMITS[key].map(value => Math.round(value * 100));
+  return `<div class="av-parameter"><label for="av-physics-${key}">${label}<small>${low}–${high}%</small></label><span class="av-parameter-number"><input data-physics-number="${key}" type="number" min="${low}" max="${high}" step="1" value="100" inputmode="numeric" aria-label="${label}百分比" aria-describedby="${note}"><span aria-hidden="true">%</span></span><input id="av-physics-${key}" data-physics="${key}" type="range" min="${low}" max="${high}" step="1" value="100" aria-label="${label}" aria-describedby="${note}"></div>`;
+}).join('');
 const flightMusic = { a380: { music: { root: 50, bpm: 100 } }, su30: { music: { root: 45, bpm: 136 } } };
 const audioStates = { running: 'running', ready: 'menu', paused: 'paused', crashed: 'lost', completed: 'won' };
 
@@ -28,12 +34,16 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <p class="av-specs" data-value="specs"></p><p class="av-load-status" role="status" aria-live="polite">正在载入飞机模型…</p>
       <label class="av-runway-choice">起飞方向 <select data-setting="runway"><option value="36">跑道 36 · 向北</option><option value="18">跑道 18 · 向南</option></select><small>${RUNWAY.length.toLocaleString('en-US')} × ${RUNWAY.width} m · 两侧各 ${RUNWAY.shoulder} m 道肩</small></label>
       <div class="av-panel-actions"><button data-action="resume" hidden>继续飞行</button><button data-action="runway" disabled>跑道起飞 <span>↗</span></button><button data-action="airborne" disabled>直接空中试飞</button><button data-action="retry" hidden>重试模型加载</button><button data-action="hangar" hidden>返回飞机机库</button></div>
+      <section class="av-tuning" aria-label="本机调校"><p data-value="tuning-name"></p><div class="av-tuning-presets" role="group" aria-label="应用整套飞机调校">${AIRCRAFT_PRESETS.map(preset => `<button data-flight-preset="${preset.id}" aria-pressed="false">${preset.name}</button>`).join('')}</div><small>预设替换本机整套物理参数；手动调整后显示为自定义。两架飞机分别记录，仅保留在本次飞机模式。</small>
+      <dl class="av-performance" aria-label="当前飞机性能参考"><div><dt>速度上限</dt><dd data-value="tune-speed"></dd></div><div><dt>满油门加速参考</dt><dd data-value="tune-acceleration"></dd></div><div><dt>起飞参考</dt><dd data-value="tune-takeoff"></dd></div><div><dt>失速参考</dt><dd data-value="tune-stall"></dd></div><div><dt>着陆速度上限</dt><dd data-value="tune-landing"></dd></div><div><dt>辅助俯仰 / 滚转</dt><dd data-value="tune-limits"></dd></div></dl><p data-value="performance-note"></p></section>
+      <details class="av-help av-physics" open><summary>动力与气动自定义 · 7 项</summary>
+      ${physicsControls(powerFields, 'av-power-note')}
+      <p id="av-power-note">100% 为本机默认值。推力和质量改变推重比，质量也改变操纵与航迹惯性；质量、重力、升力共同影响低速门槛。空中减速作用于制动与减速板，轮刹只作用于地面。所有数值为游戏调校。</p></details>
       <details class="av-help av-physics" open><summary>飞行物理与机动</summary>
       <label>飞行模式<select data-setting="flight-mode"><option value="assisted">稳定飞行 · 姿态辅助</option><option value="maneuver">自由机动 · 滚转 / 筋斗</option></select></label>
       <p data-value="physics-help"></p>
-      ${physicsFields.map(([key, label]) => `<label>${label}<output data-physics-value="${key}">100%</output><input data-physics="${key}" type="range" min="${AIRCRAFT_PHYSICS_LIMITS[key][0] * 100}" max="${AIRCRAFT_PHYSICS_LIMITS[key][1] * 100}" step="5" value="100" aria-label="${label}" aria-describedby="av-physics-note"></label>`).join('')}
-      <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变到达该速率的快慢。回正辅助为 0% 时，松手停止旋转并保留姿态；重力影响爬升、下坠与转弯。所有参数均为游戏调校。</p>
-      <button data-action="reset-physics">恢复稳定飞行默认值</button></details>
+      ${physicsControls(maneuverFields, 'av-physics-note')}
+      <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变加减旋转的快慢；回正辅助为 0% 时，松手逐步停止主动旋转并保留倾斜。航迹响应越高，升降速度越快跟随机头。辅助幅度仅用于稳定模式，自由机动不限制整周旋转。</p></details>
       <details class="av-help"><summary>操作与键位</summary><p data-value="keys"></p>
       <p><b>A / D</b> 或 <b>← / →</b> 滚转 · <b>Q / E</b> 方向舵<br><b>G</b> 起落架 · <b>F</b> 切换三档襟翼 · <b>B</b> 减速板<br><b>空格</b> 按住制动 · <b>C</b> 切换镜头<br><b>V</b> 进入 / 离开驾驶舱 · <b>Z / X</b> 按住左右观察 · <b>R</b> 视线回正<br><b>Esc / P</b> 暂停并打开设置</p>
       <label>键位预设<select data-setting="keys"><option value="flight">经典飞行</option><option value="wasd">WASD 升降</option></select></label><label>升降方向<select data-setting="pitch"><option value="normal">标准</option><option value="inverted">反向</option></select></label><label>操纵灵敏度 <output data-value="sensitivity">100%</output><input data-setting="sensitivity" type="range" min="40" max="150" step="5" value="100" aria-label="飞机操纵灵敏度"></label>
@@ -50,7 +60,8 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   const panel = $('.av-panel'), loadStatus = $('.av-load-status'), stick = $('.av-stick-pad'), knob = $('.av-stick-knob');
   const listeners = new AbortController(), held = new Set();
   const controlSettings = { preset: 'flight', sensitivity: 1, invertPitch: false };
-  const physicsSettings = { ...AIRCRAFT_PHYSICS_DEFAULTS };
+  const aircraftSettings = Object.fromEntries(AIRCRAFT.map(aircraft => [aircraft.id, { ...AIRCRAFT_PHYSICS_DEFAULTS }]));
+  let physicsSettings = aircraftSettings.a380;
   const touchInput = { pitch: 0, roll: 0, brake: false }, input = {};
   const audioFrame = { status: 'menu', speed: 0, mission: flightMusic.a380 };
   let world;
@@ -88,15 +99,36 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text($('.av-joystick>span'), controlSettings.invertPitch ? '前推升 · 后拉降' : '前推降 · 后拉升');
   }
 
-  function syncPhysics() {
+  function syncPerformance() {
+    const envelope = aircraftEnvelope(flight), performance = flight.performance, aircraft = flight.aircraft;
+    const speedText = value => `${Math.round(value * 3.6)} km/h`;
+    text(values['tune-speed'], speedText(envelope.maxSpeed)); text(values['tune-takeoff'], speedText(envelope.takeoff));
+    text(values['tune-stall'], speedText(envelope.stall)); text(values['tune-landing'], speedText(envelope.landing));
+    text(values['tune-acceleration'], `${performance.acceleration.toFixed(1)} m/s²`);
+    text(values['tune-limits'], physicsSettings.mode === 'maneuver' ? '自由机动 · 不限角度' : `${Math.round(performance.pitchLimit * 180 / Math.PI)}° / ${Math.round(performance.bankLimit * 180 / Math.PI)}°`);
+    text(values['performance-note'], physicsSettings.thrust === 0 ? '发动机推力为零，可空中试飞练习滑翔；跑道起飞需要增加推力。' : envelope.takeoff > envelope.maxSpeed ? '当前起飞参考超过速度上限，请提高上限或升力，或降低质量 / 重力。' : `低速参考已计入当前襟翼。加速参考未扣空气阻力，实际极速取决于推力与阻力；${aircraft.name} 的机身尺寸保持不变。`);
+    text(values.specs, `${aircraft.subtitle} · 翼展 ${aircraft.span} m · 起飞参考 ≥ ${speedText(envelope.takeoff)} · 速度上限 ${speedText(envelope.maxSpeed)}`);
+  }
+
+  function syncPhysics(forceNumbers = false) {
     Object.assign(physicsSettings, setAircraftPhysics(flight, physicsSettings));
     $('[data-setting="flight-mode"]').value = physicsSettings.mode;
     for (const [key] of physicsFields) {
-      $(`[data-physics="${key}"]`).value = Math.round(physicsSettings[key] * 100);
-      text($(`[data-physics-value="${key}"]`), `${Math.round(physicsSettings[key] * 100)}%`);
+      const slider = $(`[data-physics="${key}"]`), number = $(`[data-physics-number="${key}"]`), percent = Math.round(physicsSettings[key] * 100);
+      slider.value = percent;
+      if (forceNumbers || document.activeElement !== number) { number.value = percent; number.removeAttribute('aria-invalid'); }
+      slider.disabled = number.disabled = physicsSettings.mode === 'maneuver' && ['pitchLimit', 'bankLimit'].includes(key);
     }
+    let presetName = '自定义调校';
+    for (const preset of AIRCRAFT_PRESETS) {
+      const selected = Object.keys(AIRCRAFT_PHYSICS_DEFAULTS).every(key => physicsSettings[key] === preset.physics[key]);
+      $(`[data-flight-preset="${preset.id}"]`).setAttribute('aria-pressed', String(selected));
+      if (selected) presetName = preset.id === 'standard' ? '标准调校' : preset.name;
+    }
+    text(values['tuning-name'], `${flight.aircraft.name} · ${presetName}`);
     const maneuver = physicsSettings.mode === 'maneuver';
     text(values['physics-help'], `${maneuver ? '自由机动按机体轴持续旋转，可完成滚转、倒飞与筋斗；先爬升留出足够高度。' : '稳定飞行将操纵量转为目标姿态，适合起降与巡航。'} 当前满杆俯仰约 ${Math.round(flight.aircraft.pitchRate * physicsSettings.pitchRate * 180 / Math.PI)}°/s，滚转约 ${Math.round(flight.aircraft.rollRate * physicsSettings.rollRate * 180 / Math.PI)}°/s；低速会减弱。`);
+    syncPerformance();
     dirty = true;
   }
 
@@ -108,6 +140,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   function showPanel() {
     const ready = flight.status === 'ready', paused = flight.status === 'paused';
     panel.hidden = flight.status === 'running';
+    if (!panel.hidden) syncPerformance();
     if (!panel.hidden) { clearTimeout(noticeTimer); $('.av-notice').classList.remove('visible'); }
     $('.av-aircraft-list').hidden = !ready; $('.av-runway-choice').hidden = !ready; values.specs.hidden = !ready; loadStatus.hidden = !ready;
     action('resume').hidden = !paused;
@@ -129,13 +162,13 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
 
   async function selectAircraft(id) {
     const version = ++loadVersion;
+    physicsSettings = aircraftSettings[id];
     flight = createAircraftFlight(id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); loaded = false; returning = false;
     syncPhysics();
     text(loadStatus, '正在载入飞机模型…'); loadStatus.dataset.state = 'loading';
     action('runway').disabled = true; action('airborne').disabled = true;
     for (const button of root.querySelectorAll('[data-aircraft]')) button.setAttribute('aria-pressed', String(button.dataset.aircraft === id));
     text(values.aircraft, flight.aircraft.name);
-    text(values.specs, `${flight.aircraft.subtitle} · 翼展 ${flight.aircraft.span} m · 建议起飞 ≥ ${Math.round(flight.aircraft.takeoff * 3.6)} km/h · 极速 ${Math.round(flight.aircraft.maxSpeed * 3.6)} km/h`);
     text(values['flap-limit'], `本机襟翼展开上限 ${Math.round(flight.aircraft.flapLimit * 3.6)} km/h；超过上限 18 km/h 自动收起。`);
     world.setCameraMode(0); text(action('camera'), cameraNames[0]);
     showPanel();
@@ -158,7 +191,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     accumulator = 0; previousTime = performance.now(); world.resetCamera = true;
     unlockAudio(); showPanel();
     const help = aircraftControlHelp(controlSettings);
-    notify(airborne ? `已进入空中 · ${help.pitch} 升降 · V 进入驾驶舱` : `油门推满，达到 ${Math.round(flight.aircraft.takeoff * 3.6)} km/h 后按 ${help.pitch.split(' / ')[0]} 拉升`);
+    notify(airborne ? `已进入空中 · ${help.pitch} 升降 · V 进入驾驶舱` : `油门推满，达到 ${Math.round(aircraftEnvelope(flight).takeoff * 3.6)} km/h 后按 ${help.pitch.split(' / ')[0]} 拉升`);
   }
 
   function pause(onlyPause = false) {
@@ -236,6 +269,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen(root, 'click', event => {
     const button = event.target.closest('button'); if (!button || button.disabled) return;
     if (button.dataset.aircraft) { if (button.dataset.aircraft !== flight.aircraft.id) selectAircraft(button.dataset.aircraft); return; }
+    if (button.dataset.flightPreset) {
+      Object.assign(physicsSettings, AIRCRAFT_PRESETS.find(preset => preset.id === button.dataset.flightPreset).physics);
+      clearInput(); syncPhysics(true); return;
+    }
     switch (button.dataset.action) {
       case 'exit': dispose(); break;
       case 'pause': case 'resume': pause(); break;
@@ -244,7 +281,6 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       case 'gear': gear(); break;
       case 'flaps': flaps(); break;
       case 'speed-brake': speedBrake(); break;
-      case 'reset-physics': Object.assign(physicsSettings, AIRCRAFT_PHYSICS_DEFAULTS); clearInput(); syncPhysics(); break;
       case 'navigation': returning = !returning; updateUI(); break;
       case 'retry': selectAircraft(flight.aircraft.id); break;
       case 'hangar': flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); audio.setState('menu'); world.resetCamera = true; showPanel(); break;
@@ -269,9 +305,21 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     physicsSettings.mode = event.target.value; physicsSettings.stability = physicsSettings.mode === 'maneuver' ? 0 : 1;
     clearInput(); syncPhysics();
   });
-  for (const [key] of physicsFields) listen($(`[data-physics="${key}"]`), 'input', event => {
-    physicsSettings[key] = Number(event.target.value) / 100; syncPhysics();
-  });
+  for (const [key] of physicsFields) {
+    listen($(`[data-physics="${key}"]`), 'input', event => {
+      physicsSettings[key] = Number(event.target.value) / 100; syncPhysics(true);
+    });
+    const number = $(`[data-physics-number="${key}"]`);
+    listen(number, 'input', () => {
+      const value = number.valueAsNumber;
+      if (!Number.isInteger(value) || value < Number(number.min) || value > Number(number.max)) { number.setAttribute('aria-invalid', 'true'); return; }
+      number.removeAttribute('aria-invalid'); physicsSettings[key] = value / 100; syncPhysics();
+    });
+    listen(number, 'change', () => {
+      if (Number.isFinite(number.valueAsNumber)) physicsSettings[key] = Math.round(number.valueAsNumber) / 100;
+      syncPhysics(true);
+    });
+  }
   const quality = $('[data-setting="quality"]'); quality.value = world.quality < 1 ? '0.75' : '1.25';
   listen(quality, 'change', () => { world.quality = Number(quality.value); world.resize(); dirty = true; });
   listen($('[data-setting="runway"]'), 'change', event => {

@@ -41,7 +41,7 @@ test('maneuver settings change rates, retain attitude on release and apply witho
   const before = attitude(fast), position = [fast.x, fast.y, fast.z];
   setAircraftPhysics(fast, { mode: 'assisted', stability: 1, pitchRate: Infinity, rollRate: 100, gravity: -.5 });
   assert.ok(before.angleTo(attitude(fast)) < 1e-7); assert.deepEqual([fast.x, fast.y, fast.z], position);
-  assert.equal(fast.physics.pitchRate, 1); assert.equal(fast.physics.rollRate, 2); assert.equal(fast.physics.gravity, .5);
+  assert.equal(fast.physics.pitchRate, 1); assert.equal(fast.physics.rollRate, 3); assert.equal(fast.physics.gravity, .5);
   advance(fast, {}, 5);
   assert.ok(Math.abs(fast.roll) < .15, 'stable mode gently recovers level flight');
 });
@@ -112,7 +112,7 @@ test('low airspeed loses lift, falls under gravity and cannot hover', () => {
 });
 
 test('safe runway touchdown needs gear, alignment, moderate bank, speed and descent', () => {
-  const sample = { x: 0, z: 0, heading: 0, roll: .03, pitch: .05, speed: 80, verticalSpeed: -2, gearDown: true };
+  const sample = { ...createAircraftFlight('a380', true), x: 0, z: 0, heading: 0, roll: .03, pitch: .05, speed: 80, verticalSpeed: -2, gearDown: true };
   assert.equal(runwayContact(sample, AIRCRAFT[0]), true);
   for (const change of [{ gearDown: false }, { x: 90 }, { z: -4000 }, { heading: .8 }, { roll: .5 }, { speed: 180 }, { verticalSpeed: -15 }, { pitch: -.3 }]) {
     assert.equal(runwayContact({ ...sample, ...change }, AIRCRAFT[0]), false);

@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 自由机动与物理调校</h2>
-      <p id="release-copy">滚转、倒飞与筋斗，按自己的手感调整飞机，再平稳返回跑道。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞机动力与机动自定义</h2>
+      <p id="release-copy">调整发动机、气动与机动手感，为每架飞机搭配自己的飞行参数。</p>
+      <ul class="release-list">
+        <li><strong>16 项飞机细调</strong>增加推力 0%–300%、质量、阻力、升力、速度上限、空中减速和轮刹；扩展三轴速率与响应范围，增加航迹响应和辅助角度。每项支持 1% 滑杆与精确数字输入，实际参与飞行物理。</li>
+        <li><strong>每架飞机独立配置</strong>标准、灵活机动、极速动力、轻松巡航四套完整预设，支持继续手动细调。A380 与 Su-30 分别保留本次飞机模式内的设置；自由机动时禁用不适用的辅助角度。</li>
+        <li><strong>看得见的性能变化</strong>实时显示加速、起飞、失速、着陆及速度上限参考，提示零推力和不匹配的起飞组合。暂停调校保持飞行状态，降低上限后平滑减速；1.23.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>77 个版本</span></summary>
+      <article><h3>v1.23.0 · 自由机动与物理调校</h3>
+      <p>滚转、倒飞与筋斗，按自己的手感调整飞机，再平稳返回跑道。</p>
       <ul class="release-list">
         <li><strong>真正的自由机动</strong>稳定与机动两种模式，支持完整滚转、倒飞和筋斗，保留双机差异；低速降低控制能力，重力影响爬升与下坠。机体碰撞随姿态旋转，修正机尾、翼尖先触地仍被判为安全着陆的问题。</li>
         <li><strong>六项物理细调</strong>三轴速率 40%–200%、响应 50%–200%、回正辅助 0%–100%、重力 50%–150%，实际接入飞行。设置分组并显示当前值，暂停调整保持位置与姿态，可恢复稳定默认值。</li>
         <li><strong>镜头与运行开销</strong>完整机动同步跟随与驾驶舱，修正快速滚转裁切机身、低空倒飞镜头穿地；复用输入与物理临时数据，训练环按进度更新，暂停停止重复刷新。1.22.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>76 个版本</span></summary>
+      </article>
       <article><h3>v1.22.0 · 跑道细化与飞行系统</h3>
       <p>从双向海岸跑道出发，用襟翼和减速板管理飞行，调整适合自己的镜头。</p>
       <ul class="release-list">

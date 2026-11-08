@@ -6,8 +6,14 @@ const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
 const pose = new Quaternion(), rotation = new Quaternion(), angles = new Euler(0, 0, 0, 'YXZ');
 const angular = new Vector3(), forward = new Vector3(), up = new Vector3(), right = new Vector3(), from = new Vector3();
 const worldUp = new Vector3(0, 1, 0);
-export const AIRCRAFT_PHYSICS_DEFAULTS = Object.freeze({ mode: 'assisted', pitchRate: 1, rollRate: 1, yawRate: 1, response: 1, stability: 1, gravity: 1 });
-export const AIRCRAFT_PHYSICS_LIMITS = Object.freeze({ pitchRate: [.4, 2], rollRate: [.4, 2], yawRate: [.4, 2], response: [.5, 2], stability: [0, 1], gravity: [.5, 1.5] });
+export const AIRCRAFT_PHYSICS_DEFAULTS = Object.freeze({ mode: 'assisted', pitchRate: 1, rollRate: 1, yawRate: 1, response: 1, stability: 1, gravity: 1, thrust: 1, mass: 1, drag: 1, lift: 1, maxSpeed: 1, airBrake: 1, wheelBrake: 1, pitchLimit: 1, bankLimit: 1, flightPath: 1 });
+export const AIRCRAFT_PHYSICS_LIMITS = Object.freeze({ pitchRate: [.2, 3], rollRate: [.2, 3], yawRate: [.2, 3], response: [.25, 3], stability: [0, 1], gravity: [.5, 1.5], thrust: [0, 3], mass: [.5, 2], drag: [.25, 2], lift: [.5, 1.75], maxSpeed: [.5, 2], airBrake: [.25, 2], wheelBrake: [.5, 2], pitchLimit: [.4, 1.5], bankLimit: [.4, 1.25], flightPath: [.4, 1.8] });
+export const AIRCRAFT_PRESETS = Object.freeze([
+  { id: 'standard', name: '恢复标准', physics: {} },
+  { id: 'agile', name: '灵活机动', physics: { mode: 'maneuver', pitchRate: 1.65, rollRate: 1.8, yawRate: 1.3, response: 1.5, stability: .12, thrust: 1.1, mass: .85, flightPath: 1.25 } },
+  { id: 'power', name: '极速动力', physics: { thrust: 2.2, maxSpeed: 1.4, drag: .75, flightPath: 1.1 } },
+  { id: 'cruise', name: '轻松巡航', physics: { thrust: .85, drag: .6, lift: 1.25, response: .8 } },
+].map(preset => Object.freeze({ ...preset, physics: Object.freeze({ ...AIRCRAFT_PHYSICS_DEFAULTS, ...preset.physics }) })));
 
 export function setAircraftPhysics(flight, settings = {}) {
   const physics = { ...AIRCRAFT_PHYSICS_DEFAULTS, ...flight.physics, ...settings };
@@ -17,6 +23,14 @@ export function setAircraftPhysics(flight, settings = {}) {
     physics[key] = Number.isFinite(physics[key]) ? clamp(physics[key], low, high) : AIRCRAFT_PHYSICS_DEFAULTS[key];
   }
   flight.physics = physics;
+  const aircraft = flight.aircraft, liftScale = Math.sqrt(physics.mass * physics.gravity / physics.lift);
+  flight.performance = {
+    acceleration: aircraft.acceleration * physics.thrust / physics.mass, drag: aircraft.drag * physics.drag / physics.mass,
+    stall: aircraft.stall * liftScale, takeoff: aircraft.takeoff * liftScale, landingSpeed: aircraft.landingSpeed * liftScale,
+    maxSpeed: aircraft.maxSpeed * physics.maxSpeed, response: aircraft.response * physics.response / physics.mass,
+    pitchLimit: aircraft.pitchLimit * physics.pitchLimit, bankLimit: aircraft.bankLimit * physics.bankLimit,
+    flightPath: .8 * physics.flightPath / physics.mass, airBrake: 7 * physics.airBrake / physics.mass, wheelBrake: 18 * physics.wheelBrake / physics.mass,
+  };
   return physics;
 }
 
@@ -57,7 +71,8 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
 }
 
 export function aircraftEnvelope(flight) {
-  return { stall: flight.aircraft.stall * (1 - flight.flaps * .1), takeoff: flight.aircraft.takeoff * (1 - flight.flaps * .07) };
+  const performance = flight.performance;
+  return { stall: performance.stall * (1 - flight.flaps * .1), takeoff: performance.takeoff * (1 - flight.flaps * .07), landing: performance.landingSpeed, maxSpeed: performance.maxSpeed };
 }
 
 export function setAircraftFlaps(flight, level) {
@@ -89,7 +104,7 @@ export function runwayContact(flight, aircraft) {
   return flight.gearDown && Math.abs(flight.x) < RUNWAY.width / 2 - aircraft.span * .12
     && flight.z > RUNWAY.end && flight.z < RUNWAY.start && alignment < .28
     && Math.abs(flight.roll) < .2 && flight.pitch > -.12 && flight.pitch < .3
-    && flight.speed <= aircraft.landingSpeed && flight.verticalSpeed >= -aircraft.sinkLimit && extentY <= aircraft.gearHeight + .2;
+    && flight.speed <= flight.performance.landingSpeed && flight.verticalSpeed >= -aircraft.sinkLimit && extentY <= aircraft.gearHeight + .2;
 }
 
 export function crossesAirGate(from, to, gate) {
@@ -108,25 +123,25 @@ function crash(flight, reason) {
 }
 
 function stepFlight(flight, input, dt) {
-  const aircraft = flight.aircraft, physics = flight.physics, gravity = 9.81 * physics.gravity;
+  const aircraft = flight.aircraft, physics = flight.physics, performance = flight.performance, gravity = 9.81 * physics.gravity;
   from.set(flight.x, flight.y, flight.z);
   flight.elapsed += dt;
   if (flight.flaps && flight.speed > aircraft.flapLimit + 5) { flight.flaps = 0; flight.events.push('flaps-limit'); }
-  const stall = aircraft.stall * (1 - flight.flaps * .1), takeoff = aircraft.takeoff * (1 - flight.flaps * .07);
+  const stall = performance.stall * (1 - flight.flaps * .1), takeoff = performance.takeoff * (1 - flight.flaps * .07);
   flight.throttle = clamp(flight.throttle + axis(input.throttle) * dt * .3, 0, 1);
   const authority = clamp((flight.speed / stall) ** 2, .03, 1);
   const pitchInput = axis(input.pitch), rollInput = axis(input.roll), yawInput = axis(input.yaw);
   if (flight.onGround) {
-    flight.pitch += (pitchInput * aircraft.pitchLimit - flight.pitch) * (1 - Math.exp(-aircraft.response * physics.response * dt));
+    flight.pitch += (pitchInput * performance.pitchLimit - flight.pitch) * (1 - Math.exp(-performance.response * dt));
     flight.pitch = clamp(flight.pitch, -.02, .13); flight.roll = 0;
     flight.pitchRate = 0; flight.rollRate = 0; flight.yawRate = 0;
   } else {
     const maneuver = physics.mode === 'maneuver';
     const pitchLimit = aircraft.pitchRate * physics.pitchRate * authority;
     const rollLimit = aircraft.rollRate * physics.rollRate * authority;
-    const pitchTarget = maneuver ? pitchInput * pitchLimit - (1 - Math.abs(pitchInput)) * flight.pitch * physics.stability : (pitchInput * aircraft.pitchLimit + .018 - flight.pitch) * aircraft.response * (pitchInput ? 1 : physics.stability);
-    const rollTarget = maneuver ? rollInput * rollLimit - (1 - Math.abs(rollInput)) * flight.roll * physics.stability : (rollInput * aircraft.bankLimit - flight.roll) * aircraft.response * 1.5 * (rollInput ? 1 : physics.stability);
-    const response = 1 - Math.exp(-aircraft.response * 3 * physics.response * dt);
+    const pitchTarget = maneuver ? pitchInput * pitchLimit - (1 - Math.abs(pitchInput)) * flight.pitch * physics.stability : (pitchInput * performance.pitchLimit + .018 - flight.pitch) * aircraft.response * (pitchInput ? 1 : physics.stability);
+    const rollTarget = maneuver ? rollInput * rollLimit - (1 - Math.abs(rollInput)) * flight.roll * physics.stability : (rollInput * performance.bankLimit - flight.roll) * aircraft.response * 1.5 * (rollInput ? 1 : physics.stability);
+    const response = 1 - Math.exp(-performance.response * 3 * dt);
     flight.pitchRate += (clamp(pitchTarget, -pitchLimit, pitchLimit) - flight.pitchRate) * response;
     flight.rollRate += (clamp(rollTarget, -rollLimit, rollLimit) - flight.rollRate) * response;
     flight.yawRate += (yawInput * aircraft.yawRate * physics.yawRate * authority - flight.yawRate) * response;
@@ -139,10 +154,11 @@ function stepFlight(flight, input, dt) {
     angles.setFromQuaternion(pose);
     flight.pitch = angles.x; flight.heading = -angles.y; flight.roll = -angles.z;
   }
-  const drag = aircraft.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 : 0)) * flight.speed ** 2;
-  const braking = flight.onGround ? (input.brake ? 18 : 0) : (input.brake || flight.speedBrake ? 7 : 0);
-  const acceleration = aircraft.acceleration * flight.throttle - drag - (flight.onGround ? .45 : gravity * Math.sin(flight.pitch)) - braking;
-  const nextSpeed = clamp(flight.speed + acceleration * dt, 0, aircraft.maxSpeed);
+  const drag = performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2;
+  const braking = flight.onGround ? (input.brake ? performance.wheelBrake : 0) : (input.brake || flight.speedBrake ? performance.airBrake : 0);
+  const acceleration = performance.acceleration * flight.throttle - drag - (flight.onGround ? .45 : gravity * Math.sin(flight.pitch)) - braking;
+  const ceiling = Math.max(performance.maxSpeed, flight.speed - Math.min(60, Math.max(0, flight.speed - performance.maxSpeed) * 2) * dt);
+  const nextSpeed = clamp(flight.speed + acceleration * dt, 0, ceiling);
   const speed = (flight.speed + nextSpeed) * .5;
   flight.speed = nextSpeed;
   if (flight.onGround) {
@@ -159,7 +175,7 @@ function stepFlight(flight, input, dt) {
   flight.z -= Math.cos(flight.heading) * horizontalSpeed * dt;
   if (!flight.onGround) {
     const lift = Math.min(1, (speed / stall) ** 2);
-    const verticalAcceleration = (speed * Math.sin(flight.pitch) - flight.verticalSpeed) * .8 * lift - gravity * (1 - lift * Math.cos(flight.roll) * Math.cos(flight.pitch));
+    const verticalAcceleration = (speed * Math.sin(flight.pitch) - flight.verticalSpeed) * performance.flightPath * lift - gravity * (1 - lift * Math.cos(flight.roll) * Math.cos(flight.pitch));
     flight.y += flight.verticalSpeed * dt + .5 * verticalAcceleration * dt ** 2;
     flight.verticalSpeed += verticalAcceleration * dt;
   }

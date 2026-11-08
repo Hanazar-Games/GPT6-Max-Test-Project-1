@@ -193,7 +193,7 @@ export class AviationWorld {
       if (flight.status !== 'ready' && flight.physics.mode === 'maneuver') this.camera.up.applyQuaternion(this.aircraftRoot.quaternion);
       this.camera.lookAt(target);
     }
-    const fov = inside ? view.cockpitFov : 55 + (view.speedFov ? Math.min(18, flight.speed / flight.aircraft.maxSpeed * 18) : 0);
+    const fov = inside ? view.cockpitFov : 55 + (view.speedFov ? Math.min(18, flight.speed / flight.performance.maxSpeed * 18) : 0);
     if (Math.abs(this.camera.fov - fov) > .1) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     if (inside && Math.abs(this.cockpitCamera.fov - fov) > .1) { this.cockpitCamera.fov = fov; this.cockpitCamera.updateProjectionMatrix(); }
     this.resetCamera = false;
