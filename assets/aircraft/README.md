@@ -17,4 +17,16 @@
 - Original simplified geometry: twin engines, twin fins, swept wings, canards, tandem canopy and separate landing gear. No externally downloaded fighter mesh is included.
 - Rebuild with Node 22+: `node scripts/build-su30.mjs` from the repository root. The script uses the project's pinned Three.js dependency and exports a self-contained GLB.
 
+## Original fictional aircraft fleet
+
+- Files: `t6.glb`, `b62.glb`, `c24.glb`, `d9.glb`.
+- Author: **Lunar Courier project**.
+- License: **CC0 1.0** — https://creativecommons.org/publicdomain/zero/1.0/
+- T-6: low-wing single-propeller trainer with a bubble canopy.
+- B-62: twin rear-engine business jet with winglets and a high tailplane.
+- C-24: high-wing twin-turboprop transport with a rear cargo ramp.
+- D-9: single-engine delta-wing fighter with canards.
+- Original fictional designs; these identifiers do not represent certified real-world aircraft. No external meshes or textures are used.
+- Rebuild with Node 22+: `node scripts/build-aircraft-fleet.mjs`. Static geometry is batched by material; landing gear and propeller groups remain separate for runtime animation. Combined GLB size is approximately 255 kB.
+
 In-game aircraft dimensions, performance and flight assistance are tuned for gameplay.

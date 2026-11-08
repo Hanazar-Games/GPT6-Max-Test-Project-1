@@ -78,7 +78,7 @@ test('maneuver integration stays consistent across frame sizes and ground contro
   assert.ok(ground.pitch <= .13);
 });
 
-test('both aircraft accelerate on the runway and need speed plus rotation to take off', () => {
+test('all aircraft accelerate on the runway and need speed plus rotation to take off', () => {
   for (const aircraft of AIRCRAFT) {
     const flight = createAircraftFlight(aircraft.id);
     flight.status = 'running'; flight.throttle = 1;
@@ -222,7 +222,7 @@ test('runway stays flat, every gate clears terrain and gate collection cannot re
   assert.equal(flight.gates, 1);
 });
 
-test('both runway directions spawn inside the threshold and can take off and land', () => {
+test('every aircraft can take off and land from both runway directions', () => {
   for (const aircraft of AIRCRAFT) for (const runwayDirection of ['18', '36']) {
     const flight = createAircraftFlight(aircraft.id, false, { runwayDirection });
     assert.ok(flight.z > RUNWAY.end + 100 && flight.z < RUNWAY.start - 100);
@@ -232,7 +232,7 @@ test('both runway directions spawn inside the threshold and can take off and lan
     advance(flight, { pitch: 1 }, 30);
     assert.equal(flight.status, 'running'); assert.equal(flight.onGround, false);
     assert.equal(Math.sign(flight.z - initialZ), runwayDirection === '18' ? 1 : -1);
-    Object.assign(flight, { x: 0, z: RUNWAY.center, y: aircraft.gearHeight + .01, speed: 65, pitch: .03, roll: 0, verticalSpeed: -2, gearDown: true, throttle: 0 });
+    Object.assign(flight, { x: 0, z: RUNWAY.center, y: aircraft.gearHeight + .01, speed: Math.min(65, aircraft.landingSpeed * .8), pitch: .03, roll: 0, verticalSpeed: -2, gearDown: true, throttle: 0 });
     advance(flight, { brake: true }, 6);
     assert.equal(flight.status, 'completed');
   }

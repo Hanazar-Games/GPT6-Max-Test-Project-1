@@ -4,6 +4,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export const AIRCRAFT_MODEL_URLS = {
   a380: new URL('../assets/aircraft/a380.glb', import.meta.url).href,
   su30: new URL('../assets/aircraft/su30.glb', import.meta.url).href,
+  t6: new URL('../assets/aircraft/t6.glb', import.meta.url).href,
+  b62: new URL('../assets/aircraft/b62.glb', import.meta.url).href,
+  c24: new URL('../assets/aircraft/c24.glb', import.meta.url).href,
+  d9: new URL('../assets/aircraft/d9.glb', import.meta.url).href,
 };
 
 export function disposeAircraftObject(root) {
@@ -42,13 +46,14 @@ export function normalizeAircraftModel(scene, aircraft) {
   scene.position.x -= center.x;
   scene.position.z -= center.z;
   scene.position.y -= bounds.min.y + aircraft.gearHeight;
-  const gear = [];
+  const gear = [], propellers = [];
   scene.traverse(object => {
     if (object.name === 'gears' || object.name === 'landing-gear') gear.push(object);
+    if (object.name.startsWith('propeller-')) propellers.push(object);
     if (object.isMesh) { object.castShadow = false; object.receiveShadow = false; }
   });
   model.updateMatrixWorld(true);
-  model.userData.gear = gear;
+  model.userData.gear = gear; model.userData.propellers = propellers;
   return model;
 }
 

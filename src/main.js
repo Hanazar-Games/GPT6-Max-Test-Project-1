@@ -155,7 +155,7 @@ let ghostEnabled = true;
 let splitFlashUntil = 0;
 const audio = new AudioEngine();
 let aviationActive = false;
-$('open-hangar').insertAdjacentHTML('afterend', `<button id="open-aviation" class="hangar-button aircraft-entry" disabled><span>飞机机库 · 空中试飞<small>A380 / Su-30 · 起飞、飞行与降落</small></span>${icon('arrow')}</button>`);
+$('open-hangar').insertAdjacentHTML('afterend', `<button id="open-aviation" class="hangar-button aircraft-entry" disabled><span>飞机机库 · 空中试飞<small>6 款飞机 · 起飞、飞行与降落</small></span>${icon('arrow')}</button>`);
 $('open-aviation').addEventListener('click', async () => {
   if (aviationActive || !world || game.status !== 'menu') return;
   aviationActive = true;

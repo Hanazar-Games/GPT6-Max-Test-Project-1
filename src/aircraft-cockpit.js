@@ -3,16 +3,17 @@ import { batchMeshes } from './model-utils.js';
 import { RUNWAY } from './airport.js';
 
 export function cockpitSeat(aircraft) {
-  return aircraft.id === 'a380' ? [-1.15, 2.2, -aircraft.length * .36] : [0, .55, -aircraft.length * .24];
+  return aircraft.cockpit === 'airliner' ? [-1.15, 2.2, -aircraft.length * .36] : aircraft.cockpit === 'transport' ? [-.55, .8, -aircraft.length * .28] : [0, .55, -aircraft.length * .24];
 }
 
 export function cockpitInstruments(flight) {
-  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), flaps: flight.flaps, speedBrake: flight.speedBrake, warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
+  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), engine: Math.round(flight.engineOutput * flight.physics.thrust * 100), flaps: flight.flaps, speedBrake: flight.speedBrake, warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
 }
 
 export function createAircraftCockpit(aircraft, texture = null) {
   const root = new THREE.Group(), shell = new THREE.Group(); root.name = `${aircraft.id}-cockpit`; root.add(shell);
-  const airliner = aircraft.id === 'a380', width = airliner ? 4.2 : 2.05;
+  const airliner = aircraft.cockpit === 'airliner' || aircraft.cockpit === 'transport', yoke = aircraft.cockpit !== 'fighter';
+  const width = aircraft.cockpit === 'airliner' ? 4.2 : airliner ? 3.4 : 2.05;
   const materials = {
     shell: new THREE.MeshStandardMaterial({ color: airliner ? 0x778084 : 0x314047, roughness: .8 }),
     dark: new THREE.MeshStandardMaterial({ color: 0x172126, roughness: .9 }),
@@ -34,14 +35,15 @@ export function createAircraftCockpit(aircraft, texture = null) {
   box(shell, 'shell', [width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'dark', [0, -1.45, -.1], [width, .1, 3.3]);
   const frame = airliner ? [[-1.9, -.27, -1.58], [-1.55, 1.05, -1.15], [.6, 1.05, -1.45], [2.05, 1.05, -1.15], [2.1, -.27, -1.58]] : [[-.99, -.28, -1.5], [-.75, .65, -1.25], [0, 1.05, -1.1], [.75, .65, -1.25], [.99, -.28, -1.5]];
+  if (airliner) for (const point of frame) point[0] *= width / 4.2;
   for (let i = 1; i < frame.length; i++) bar(frame[i - 1], frame[i], airliner ? .045 : .035);
   if (airliner) {
     bar([.6, -.27, -1.58], [.6, 1.05, -1.45], .04);
     box(shell, 'shell', [.7, 1.06, -.5], [1, .12, 1.1]);
     for (let row = 0; row < 3; row++) for (let column = 0; column < 7; column++) box(shell, row === 1 ? 'amber' : 'dark', [.35 + column * .11, .988, -.85 + row * .23], [.05, .025, .09]);
-    box(shell, 'shell', [.95, -1.1, -.3], [.5, .55, 1.3]);
-    box(shell, 'seat', [1.65, -.9, .3], [.75, .2, .8]);
-    box(shell, 'seat', [1.65, -.4, .7], [.75, .9, .16]);
+    box(shell, 'shell', [width / 2 - 1.15, -1.1, -.3], [.5, .55, 1.3]);
+    box(shell, 'seat', [width / 2 - .45, -.9, .3], [.75, .2, .8]);
+    box(shell, 'seat', [width / 2 - .45, -.4, .7], [.75, .9, .16]);
   } else {
     box(shell, 'shell', [-.65, -1.08, -.15], [.35, .32, 1.2]);
     box(shell, 'shell', [.65, -1.08, -.15], [.35, .32, 1.2]);
@@ -55,13 +57,13 @@ export function createAircraftCockpit(aircraft, texture = null) {
   screen.name = 'live-flight-displays'; screen.position.set(0, -.7, -1.411); root.add(screen);
   const stick = new THREE.Group(); stick.position.set(0, -1.17, -1.05); root.add(stick);
   box(stick, 'dark', [0, .2, 0], [.055, .4, .055]);
-  if (airliner) {
+  if (yoke) {
     box(stick, 'dark', [0, .4, 0], [.42, .055, .055]);
     for (const x of [-.21, .21]) box(stick, 'dark', [x, .47, 0], [.055, .18, .055]);
   } else box(stick, 'dark', [0, .44, -.02], [.09, .16, .13]);
   batchMeshes(stick);
-  const throttles = Array.from({ length: airliner ? 4 : 2 }, (_, index) => {
-    const lever = new THREE.Group(); lever.position.set(airliner ? .78 + index * .1 : -.72 + index * .1, -1, -1.08); root.add(lever);
+  const throttles = Array.from({ length: aircraft.engines }, (_, index) => {
+    const lever = new THREE.Group(); lever.position.set((airliner ? width / 2 - 1.32 : -.72) + index * .1, -1, -1.08); root.add(lever);
     box(lever, 'trim', [0, .12, 0], [.025, .24, .025]);
     box(lever, 'dark', [0, .24, 0], [.075, .065, .1]); batchMeshes(lever); return lever;
   });
@@ -79,7 +81,7 @@ export function updateCockpitControls(root, flight, input = {}) {
 }
 
 export function drawCockpitDisplay(ctx, flight) {
-  const data = cockpitInstruments(flight), airliner = flight.aircraft.id === 'a380';
+  const data = cockpitInstruments(flight), airliner = flight.aircraft.cockpit === 'airliner' || flight.aircraft.cockpit === 'transport', engines = flight.aircraft.engines;
   const width = ctx.canvas.width, height = ctx.canvas.height;
   ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#111c23'; ctx.fillRect(0, 0, width, height);
   const text = (value, x, y, size = 22, color = '#c8eee4') => { ctx.fillStyle = color; ctx.font = `${size}px monospace`; ctx.fillText(String(value), x, y); };
@@ -97,10 +99,10 @@ export function drawCockpitDisplay(ctx, flight) {
   text(data.warning, second + 14, height - 39, 20, flight.stalling ? '#ff805c' : '#96efb0');
   const third = gap * 3 + tile * 2;
   text(airliner ? 'ENGINE / ECAM' : 'ENGINE / NAV', third + 14, 47, 20);
-  text(`${data.throttle}%`, third + 14, 103, 40);
-  for (let i = 0; i < (airliner ? 4 : 2); i++) {
-    const barX = third + 18 + i * (tile - 35) / (airliner ? 4 : 2);
-    ctx.fillStyle = '#163b3e'; ctx.fillRect(barX, 135, 24, 96); ctx.fillStyle = '#8bdeb3'; ctx.fillRect(barX, 231 - data.throttle * .96, 24, data.throttle * .96);
+  text(`${data.engine}%`, third + 14, 103, 40);
+  for (let i = 0; i < engines; i++) {
+    const barX = third + 18 + i * (tile - 35) / engines, output = Math.min(100, data.engine) * .96;
+    ctx.fillStyle = '#163b3e'; ctx.fillRect(barX, 135, 24, 96); ctx.fillStyle = '#8bdeb3'; ctx.fillRect(barX, 231 - output, 24, output);
   }
   text(`FLAP ${data.flaps}  BRK ${data.speedBrake ? 'ON' : 'OFF'}`, third + 14, height - 65, 18, data.speedBrake ? '#ffcf86' : '#96efb0');
   text(`RINGS ${flight.gates}/6`, third + 14, height - 39, 20);

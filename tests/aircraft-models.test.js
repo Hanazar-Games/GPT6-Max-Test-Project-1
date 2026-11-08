@@ -15,7 +15,7 @@ async function asset(id) {
   return { file, json, jsonSize };
 }
 
-test('both real GLBs normalize to aircraft dimensions with independent landing gear', async () => {
+test('every GLB normalizes to aircraft dimensions with independent gear and propellers', async () => {
   for (const aircraft of AIRCRAFT) {
     const { file, json, jsonSize } = await asset(aircraft.id);
     assert.ok(!json.buffers.some(buffer => buffer.uri));
@@ -32,11 +32,24 @@ test('both real GLBs normalize to aircraft dimensions with independent landing g
     assert.ok(Math.abs(dimensions.x - aircraft.span) < 1);
     assert.ok(Math.abs(bounds.min.y + aircraft.gearHeight) < .001);
     assert.equal(model.userData.gear.length, 1);
+    assert.equal(model.userData.propellers.length, aircraft.id === 't6' ? 1 : aircraft.id === 'c24' ? 2 : 0);
     model.userData.gear[0].visible = false;
     let visibleMeshes = 0; model.traverseVisible(object => { if (object.isMesh) visibleMeshes++; });
     assert.ok(visibleMeshes > 0);
     disposeAircraftObject(model);
   }
+});
+
+test('the four original fleet assets are compact, attributed and have distinct geometry', async () => {
+  const meshes = new Set();
+  for (const id of ['t6', 'b62', 'c24', 'd9']) {
+    const { file, json } = await asset(id);
+    assert.equal(json.nodes[0].extras.license, 'CC0-1.0');
+    assert.ok(file.length < 100000);
+    assert.ok(json.meshes.length < 18);
+    meshes.add(file.toString('base64'));
+  }
+  assert.equal(meshes.size, 4);
 });
 
 test('A380 attribution survives and the fighter is an original self-contained asset', async () => {

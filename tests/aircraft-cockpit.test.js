@@ -13,9 +13,13 @@ test('each cockpit has a clear forward window, distinct controls and a seat insi
     const ray = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1), .01, 5);
     assert.equal(ray.intersectObject(cockpit, true).length, 0, 'forward eye line must remain unobstructed');
     assert.ok(cockpit.userData.controls.stick);
-    assert.equal(cockpit.userData.controls.throttles.length, aircraft.id === 'a380' ? 4 : 2);
+    assert.equal(cockpit.userData.controls.throttles.length, aircraft.engines);
     assert.ok(cockpitSeat(aircraft).every(Number.isFinite));
     assert.ok(Math.abs(cockpitSeat(aircraft)[2]) < aircraft.length / 2);
+    if (aircraft.cockpit === 'transport') {
+      const bounds = new THREE.Box3().setFromObject(cockpit);
+      assert.ok(bounds.max.x < 1.9 && bounds.min.x > -1.9, 'copilot seat and console must fit inside the narrower cabin');
+    }
     const meshes = []; cockpit.traverse(object => { if (object.isMesh) meshes.push(object); });
     assert.ok(meshes.length < 22, 'cockpit geometry must be batched');
     disposeAircraftObject(cockpit);
@@ -42,12 +46,13 @@ test('instruments wrap headings and use the same units and warnings as the fligh
   const data = cockpitInstruments(flight);
   assert.equal(data.speed, 720); assert.equal(data.altitude, 750); assert.equal(data.heading, '270');
   assert.equal(data.vertical, '-4.0'); assert.equal(data.throttle, 70); assert.equal(data.warning, 'STALL');
+  assert.equal(data.engine, 65, 'engine output must remain distinct from the commanded throttle');
 });
 
 test('cockpit camera follows the aircraft attitude and side looking preserves its bank', () => {
   const flight = createAircraftFlight('su30', true);
   Object.assign(flight, { x: 800, y: 900, z: -1200, heading: 1.2, pitch: .2, roll: .6 });
-  const model = new THREE.Group(); model.userData.gear = [];
+  const model = new THREE.Group(); model.userData.gear = []; model.userData.propellers = [];
   const cockpit = createAircraftCockpit(flight.aircraft);
   const passes = [];
   const world = Object.assign(Object.create(AviationWorld.prototype), {
@@ -101,6 +106,10 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
   world.render(flight, 1 / 60);
   assert.ok(world.camera.position.y >= 4, 'inverted low-altitude camera must stay above terrain');
   assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) >= clearance - 1e-8);
+  const propeller = new THREE.Group(); model.userData.propellers.push(propeller);
+  world.render(flight, .1); assert.ok(propeller.rotation.z > 0);
+  flight.status = 'paused'; const propellerAngle = propeller.rotation.z;
+  world.render(flight, .1); assert.equal(propeller.rotation.z, propellerAngle);
   disposeAircraftObject(cockpit); disposeAircraftObject(world.shadow);
 });
 

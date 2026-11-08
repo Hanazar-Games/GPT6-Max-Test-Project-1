@@ -7,13 +7,13 @@ import { RUNWAY } from './airport.js';
 const cameraNames = ['追随机位', '近距跟随', '驾驶舱'];
 const flapNames = ['收起', '起飞', '着陆'];
 const maneuverFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['flightPath', '航迹跟随响应'], ['pitchLimit', '辅助俯仰幅度'], ['bankLimit', '辅助滚转幅度'], ['gravity', '重力强度']];
-const powerFields = [['thrust', '发动机推力'], ['mass', '机体质量'], ['drag', '气动阻力'], ['lift', '升力系数'], ['maxSpeed', '速度上限'], ['airBrake', '空中减速强度'], ['wheelBrake', '轮刹强度']];
+const powerFields = [['thrust', '发动机推力'], ['engineResponse', '发动机响应'], ['mass', '机体质量'], ['drag', '气动阻力'], ['lift', '升力系数'], ['maxSpeed', '速度上限'], ['airBrake', '空中减速强度'], ['wheelBrake', '轮刹强度']];
 const physicsFields = [...maneuverFields, ...powerFields];
 const physicsControls = (fields, note) => fields.map(([key, label]) => {
   const [low, high] = AIRCRAFT_PHYSICS_LIMITS[key].map(value => Math.round(value * 100));
   return `<div class="av-parameter"><label for="av-physics-${key}">${label}<small>${low}–${high}%</small></label><span class="av-parameter-number"><input data-physics-number="${key}" type="number" min="${low}" max="${high}" step="1" value="100" inputmode="numeric" aria-label="${label}百分比" aria-describedby="${note}"><span aria-hidden="true">%</span></span><input id="av-physics-${key}" data-physics="${key}" type="range" min="${low}" max="${high}" step="1" value="100" aria-label="${label}" aria-describedby="${note}"></div>`;
 }).join('');
-const flightMusic = { a380: { music: { root: 50, bpm: 100 } }, su30: { music: { root: 45, bpm: 136 } } };
+const flightMusic = { a380: { music: { root: 50, bpm: 100 } }, su30: { music: { root: 45, bpm: 136 } }, t6: { music: { root: 55, bpm: 96 } }, b62: { music: { root: 52, bpm: 112 } }, c24: { music: { root: 48, bpm: 104 } }, d9: { music: { root: 43, bpm: 144 } } };
 const audioStates = { running: 'running', ready: 'menu', paused: 'paused', crashed: 'lost', completed: 'won' };
 
 export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
@@ -25,20 +25,20 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     <header class="av-header"><div class="av-brand"><span>✈</span><div>海岛飞行计划<small>ISLAND FLIGHT / 01</small></div></div><nav aria-label="飞机操作"><button data-action="sound" aria-pressed="false">声音</button><button data-action="camera">追随机位</button><button data-action="pause">暂停</button><button data-action="exit">返回基地 ↗</button></nav></header>
     <div class="av-instruments" aria-label="飞行仪表"><div><small>空速 <span>KM/H</span></small><strong data-value="speed">0</strong></div><div><small>高度 <span>M</span></small><strong data-value="altitude">0</strong></div><div><small>升降率 <span>M/S</span></small><strong data-value="vertical">0</strong></div><div><small>航向 <span>DEG</span></small><strong data-value="heading">000</strong></div></div>
     <div class="av-navigation"><small data-value="phase">飞机机库</small><strong data-value="guide">准备前往天空</strong><span data-value="target">海岸跑道 · 自由飞行与六环训练</span><div class="av-attitude" aria-label="姿态仪"><div class="av-horizon"><i></i></div><b aria-hidden="true">— ⌄ —</b></div><span data-value="bank">机翼水平 · 机头水平</span></div>
-    <div class="av-flight-tools"><label>油门 <output data-value="throttle">0%</output><input data-control="throttle" type="range" min="0" max="100" value="0" aria-label="飞机油门"></label><div class="av-systems"><button data-action="gear" aria-pressed="true">轮：放下</button><button data-action="flaps">襟翼：收起</button><button data-action="speed-brake" aria-pressed="false">减速板：收起</button></div><button data-action="navigation" data-value="progress" aria-pressed="false">训练 0/6 · 返航 ↗</button><div class="av-look" role="group" aria-label="驾驶舱观察方向" hidden><button data-action="look-left" aria-label="驾驶舱向左看">左看</button><button data-action="look-center" aria-label="驾驶舱视线回正">正前</button><button data-action="look-right" aria-label="驾驶舱向右看">右看</button></div></div>
+    <div class="av-flight-tools"><label>油门 <output data-value="throttle">0%</output><input data-control="throttle" type="range" min="0" max="100" value="0" aria-label="飞机油门"><small class="av-engine-readout">实际推力 <output data-value="engine">0%</output></small></label><div class="av-systems"><button data-action="gear" aria-pressed="true">轮：放下</button><button data-action="flaps">襟翼：收起</button><button data-action="speed-brake" aria-pressed="false">减速板：收起</button></div><button data-action="navigation" data-value="progress" aria-pressed="false">训练 0/6 · 返航 ↗</button><div class="av-look" role="group" aria-label="驾驶舱观察方向" hidden><button data-action="look-left" aria-label="驾驶舱向左看">左看</button><button data-action="look-center" aria-label="驾驶舱视线回正">正前</button><button data-action="look-right" aria-label="驾驶舱向右看">右看</button></div></div>
     <div class="av-joystick" aria-label="触屏升降与滚转操纵杆" role="group"><span>前推降 · 后拉升</span><div class="av-stick-pad"><i class="av-stick-cross"></i><b class="av-stick-knob"></b><small>左 / 右滚转</small></div></div>
     <button class="av-brake" data-hold="brake">按住制动</button>
     <aside class="av-panel" aria-labelledby="av-panel-title" aria-describedby="av-panel-copy">
       <span class="av-eyebrow">FLIGHT DECK / 全新空中载具</span><h1 id="av-panel-title" tabindex="-1">这次，真的飞起来。</h1><p id="av-panel-copy">从海岸跑道起飞，掠过云层、群山与城市。自由探索，或依次穿过六座导航环，再返回跑道。</p>
-      <div class="av-aircraft-list" role="group" aria-label="选择飞机">${AIRCRAFT.map(aircraft => `<button data-aircraft="${aircraft.id}" aria-pressed="${aircraft.id === 'a380'}"><span class="av-plane-icon" aria-hidden="true">${aircraft.id === 'a380' ? '✈' : '➤'}</span><span><strong>${aircraft.name}</strong><small>${aircraft.role} · ${aircraft.id === 'a380' ? '四发客机' : '双发战斗机'}</small></span></button>`).join('')}</div>
+      <div class="av-aircraft-list" role="group" aria-label="选择飞机">${AIRCRAFT.map(aircraft => `<button data-aircraft="${aircraft.id}" aria-pressed="${aircraft.id === 'a380'}"><span class="av-plane-icon" aria-hidden="true">${aircraft.cockpit === 'fighter' ? '➤' : '✈'}</span><span><strong>${aircraft.name}</strong><small>${aircraft.role} · ${aircraft.configuration}</small></span></button>`).join('')}</div>
       <p class="av-specs" data-value="specs"></p><p class="av-load-status" role="status" aria-live="polite">正在载入飞机模型…</p>
       <label class="av-runway-choice">起飞方向 <select data-setting="runway"><option value="36">跑道 36 · 向北</option><option value="18">跑道 18 · 向南</option></select><small>${RUNWAY.length.toLocaleString('en-US')} × ${RUNWAY.width} m · 两侧各 ${RUNWAY.shoulder} m 道肩</small></label>
       <div class="av-panel-actions"><button data-action="resume" hidden>继续飞行</button><button data-action="runway" disabled>跑道起飞 <span>↗</span></button><button data-action="airborne" disabled>直接空中试飞</button><button data-action="retry" hidden>重试模型加载</button><button data-action="hangar" hidden>返回飞机机库</button></div>
-      <section class="av-tuning" aria-label="本机调校"><p data-value="tuning-name"></p><div class="av-tuning-presets" role="group" aria-label="应用整套飞机调校">${AIRCRAFT_PRESETS.map(preset => `<button data-flight-preset="${preset.id}" aria-pressed="false">${preset.name}</button>`).join('')}</div><small>预设替换本机整套物理参数；手动调整后显示为自定义。两架飞机分别记录，仅保留在本次飞机模式。</small>
+      <section class="av-tuning" aria-label="本机调校"><p data-value="tuning-name"></p><div class="av-tuning-presets" role="group" aria-label="应用整套飞机调校">${AIRCRAFT_PRESETS.map(preset => `<button data-flight-preset="${preset.id}" aria-pressed="false">${preset.name}</button>`).join('')}</div><small>预设替换本机整套物理参数；手动调整后显示为自定义。每架飞机分别记录，仅保留在本次飞机模式。</small>
       <dl class="av-performance" aria-label="当前飞机性能参考"><div><dt>速度上限</dt><dd data-value="tune-speed"></dd></div><div><dt>满油门加速参考</dt><dd data-value="tune-acceleration"></dd></div><div><dt>起飞参考</dt><dd data-value="tune-takeoff"></dd></div><div><dt>失速参考</dt><dd data-value="tune-stall"></dd></div><div><dt>着陆速度上限</dt><dd data-value="tune-landing"></dd></div><div><dt>辅助俯仰 / 滚转</dt><dd data-value="tune-limits"></dd></div></dl><p data-value="performance-note"></p></section>
-      <details class="av-help av-physics" open><summary>动力与气动自定义 · 7 项</summary>
+      <details class="av-help av-physics" open><summary>动力与气动自定义 · ${powerFields.length} 项</summary>
       ${physicsControls(powerFields, 'av-power-note')}
-      <p id="av-power-note">100% 为本机默认值。推力和质量改变推重比，质量也改变操纵与航迹惯性；质量、重力、升力共同影响低速门槛。空中减速作用于制动与减速板，轮刹只作用于地面。所有数值为游戏调校。</p></details>
+      <p id="av-power-note">100% 为本机默认值。发动机响应越高，加减推力越快；油门是目标，实际推力逐步跟随，输出以本机标准满推力为 100%。质量改变推重比与惯性；质量、重力、升力共同影响低速门槛，倾斜转弯会提高失速参考并增加阻力。空中减速作用于制动与减速板，轮刹只作用于地面。所有数值为游戏调校。</p></details>
       <details class="av-help av-physics" open><summary>飞行物理与机动</summary>
       <label>飞行模式<select data-setting="flight-mode"><option value="assisted">稳定飞行 · 姿态辅助</option><option value="maneuver">自由机动 · 滚转 / 筋斗</option></select></label>
       <p data-value="physics-help"></p>
@@ -50,7 +50,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <p>手机用左下操纵杆升降与滚转，右侧调节油门、襟翼和减速板。起飞前可用起飞襟翼，达到提示速度后拉升，关闭减速板；降落前放轮、放着陆襟翼，降低下降率，接地后油门归零并按住制动。襟翼降低失速速度并增加阻力，超速会自动收起；减速板不代替地面刹车。</p><p data-value="flap-limit"></p></details>
       <details class="av-help"><summary>镜头与视野</summary><label>驾驶舱视场角 <output data-value="cockpit-fov">68°</output><input data-setting="cockpit-fov" type="range" min="50" max="90" step="1" value="68" aria-label="驾驶舱视场角"></label><label>跟随距离 <output data-value="chase-distance">100%</output><input data-setting="chase-distance" type="range" min="70" max="160" step="5" value="100" aria-label="飞机跟随镜头距离"></label><label>速度扩角<select data-setting="speed-fov"><option value="on">开启</option><option value="off">关闭</option></select></label></details>
       <details class="av-help"><summary>画面与声音</summary><label>画面质量<select data-setting="quality"><option value="0.75">省电</option><option value="1.25">标准</option><option value="1.75">精细</option></select></label><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><small>机场尺寸与飞行参数为游戏设计；驾驶舱为原创简化内饰。设置即时生效，仅保留在本次飞机模式。</small></details>
-      <details class="av-credits"><summary>模型署名</summary><p>Airbus A380：<a href="https://sketchfab.com/3d-models/singapore-airlines-a380-fd047ccf175c4db5b7e3e400c67c47a0" target="_blank" rel="noopener noreferrer">Singapore Airlines A380</a>，作者 zairiq-zairiq-123-pixar-cars-bfdi，用户提供，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。游戏中调整了大小、朝向和起落架显示。</p><p>Su-30：本项目原创简化模型（CC0），依据双发、双垂尾与前翼轮廓制作。</p></details>
+      <details class="av-credits"><summary>模型署名</summary><p>Airbus A380：<a href="https://sketchfab.com/3d-models/singapore-airlines-a380-fd047ccf175c4db5b7e3e400c67c47a0" target="_blank" rel="noopener noreferrer">Singapore Airlines A380</a>，作者 zairiq-zairiq-123-pixar-cars-bfdi，用户提供，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。游戏中调整了大小、朝向和起落架显示。</p><p>Su-30：本项目原创简化模型（CC0），依据双发、双垂尾与前翼轮廓制作。</p><p>星雀 T-6、云帆 B-62、山海 C-24、岚影 D-9：本项目原创架空机型与简化 GLB，采用 CC0。</p></details>
     </aside>
     <div class="av-notice" role="status" aria-live="polite"></div><footer class="av-footer"><span data-value="aircraft">Airbus A380</span><span data-value="keyhint"></span><span data-value="time">00:00</span></footer>`;
   document.body.append(root);
@@ -106,7 +106,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text(values['tune-stall'], speedText(envelope.stall)); text(values['tune-landing'], speedText(envelope.landing));
     text(values['tune-acceleration'], `${performance.acceleration.toFixed(1)} m/s²`);
     text(values['tune-limits'], physicsSettings.mode === 'maneuver' ? '自由机动 · 不限角度' : `${Math.round(performance.pitchLimit * 180 / Math.PI)}° / ${Math.round(performance.bankLimit * 180 / Math.PI)}°`);
-    text(values['performance-note'], physicsSettings.thrust === 0 ? '发动机推力为零，可空中试飞练习滑翔；跑道起飞需要增加推力。' : envelope.takeoff > envelope.maxSpeed ? '当前起飞参考超过速度上限，请提高上限或升力，或降低质量 / 重力。' : `低速参考已计入当前襟翼。加速参考未扣空气阻力，实际极速取决于推力与阻力；${aircraft.name} 的机身尺寸保持不变。`);
+    text(values['performance-note'], physicsSettings.thrust === 0 ? '发动机推力为零，可空中试飞练习滑翔；跑道起飞需要增加推力。' : envelope.takeoff > envelope.maxSpeed ? '当前起飞参考超过速度上限，请提高上限或升力，或降低质量 / 重力。' : '失速参考已计入当前襟翼与坡度。加速参考为发动机稳定后的满推力，未扣空气阻力，实际极速取决于推力与阻力。');
     text(values.specs, `${aircraft.subtitle} · 翼展 ${aircraft.span} m · 起飞参考 ≥ ${speedText(envelope.takeoff)} · 速度上限 ${speedText(envelope.maxSpeed)}`);
   }
 
@@ -223,6 +223,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text(values.vertical, `${flight.verticalSpeed > 0 ? '+' : ''}${flight.verticalSpeed.toFixed(1)}`);
     text(values.heading, String(Math.round(heading) % 360).padStart(3, '0'));
     text(values.throttle, `${Math.round(flight.throttle * 100)}%`);
+    text(values.engine, `${Math.round(flight.engineOutput * physicsSettings.thrust * 100)}%`);
     const throttle = $('[data-control="throttle"]');
     if (document.activeElement !== throttle) throttle.value = Math.round(flight.throttle * 100);
     text(action('gear'), `轮：${flight.gearDown ? '放下' : '收起'}`); action('gear').setAttribute('aria-pressed', String(flight.gearDown));

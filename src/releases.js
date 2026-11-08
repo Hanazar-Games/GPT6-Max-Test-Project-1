@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞机动力与机动自定义</h2>
-      <p id="release-copy">调整发动机、气动与机动手感，为每架飞机搭配自己的飞行参数。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 六机型与飞行动力升级</h2>
+      <p id="release-copy">从单发教练机到三角翼战机，感受不同飞机的动力与转弯手感。</p>
+      <ul class="release-list">
+        <li><strong>四款新飞机</strong>星雀 T-6 教练机、云帆 B-62 公务机、山海 C-24 涡桨运输机、岚影 D-9 三角翼战机加入机库，六款飞机全部可驾驶。四款原创 GLB 合计约 255 kB，带独立起落架、对应驾驶舱与调校。</li>
+        <li><strong>更有层次的动力</strong>发动机出力逐步跟随油门，增加 25%–300% 发动机响应设置，共 17 项调校。HUD 与驾驶舱显示实际推力，螺旋桨随输出旋转；倾斜急转增加阻力并提高失速参考，平飞后回落。</li>
+        <li><strong>机库与驾驶舱完善</strong>机型卡片双列排列，修正窄体舱座椅位置、四屏仪表文字拉伸及手机横屏导航遮挡。六机型完成双向起降与机动回归；1.24.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>78 个版本</span></summary>
+      <article><h3>v1.24.0 · 飞机动力与机动自定义</h3>
+      <p>调整发动机、气动与机动手感，为每架飞机搭配自己的飞行参数。</p>
       <ul class="release-list">
         <li><strong>16 项飞机细调</strong>增加推力 0%–300%、质量、阻力、升力、速度上限、空中减速和轮刹；扩展三轴速率与响应范围，增加航迹响应和辅助角度。每项支持 1% 滑杆与精确数字输入，实际参与飞行物理。</li>
         <li><strong>每架飞机独立配置</strong>标准、灵活机动、极速动力、轻松巡航四套完整预设，支持继续手动细调。A380 与 Su-30 分别保留本次飞机模式内的设置；自由机动时禁用不适用的辅助角度。</li>
         <li><strong>看得见的性能变化</strong>实时显示加速、起飞、失速、着陆及速度上限参考，提示零推力和不匹配的起飞组合。暂停调校保持飞行状态，降低上限后平滑减速；1.23.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>77 个版本</span></summary>
+      </article>
       <article><h3>v1.23.0 · 自由机动与物理调校</h3>
       <p>滚转、倒飞与筋斗，按自己的手感调整飞机，再平稳返回跑道。</p>
       <ul class="release-list">

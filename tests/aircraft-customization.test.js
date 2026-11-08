@@ -106,7 +106,7 @@ test('speed ceiling tuning increases attainable speed and reduces an existing ov
   assert.ok(fast.speed <= aircraftEnvelope(fast).maxSpeed + .1);
 });
 
-test('presets and every parameter boundary remain finite for both aircraft across frame sizes', () => {
+test('presets and every parameter boundary remain finite across the fleet and frame sizes', () => {
   for (const aircraft of AIRCRAFT) for (const preset of AIRCRAFT_PRESETS) {
     const flights = [1 / 30, 1 / 60, 1 / 120].map(step => {
       const flight = airborne(preset.physics, aircraft.id);
@@ -118,7 +118,7 @@ test('presets and every parameter boundary remain finite for both aircraft acros
       assert.ok(Math.abs(flight.speed - flights[0].speed) < .001);
     }
   }
-  for (const id of ['a380', 'su30']) for (const end of [0, 1]) {
+  for (const { id } of AIRCRAFT) for (const end of [0, 1]) {
     const physics = Object.fromEntries(Object.entries(AIRCRAFT_PHYSICS_LIMITS).map(([key, range]) => [key, range[end]]));
     const flight = airborne({ ...physics, mode: 'maneuver' }, id);
     advance(flight, { pitch: 1, roll: -1, yaw: .7 }, 10);

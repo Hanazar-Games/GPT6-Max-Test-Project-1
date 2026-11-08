@@ -114,7 +114,7 @@ export class AviationWorld {
     const model = await loadAircraftModel(aircraft, controller.signal);
     if (this.disposed || controller !== this.loadController) { disposeAircraftObject(model); return false; }
     this.model = model; this.aircraftRoot.add(model); this.resetCamera = true;
-    this.cockpitCanvas = document.createElement('canvas'); this.cockpitCanvas.width = aircraft.id === 'a380' ? 1536 : 960; this.cockpitCanvas.height = 320;
+    this.cockpitCanvas = document.createElement('canvas'); this.cockpitCanvas.width = ['airliner', 'transport'].includes(aircraft.cockpit) ? 1536 : 960; this.cockpitCanvas.height = 320;
     this.cockpitContext = this.cockpitCanvas.getContext('2d');
     this.cockpitTexture = new THREE.CanvasTexture(this.cockpitCanvas); this.cockpitTexture.colorSpace = THREE.SRGBColorSpace;
     this.cockpit = createAircraftCockpit(aircraft, this.cockpitTexture); this.cockpit.visible = false; this.cockpitScene.add(this.cockpit);
@@ -147,6 +147,7 @@ export class AviationWorld {
     if (this.model) {
       this.model.visible = !inside;
       for (const gear of this.model.userData.gear) gear.visible = flight.gearDown;
+      if (flight.status === 'running') for (const propeller of this.model.userData.propellers) propeller.rotation.z = (propeller.rotation.z + flight.engineOutput * dt * 70) % (Math.PI * 2);
     }
     if (this.lastGates !== flight.gates) {
       this.lastGates = flight.gates;
