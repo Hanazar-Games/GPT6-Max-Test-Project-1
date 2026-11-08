@@ -49,7 +49,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <label>键位预设<select data-setting="keys"><option value="flight">经典飞行</option><option value="wasd">WASD 升降</option></select></label><label>升降方向<select data-setting="pitch"><option value="normal">标准</option><option value="inverted">反向</option></select></label><label>操纵灵敏度 <output data-value="sensitivity">100%</output><input data-setting="sensitivity" type="range" min="40" max="150" step="5" value="100" aria-label="飞机操纵灵敏度"></label>
       <p>手机用左下操纵杆升降与滚转，右侧调节油门、襟翼和减速板。起飞前可用起飞襟翼，达到提示速度后拉升，关闭减速板；降落前放轮、放着陆襟翼，降低下降率，接地后油门归零并按住制动。襟翼降低失速速度并增加阻力，超速会自动收起；减速板不代替地面刹车。</p><p data-value="flap-limit"></p></details>
       <details class="av-help"><summary>镜头与视野</summary><label>驾驶舱视场角 <output data-value="cockpit-fov">68°</output><input data-setting="cockpit-fov" type="range" min="50" max="90" step="1" value="68" aria-label="驾驶舱视场角"></label><label>跟随距离 <output data-value="chase-distance">100%</output><input data-setting="chase-distance" type="range" min="70" max="160" step="5" value="100" aria-label="飞机跟随镜头距离"></label><label>速度扩角<select data-setting="speed-fov"><option value="on">开启</option><option value="off">关闭</option></select></label></details>
-      <details class="av-help"><summary>画面与声音</summary><label>画面质量<select data-setting="quality"><option value="0.75">省电</option><option value="1.25">标准</option><option value="1.75">精细</option></select></label><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><small>机场尺寸与飞行参数为游戏设计；驾驶舱为原创简化内饰。设置即时生效，仅保留在本次飞机模式。</small></details>
+      <details class="av-help av-audio-settings"><summary>画面与声音</summary><label>画面质量<select data-setting="quality"><option value="0.75">省电</option><option value="1.25">标准</option><option value="1.75">精细</option></select></label><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><p data-value="audio-status" role="status" aria-live="polite"></p><button data-action="audio-retry" hidden>重新启用声音</button><small>暂停与离开页面时停止声音；失速警报会暂时降低音乐音量。声音设置与基地共用，仅保留在当前页面；画面和飞行设置仅保留在本次飞机模式。机场尺寸与飞行参数为游戏设计，驾驶舱为原创简化内饰。</small></details>
       <details class="av-credits"><summary>模型署名</summary><p>Airbus A380：<a href="https://sketchfab.com/3d-models/singapore-airlines-a380-fd047ccf175c4db5b7e3e400c67c47a0" target="_blank" rel="noopener noreferrer">Singapore Airlines A380</a>，作者 zairiq-zairiq-123-pixar-cars-bfdi，用户提供，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。游戏中调整了大小、朝向和起落架显示。</p><p>Su-30：本项目原创简化模型（CC0），依据双发、双垂尾与前翼轮廓制作。</p><p>星雀 T-6、云帆 B-62、山海 C-24、岚影 D-9：本项目原创架空机型与简化 GLB，采用 CC0。</p></details>
     </aside>
     <div class="av-notice" role="status" aria-live="polite"></div><footer class="av-footer"><span data-value="aircraft">Airbus A380</span><span data-value="keyhint"></span><span data-value="time">00:00</span></footer>`;
@@ -63,7 +63,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   const aircraftSettings = Object.fromEntries(AIRCRAFT.map(aircraft => [aircraft.id, { ...AIRCRAFT_PHYSICS_DEFAULTS }]));
   let physicsSettings = aircraftSettings.a380;
   const touchInput = { pitch: 0, roll: 0, brake: false }, input = {};
-  const audioFrame = { status: 'menu', speed: 0, mission: flightMusic.a380 };
+  const audioFrame = { status: 'menu', speed: 0, mission: flightMusic.a380, aircraft: AIRCRAFT[0], maxSpeed: AIRCRAFT[0].maxSpeed, engineOutput: 0, stalling: false };
   let world;
   try { world = new AviationWorld($('.av-viewport')); }
   catch (error) { root.remove(); throw error; }
@@ -71,6 +71,17 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   let previousTime = performance.now(), accumulator = 0, uiTime = 0, dirty = true, stickPointer = null, brakePointer = null, stickPitch = 0, stickRoll = 0, braking = false, noticeTimer;
   const listen = (target, event, callback, options = {}) => target.addEventListener(event, callback, { ...options, signal: listeners.signal });
   const text = (element, value) => { if (element.textContent !== String(value)) element.textContent = value; };
+  let lastAudioState;
+
+  function syncAudioStatus() {
+    const state = audio.enabled ? audio.context?.state ?? 'locked' : 'muted';
+    if (state === lastAudioState) return;
+    lastAudioState = state;
+    const retry = action('audio-retry'), focused = document.activeElement === retry;
+    retry.hidden = state === 'running' || state === 'muted';
+    text(values['audio-status'], state === 'muted' ? '全部声音已静音，点击顶部“已静音”恢复。' : state === 'running' ? '声音已启用，音乐与引擎 / 音效可分别调节。' : '浏览器尚未启用声音，请点击“重新启用声音”重试。');
+    if (focused && retry.hidden) action('sound').focus({ preventScroll: true });
+  }
 
   function releaseStick() {
     const pointer = stickPointer; stickPointer = null; stickPitch = 0; stickRoll = 0;
@@ -290,6 +301,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       case 'look-center': world.lookTarget = 0; dirty = true; break;
       case 'look-right': world.lookTarget = -.95; dirty = true; break;
       case 'sound': onToggleAudio(); updateUI(); break;
+      case 'audio-retry': unlockAudio(); break;
     }
   });
   listen($('[data-control="throttle"]'), 'input', event => {
@@ -342,7 +354,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen(window, 'keydown', event => {
     if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.code === 'Tab' && !panel.hidden) {
-      const focusable = [...root.querySelectorAll('button, input, select, summary, a[href]')].filter(element => !element.disabled && !element.closest('[inert]') && element.getClientRects().length);
+      const focusable = [...root.querySelectorAll('button, input, select, summary, a[href]')].filter(element => !element.disabled && !element.closest('[inert]') && element.checkVisibility());
       const first = focusable[0], last = focusable.at(-1);
       if (event.shiftKey && (document.activeElement === first || document.activeElement === $('#av-panel-title'))) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -409,7 +421,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       uiTime += dt;
       if (dirty || (flight.status === 'running' && uiTime > .08)) { updateUI(); uiTime = 0; }
       audioFrame.status = audioStates[flight.status]; audioFrame.speed = flight.speed; audioFrame.mission = flightMusic[flight.aircraft.id];
+      audioFrame.aircraft = flight.aircraft; audioFrame.maxSpeed = flight.performance.maxSpeed;
+      audioFrame.engineOutput = flight.engineOutput * physicsSettings.thrust; audioFrame.stalling = flight.stalling;
       audio.update(audioFrame);
+      syncAudioStatus();
       const look = held.has('KeyZ') || held.has('KeyX') ? (Number(held.has('KeyZ')) - Number(held.has('KeyX'))) * .95 : null;
       if (dirty || flight.status === 'running') world.render(flight, dt, input, look);
       dirty = false;

@@ -1,5 +1,12 @@
 import { composeBeat } from './music.js';
 
+const engineProfiles = {
+  jet: { wave: 'sawtooth', base: 42, range: 155, filter: 240, gain: .085 },
+  fighter: { wave: 'sawtooth', base: 48, range: 205, filter: 380, gain: .095 },
+  propeller: { wave: 'triangle', base: 24, range: 72, filter: 180, gain: .11 },
+  turboprop: { wave: 'sawtooth', base: 31, range: 90, filter: 210, gain: .09 },
+};
+
 export class AudioEngine {
   constructor(createContext = () => new AudioContext()) {
     this.createContext = createContext;
@@ -11,6 +18,7 @@ export class AudioEngine {
     this.beat = 0;
     this.nextBeat = 0;
     this.alertUntil = 0;
+    this.nextStall = 0;
     this.unlocking = null;
   }
 
@@ -24,6 +32,7 @@ export class AudioEngine {
           this.ready = false;
           this.voices.clear();
           this.alertUntil = 0;
+          this.nextStall = 0;
           this.nextBeat = 0;
           for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
         }
@@ -61,6 +70,7 @@ export class AudioEngine {
           this.ready = false;
           this.voices.clear();
           this.alertUntil = 0;
+          this.nextStall = 0;
           this.nextBeat = 0;
           for (const key of ['context', 'engine', 'engineGain', 'filter', 'master', 'music', 'sfx']) this[key] = null;
         }
@@ -131,7 +141,7 @@ export class AudioEngine {
       this.voices.delete(voice);
     }
     if (!bus || bus === 'music') this.nextBeat = 0;
-    if (!bus || bus === 'sfx') { this.alertUntil = 0; this.mixMusic(); }
+    if (!bus || bus === 'sfx') { this.alertUntil = 0; this.nextStall = 0; this.mixMusic(); }
   }
 
   tone(frequency, duration = 0.15, offset = 0, type = 'sine', bus = 'sfx', volume = 0.3, kind = 'tone') {
@@ -190,6 +200,7 @@ export class AudioEngine {
     if (type === 'pad') { this.tone(330, 0.15); this.tone(660, 0.2, 0.08); this.tone(990, 0.25, 0.16); }
     if (type === 'dodge') { this.tone(1040, 0.2); this.tone(1560, 0.3, 0.07); }
     if (type === 'meteor-warning') { alertTone(520, .11); alertTone(520, .11, .2); }
+    if (type === 'stall') { alertTone(620, .12); alertTone(480, .16, .18); }
     if (type === 'meteor-strike') { alertTone(42, .45, 0, 'sawtooth'); alertTone(68, .25, .04); }
     if (type === 'low-gravity') { this.tone(220, 0.3); this.tone(330, 0.4, 0.1); }
     if (type === 'glide' || type === 'meteor-dodge') [660, 990, 1320].forEach((note, i) => this.tone(note, 0.25, i * 0.07));
@@ -210,10 +221,20 @@ export class AudioEngine {
     if (!this.engine || this.context.state !== 'running' || this.background) return;
     this.mixMusic();
     const now = this.context.currentTime;
-    const intensity = Math.max(0, Math.min(1, game.speed / 420));
-    this.target(this.engine.frequency, 35 + intensity * 190, 0.08);
-    this.target(this.filter.frequency, 180 + intensity * 700, 0.1);
-    this.target(this.engineGain.gain, game.status === 'running' ? 0.035 + intensity * 0.08 : 0, game.status === 'running' ? 0.1 : 0.01);
+    const intensity = Math.max(0, Math.min(1, game.speed / (game.aircraft ? game.maxSpeed : 420)));
+    const profile = game.aircraft && engineProfiles[game.aircraft.engineType];
+    const output = profile ? Math.max(0, Math.min(3, game.engineOutput)) : 0;
+    const power = Math.sqrt(Math.min(1.6, output));
+    const wave = profile?.wave ?? 'sawtooth';
+    if (this.engine.type !== wave) this.engine.type = wave;
+    this.target(this.engine.frequency, profile ? profile.base + power * profile.range : 35 + intensity * 190, .08);
+    this.target(this.filter.frequency, profile ? profile.filter + power * 900 : 180 + intensity * 700, .1);
+    const level = profile ? power * profile.gain : .035 + intensity * .08;
+    this.target(this.engineGain.gain, game.status === 'running' ? level : 0, game.status === 'running' ? .1 : .01);
+    if (!game.aircraft || game.status !== 'running' || !this.enabled || !this.volumes.sfx) this.nextStall = 0;
+    else if (game.stalling) {
+      if (now >= this.nextStall) { this.event('stall'); this.nextStall = now + 2.5; }
+    }
     if (!this.enabled || !this.volumes.music || !['menu', 'running'].includes(game.status)) return;
     if (this.nextBeat < now) this.nextBeat = now + 0.03;
     while (this.nextBeat < now + 0.2) {

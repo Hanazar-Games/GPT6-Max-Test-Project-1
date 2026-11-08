@@ -170,7 +170,7 @@ $('open-aviation').addEventListener('click', async () => {
       aviationActive = false;
       $('app').hidden = false; $('app').inert = false;
       entry.disabled = false;
-      entry.querySelector('small').textContent = 'A380 / Su-30 · 起飞、飞行与降落';
+      entry.querySelector('small').textContent = '6 款飞机 · 起飞、飞行与降落';
       world.resize(); frameTime = performance.now(); accumulator = 0; hudDirty = true;
       for (const bus of ['music', 'sfx']) {
         const volume = Math.round(audio.volumes[bus] * 100);
@@ -183,7 +183,7 @@ $('open-aviation').addEventListener('click', async () => {
   } catch (error) {
     console.error('Unable to enter aircraft mode:', error);
     aviationActive = false; $('app').hidden = false; $('app').inert = false; entry.disabled = false;
-    entry.querySelector('small').textContent = 'A380 / Su-30 · 起飞、飞行与降落';
+    entry.querySelector('small').textContent = '6 款飞机 · 起飞、飞行与降落';
     toast('飞机模式未能启动，请重试。', 'warning'); entry.focus({ preventScroll: true });
   }
 });

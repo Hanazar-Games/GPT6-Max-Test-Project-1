@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AudioEngine } from '../src/audio.js';
+import { AIRCRAFT, createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 
 class Param {
   value = 0;
@@ -34,6 +35,112 @@ async function setup() {
   return audio;
 }
 const running = { status: 'running', speed: 36, boosting: false };
+
+const flightFrame = flight => ({ status: flight.status, speed: flight.speed, aircraft: flight.aircraft, maxSpeed: flight.performance.maxSpeed, engineOutput: flight.engineOutput * flight.physics.thrust, stalling: flight.stalling });
+
+test('aircraft engine sound follows actual spool and thrust even while stationary or gliding', async () => {
+  const audio = await setup(), flight = createAircraftFlight('t6');
+  flight.status = 'running'; flight.throttle = 1;
+  audio.update(flightFrame(flight));
+  assert.equal(audio.engineGain.gain.value, 0);
+  updateAircraftFlight(flight, {}, 1 / 60);
+  audio.update(flightFrame(flight));
+  const spooling = audio.engineGain.gain.value;
+  assert.ok(spooling > 0);
+  flight.engineOutput = 1;
+  audio.update(flightFrame(flight));
+  assert.ok(audio.engineGain.gain.value > spooling);
+  const full = audio.engineGain.gain.value;
+  flight.speed = 90; flight.engineOutput = .1;
+  audio.update(flightFrame(flight));
+  assert.ok(audio.engineGain.gain.value < full / 2);
+  flight.physics.thrust = 0;
+  audio.update(flightFrame(flight));
+  assert.equal(audio.engineGain.gain.value, 0);
+});
+
+test('aircraft have distinct bounded engine profiles and racing restores its original engine', async () => {
+  const audio = await setup(), profiles = new Map();
+  for (const aircraft of AIRCRAFT) {
+    assert.ok(['jet', 'fighter', 'propeller', 'turboprop'].includes(aircraft.engineType));
+    const flight = createAircraftFlight(aircraft.id, true);
+    for (const output of [0, .5, 1, 3]) {
+      audio.update({ ...flightFrame(flight), engineOutput: output });
+      assert.ok(audio.engineGain.gain.value >= 0 && audio.engineGain.gain.value <= .16);
+      assert.ok(audio.engine.frequency.value >= 20 && audio.engine.frequency.value <= 400);
+    }
+    profiles.set(aircraft.engineType, [audio.engine.type, audio.engine.frequency.value, audio.filter.frequency.value]);
+  }
+  assert.equal(new Set([...profiles.values()].map(JSON.stringify)).size, 4);
+  audio.update(running);
+  assert.equal(audio.engine.type, 'sawtooth');
+  assert.equal(audio.engine.frequency.value, 35 + 36 / 420 * 190);
+  assert.equal(audio.engineGain.gain.value, .035 + 36 / 420 * .08);
+});
+
+test('flight music layers follow the tuned speed limit across slow and fast aircraft', async () => {
+  const scores = [];
+  for (const id of ['t6', 'su30']) for (const maxSpeed of [.5, 2]) {
+    const audio = await setup(), flight = createAircraftFlight(id, true, { physics: { maxSpeed } }), notes = [];
+    audio.update(flightFrame(flight)); audio.stopVoices('music');
+    audio.beat = 1; audio.tone = (...args) => notes.push(args);
+    audio.update({ ...flightFrame(flight), speed: flight.performance.maxSpeed * .9 });
+    assert.ok(notes.some(args => args[6] === 'tone'), id);
+    scores.push(notes.slice());
+    notes.length = 0; audio.stopVoices('music'); audio.beat = 1;
+    audio.update({ ...flightFrame(flight), speed: flight.performance.maxSpeed * .1 });
+    assert.ok(notes.every(args => args[6] === 'hat'), id);
+  }
+  assert.ok(scores.every(score => JSON.stringify(score) === JSON.stringify(scores[0])));
+});
+
+test('stall alerts repeat at a bounded rate, duck music and stop with pause or recovery', async () => {
+  const audio = await setup(), frame = { ...flightFrame(createAircraftFlight('t6', true)), stalling: true };
+  audio.update(frame);
+  const alerts = () => [...audio.voices].filter(voice => voice.bus === 'sfx');
+  assert.equal(alerts().length, 2);
+  assert.equal(audio.music.gain.value, audio.volumes.music * .4);
+  for (let i = 0; i < 120; i++) { audio.context.currentTime += 1 / 60; audio.update(frame); }
+  assert.equal(alerts().length, 2);
+  audio.context.currentTime = 3; audio.update(frame);
+  assert.equal(alerts().length, 4);
+  audio.update({ ...frame, status: 'paused' });
+  assert.equal(audio.engineGain.gain.value, 0);
+  assert.equal(audio.voices.size, 0);
+  audio.context.currentTime = 10; audio.update({ ...frame, status: 'paused' });
+  assert.equal(audio.voices.size, 0);
+  audio.update({ ...frame, stalling: false });
+  assert.equal(alerts().length, 0);
+  audio.update(frame);
+  assert.equal(alerts().length, 2);
+  for (const silence of [() => audio.setVolume('sfx', 0), () => audio.toggle(), () => audio.setBackground(true)]) {
+    silence(); audio.context.currentTime += 3; audio.update(frame);
+    assert.equal(alerts().length, 0);
+    audio.setVolume('sfx', .8); audio.setBackground(false); if (!audio.enabled) audio.toggle();
+  }
+});
+
+test('rebuilding a closed audio context resets the stall warning clock', async () => {
+  const audio = await setup(), frame = { ...flightFrame(createAircraftFlight('t6', true)), stalling: true };
+  audio.context.currentTime = 100;
+  audio.update(frame);
+  audio.context.state = 'closed';
+  assert.equal(await audio.unlock(), true);
+  audio.update(frame);
+  assert.equal([...audio.voices].filter(voice => voice.bus === 'sfx').length, 2);
+});
+
+test('brief stall recovery cannot retrigger warning bursts near the airspeed threshold', async () => {
+  const audio = await setup(), frame = { ...flightFrame(createAircraftFlight('t6', true)), stalling: true };
+  audio.update(frame);
+  for (let i = 1; i <= 40; i++) {
+    audio.context.currentTime = i / 40;
+    audio.update({ ...frame, stalling: i % 2 === 0 });
+  }
+  assert.equal([...audio.voices].filter(voice => voice.bus === 'sfx').length, 2);
+  audio.context.currentTime = 3; audio.update(frame);
+  assert.equal([...audio.voices].filter(voice => voice.bus === 'sfx').length, 4);
+});
 
 test('cancelling a just-started sound cannot restore the default gain and create a burst', async () => {
   const audio = await setup();

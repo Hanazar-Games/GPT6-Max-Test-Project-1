@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 六机型与飞行动力升级</h2>
-      <p id="release-copy">从单发教练机到三角翼战机，感受不同飞机的动力与转弯手感。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞行声音与操作体验修复</h2>
+      <p id="release-copy">让发动机出力、失速提醒和声音设置与飞行保持一致。</p>
+      <ul class="release-list">
+        <li><strong>动力声音同步</strong>修复飞机引擎只跟速度发声的问题，改为跟随渐进发动机出力与推力调校；区分喷气、战机、螺旋桨和涡桨合成音色，零推力不再保持高速引擎声。</li>
+        <li><strong>配乐与失速提醒</strong>配乐层次按当前调校的速度上限变化，慢速教练机也有完整速度反馈。增加带间隔的失速双音警报，警报期间短暂降低音乐，暂停、静音与离开页面时停止。</li>
+        <li><strong>操作与声音状态</strong>修复收起的设置项干扰 Tab 焦点循环；飞机设置增加声音状态和重新启用入口，返回基地保持六机型说明与共用音量。1.25.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>79 个版本</span></summary>
+      <article><h3>v1.25.0 · 六机型与飞行动力升级</h3>
+      <p>从单发教练机到三角翼战机，感受不同飞机的动力与转弯手感。</p>
       <ul class="release-list">
         <li><strong>四款新飞机</strong>星雀 T-6 教练机、云帆 B-62 公务机、山海 C-24 涡桨运输机、岚影 D-9 三角翼战机加入机库，六款飞机全部可驾驶。四款原创 GLB 合计约 255 kB，带独立起落架、对应驾驶舱与调校。</li>
         <li><strong>更有层次的动力</strong>发动机出力逐步跟随油门，增加 25%–300% 发动机响应设置，共 17 项调校。HUD 与驾驶舱显示实际推力，螺旋桨随输出旋转；倾斜急转增加阻力并提高失速参考，平飞后回落。</li>
         <li><strong>机库与驾驶舱完善</strong>机型卡片双列排列，修正窄体舱座椅位置、四屏仪表文字拉伸及手机横屏导航遮挡。六机型完成双向起降与机动回归；1.24.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>78 个版本</span></summary>
+      </article>
       <article><h3>v1.24.0 · 飞机动力与机动自定义</h3>
       <p>调整发动机、气动与机动手感，为每架飞机搭配自己的飞行参数。</p>
       <ul class="release-list">

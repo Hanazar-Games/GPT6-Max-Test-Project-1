@@ -5,6 +5,7 @@
 #aviation button:hover{background:#fff;border-color:#087f8270}
 #aviation button:focus-visible,#aviation input:focus-visible,#aviation summary:focus-visible,#aviation a:focus-visible,#aviation select:focus-visible{outline:3px solid #087f82;outline-offset:3px}
 #aviation button:disabled{opacity:.48;cursor:default}
+.av-cockpit .av-brand{background:#f3f8f0cf;border-radius:6px;box-shadow:0 0 0 5px #f3f8f0cf}
 .av-viewport,.av-viewport canvas,.av-vignette{position:absolute;inset:0;width:100%;height:100%}
 .av-vignette{pointer-events:none;background:linear-gradient(180deg,#edf7f778,transparent 25%,transparent 70%,#07314346)}
 .av-header{position:absolute;top:max(22px,env(safe-area-inset-top));left:max(30px,env(safe-area-inset-left));right:max(30px,env(safe-area-inset-right));display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:3}
