@@ -6,6 +6,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('/three/examples/jsm/loaders/GLTFLoader.js')) return 'aircraft-loader';
           if (id.includes('node_modules/three')) return 'three';
         },
       },

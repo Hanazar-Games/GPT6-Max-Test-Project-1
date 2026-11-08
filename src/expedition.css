@@ -3,7 +3,7 @@
 .loadout-label { display: flex; align-items: center; gap: 7px; color: #95abba; font-size: 8px; letter-spacing: 1.5px; }
 .loadout-label > span:last-child { margin-left: auto; font: 8px var(--mono); color: #647d91; }
 @media (min-width: 801px) and (min-height: 651px) {
-  .coordinates { bottom: 42%; padding: 12px; background: #07131cc2; border-left: 1px solid #bdd6e429; backdrop-filter: blur(6px); }
+  .coordinates { bottom: 30%; padding: 12px; background: #07131cc2; border-left: 1px solid #bdd6e429; backdrop-filter: blur(6px); }
   .scene-label { left: 62%; top: 57%; }
 }
 .flight-loadout > strong { display: block; font-weight: 500; font-size: 18px; letter-spacing: 2px; margin-top: 18px; }

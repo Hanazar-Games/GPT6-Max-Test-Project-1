@@ -1,0 +1,67 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+export const AIRCRAFT_MODEL_URLS = {
+  a380: new URL('../assets/aircraft/a380.glb', import.meta.url).href,
+  su30: new URL('../assets/aircraft/su30.glb', import.meta.url).href,
+};
+
+export function disposeAircraftObject(root) {
+  const geometries = new Set(), materials = new Set(), textures = new Set(), images = new Set();
+  root.traverse(object => {
+    if (object.geometry) geometries.add(object.geometry);
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (!material) continue;
+      materials.add(material);
+      for (const value of Object.values(material)) if (value?.isTexture) textures.add(value);
+    }
+  });
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of materials) material.dispose();
+  for (const texture of textures) {
+    if (texture.source?.data) images.add(texture.source.data);
+    texture.dispose();
+  }
+  for (const bitmap of images) bitmap.close?.();
+  root.removeFromParent();
+}
+
+export function normalizeAircraftModel(scene, aircraft) {
+  const model = new THREE.Group();
+  if (aircraft.id === 'a380') scene.rotation.y += Math.PI;
+  model.add(scene);
+  model.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  if (!(size.z > 0 && Number.isFinite(size.z))) throw new Error('Invalid aircraft bounds');
+  const scale = aircraft.length / size.z;
+  scene.scale.multiplyScalar(scale);
+  model.updateMatrixWorld(true);
+  bounds.setFromObject(model);
+  const center = bounds.getCenter(new THREE.Vector3());
+  scene.position.x -= center.x;
+  scene.position.z -= center.z;
+  scene.position.y -= bounds.min.y + aircraft.gearHeight;
+  const gear = [];
+  scene.traverse(object => {
+    if (object.name === 'gears' || object.name === 'landing-gear') gear.push(object);
+    if (object.isMesh) { object.castShadow = false; object.receiveShadow = false; }
+  });
+  model.updateMatrixWorld(true);
+  model.userData.gear = gear;
+  return model;
+}
+
+export async function loadAircraftModel(aircraft, signal) {
+  const response = await fetch(AIRCRAFT_MODEL_URLS[aircraft.id], { signal });
+  if (!response.ok) throw new Error(`Aircraft request failed: ${response.status}`);
+  const buffer = await response.arrayBuffer();
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const gltf = await new GLTFLoader().parseAsync(buffer, '');
+  if (signal?.aborted) {
+    disposeAircraftObject(gltf.scene);
+    throw new DOMException('Aborted', 'AbortError');
+  }
+  try { return normalizeAircraftModel(gltf.scene, aircraft); }
+  catch (error) { disposeAircraftObject(gltf.scene); throw error; }
+}

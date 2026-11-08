@@ -154,6 +154,39 @@ let ghostPose = null;
 let ghostEnabled = true;
 let splitFlashUntil = 0;
 const audio = new AudioEngine();
+let aviationActive = false;
+$('open-hangar').insertAdjacentHTML('afterend', `<button id="open-aviation" class="hangar-button aircraft-entry" disabled><span>飞机机库 · 空中试飞<small>A380 / Su-30 · 起飞、飞行与降落</small></span>${icon('arrow')}</button>`);
+$('open-aviation').addEventListener('click', async () => {
+  if (aviationActive || !world || game.status !== 'menu') return;
+  aviationActive = true;
+  const entry = $('open-aviation');
+  entry.disabled = true;
+  entry.querySelector('small').textContent = '正在准备飞机机库…';
+  clearInput(); audio.setState('paused');
+  try {
+    const { mountAviation } = await import('./aviation.js');
+    $('app').hidden = true; $('app').inert = true;
+    mountAviation({ audio, unlockAudio, onToggleAudio: toggleAudio, onExit: () => {
+      aviationActive = false;
+      $('app').hidden = false; $('app').inert = false;
+      entry.disabled = false;
+      entry.querySelector('small').textContent = 'A380 / Su-30 · 起飞、飞行与降落';
+      world.resize(); frameTime = performance.now(); accumulator = 0; hudDirty = true;
+      for (const bus of ['music', 'sfx']) {
+        const volume = Math.round(audio.volumes[bus] * 100);
+        $(`${bus}-volume`).value = volume; $(`${bus}-level`).textContent = `${volume}%`;
+        $(`${bus}-volume`).setAttribute('aria-valuetext', `${volume}%`);
+      }
+      syncAudioStatus();
+      entry.focus({ preventScroll: true });
+    } });
+  } catch (error) {
+    console.error('Unable to enter aircraft mode:', error);
+    aviationActive = false; $('app').hidden = false; $('app').inert = false; entry.disabled = false;
+    entry.querySelector('small').textContent = 'A380 / Su-30 · 起飞、飞行与降落';
+    toast('飞机模式未能启动，请重试。', 'warning'); entry.focus({ preventScroll: true });
+  }
+});
 const controls = new FlightInput();
 const touchControls = mountTouchControls({ root: $('touch-controls'), guide: $('guide'), controls, icon,
   isActive: () => ['running', 'countdown'].includes(game.status) && !document.querySelector('dialog[open]') && $('error').hidden,
@@ -789,6 +822,7 @@ function frame(now) {
   if (!$('error').hidden) return;
   const dt = Math.max(0, Math.min((now - frameTime) / 1000, 0.1));
   frameTime = now;
+  if (aviationActive) { accumulator = 0; requestAnimationFrame(frame); return; }
   if (document.hidden) { requestAnimationFrame(frame); return; }
   accumulator += dt;
   while (accumulator >= 1 / 60 && (game.status === 'running' || game.status === 'countdown')) {
@@ -1021,6 +1055,7 @@ $('performance-bloom').addEventListener('change', applyCustomPerformance);
 $('reload').addEventListener('click', () => location.reload());
 
 window.addEventListener('keydown', (event) => {
+  if (aviationActive) return;
   if (!acceptsGameKey(event)) return;
   if (event.repeat && ['Space', 'Enter'].includes(event.code) && event.target.closest('button, a, summary')) { event.preventDefault(); return; }
   if (!$('error').hidden) return;
@@ -1070,6 +1105,7 @@ requestAnimationFrame(() => {
     world.renderer.domElement.addEventListener('webglcontextlost', (event) => { event.preventDefault(); showError('图形连接已中断。请重新连接以恢复游戏。'); });
     syncPerformanceSettings();
     $('start').disabled = false;
+    $('open-aviation').disabled = false;
     $('start').innerHTML = `<span>开始飞行<small>LET’S MAKE A DELIVERY</small></span>${icon('arrow')}`;
     frameTime = performance.now();
     requestAnimationFrame(frame);

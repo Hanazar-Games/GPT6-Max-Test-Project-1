@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 推进物理与冲刺修正</h2>
-      <p id="release-copy">冲刺按实际剩余时长推进，免费效果、能量消耗与减速衔接更准确。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 海岛机场与空中载具</h2>
+      <p id="release-copy">A380 与 Su-30 加入飞机机库，从海岸跑道起飞，探索真正的三维天空。</p>
+      <ul class="release-list">
+        <li><strong>两架可驾驶飞机</strong>新加坡航空 A380 与原创低多边形 Su-30，拥有不同极速与操控响应；可独立收放起落架，切换三种机位。</li>
+        <li><strong>起飞、飞行与返航</strong>海岛跑道、航站楼、城市、群山与云层，配套六环训练、失速重力、着陆制动和建筑碰撞；也可直接从空中试飞。</li>
+        <li><strong>键盘与手机操纵</strong>油门、升降、滚转、方向舵与触屏操纵杆，暂停清理输入与声音；模型按需加载，退出释放资源。1.19.2 公告移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>73 个版本</span></summary>
+      <article><h3>v1.19.2 · 推进物理与冲刺修正</h3>
+      <p>冲刺按实际剩余时长推进，免费效果、能量消耗与减速衔接更准确。</p>
       <ul class="release-list">
         <li><strong>剩余冲刺准确计算</strong>修复低能量时多冲一帧、加速带与超频提前结束的问题；到期后接回手动冲刺或普通驾驶。</li>
         <li><strong>能量按实际使用扣除</strong>免费期间回充，手动冲刺只扣使用时长；能量不足后松键重启，制动始终优先。</li>
         <li><strong>到期反馈保持同步</strong>清除浮点余量，避免冲刺状态与尾焰多留一帧；覆盖全部飞船的推进回归，1.19.1 公告移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>72 个版本</span></summary>
+      </article>
       <article><h3>v1.19.1 · 驾驶设置与操作体验优化</h3>
       <p>驾驶参数更容易细调，草稿可撤销，键盘与手机操作更连贯。</p>
       <ul class="release-list">
