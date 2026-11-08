@@ -1,11 +1,82 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AIRCRAFT, AIR_GATES, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from '../src/aircraft-flight.js';
+import { AIRCRAFT, AIR_GATES, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, crossesAirGate, runwayContact, islandHeight, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake, setAircraftPhysics } from '../src/aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from '../src/airport.js';
+import { Quaternion, Euler, Vector3 } from 'three';
 
 function advance(flight, input, seconds, step = 1 / 60) {
   for (let time = 0; time < seconds - 1e-9; time += step) updateAircraftFlight(flight, input, Math.min(step, seconds - time));
 }
+
+const attitude = flight => new Quaternion().setFromEuler(new Euler(flight.pitch, -flight.heading, -flight.roll, 'YXZ'));
+
+test('maneuver mode completes rolls and loops without discontinuities at vertical or inverted attitudes', () => {
+  for (const aircraft of AIRCRAFT) for (const axis of ['roll', 'pitch']) {
+    const flight = createAircraftFlight(aircraft.id, true, { physics: { mode: 'maneuver', stability: 0 } });
+    flight.y = 3000; flight.throttle = 1; flight.speed = 250;
+    let previous = attitude(flight), rotation = 0, inverted = false, backwards = false;
+    for (let i = 0; i < 6000 && rotation < Math.PI * 2 + .1; i++) {
+      updateAircraftFlight(flight, { [axis]: 1 }, 1 / 120);
+      const current = attitude(flight), change = previous.angleTo(current);
+      assert.ok(change < .04, 'orientation must remain continuous through vertical flight');
+      rotation += change;
+      inverted ||= new Vector3(0, 1, 0).applyQuaternion(current).y < -.9;
+      backwards ||= new Vector3(0, 0, -1).applyQuaternion(current).z > .9;
+      previous = current;
+    }
+    assert.equal(flight.status, 'running'); assert.ok(rotation > Math.PI * 2);
+    assert.ok(inverted); if (axis === 'pitch') assert.ok(backwards);
+  }
+});
+
+test('maneuver settings change rates, retain attitude on release and apply without teleporting', () => {
+  const slow = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, rollRate: .4 } });
+  const fast = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, rollRate: 2 } });
+  advance(slow, { roll: 1 }, .6); advance(fast, { roll: 1 }, .6);
+  assert.ok(Math.abs(fast.roll) > Math.abs(slow.roll) * 3);
+  advance(slow, {}, 3);
+  const bank = slow.roll;
+  advance(slow, {}, 2);
+  assert.ok(Math.abs(slow.roll - bank) < .015, 'released controls damp rotation, not bank');
+  const before = attitude(fast), position = [fast.x, fast.y, fast.z];
+  setAircraftPhysics(fast, { mode: 'assisted', stability: 1, pitchRate: Infinity, rollRate: 100, gravity: -.5 });
+  assert.ok(before.angleTo(attitude(fast)) < 1e-7); assert.deepEqual([fast.x, fast.y, fast.z], position);
+  assert.equal(fast.physics.pitchRate, 1); assert.equal(fast.physics.rollRate, 2); assert.equal(fast.physics.gravity, .5);
+  advance(fast, {}, 5);
+  assert.ok(Math.abs(fast.roll) < .15, 'stable mode gently recovers level flight');
+});
+
+test('gravity, low-speed authority and inverted lift affect maneuver flight', () => {
+  const inverted = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0 } });
+  inverted.y = 2000; inverted.roll = Math.PI;
+  advance(inverted, {}, 2);
+  assert.ok(inverted.verticalSpeed < -10, 'inverted flight must not produce upward automatic lift');
+  const flights = [.5, 1.5].map(gravity => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, gravity } });
+    Object.assign(flight, { y: 2000, speed: 5, throttle: 0 });
+    advance(flight, { roll: 1 }, 2);
+    return flight;
+  });
+  assert.ok(flights[1].verticalSpeed < flights[0].verticalSpeed - 10);
+  assert.ok(Math.abs(flights[0].roll) < .5, 'near-zero airspeed must reduce control authority');
+});
+
+test('maneuver integration stays consistent across frame sizes and ground controls stay safe', () => {
+  const flights = [1 / 30, 1 / 60, 1 / 120].map(step => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0 } });
+    flight.y = 3000;
+    advance(flight, { pitch: .8, roll: .6, yaw: .3 }, 8, step);
+    return flight;
+  });
+  for (const flight of flights) {
+    assert.ok(attitude(flight).angleTo(attitude(flights[0])) < 1e-6);
+    assert.ok(Math.abs(flight.y - flights[0].y) < .001);
+  }
+  const ground = createAircraftFlight('su30', false, { physics: { mode: 'maneuver', rollRate: 2 } });
+  ground.status = 'running'; advance(ground, { pitch: 1, roll: 1 }, 2);
+  assert.equal(ground.onGround, true); assert.equal(ground.roll, 0);
+  assert.ok(ground.pitch <= .13);
+});
 
 test('both aircraft accelerate on the runway and need speed plus rotation to take off', () => {
   for (const aircraft of AIRCRAFT) {
@@ -47,6 +118,32 @@ test('safe runway touchdown needs gear, alignment, moderate bank, speed and desc
     assert.equal(runwayContact({ ...sample, ...change }, AIRCRAFT[0]), false);
   }
   assert.equal(runwayContact({ ...sample, heading: Math.PI }, AIRCRAFT[0]), true);
+  assert.equal(runwayContact({ ...sample, pitch: .28 }, AIRCRAFT[0]), false, 'tail contact above gear height cannot count as a safe landing');
+  assert.equal(runwayContact({ ...sample, roll: .18 }, AIRCRAFT[0]), false, 'a wingtip touching first cannot count as a safe landing');
+});
+
+test('pitch, yaw, response and recovery assistance each change actual aircraft motion', () => {
+  for (const [setting, input, measure] of [['pitchRate', 'pitch', 'pitch'], ['yawRate', 'yaw', 'heading'], ['response', 'roll', 'roll']]) {
+    const flights = [.5, 2].map(value => {
+      const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, [setting]: value } });
+      advance(flight, { [input]: 1 }, .15);
+      return flight;
+    });
+    assert.ok(Math.abs(flights[1][measure]) > Math.abs(flights[0][measure]) * 1.5, setting);
+  }
+  const flights = [0, 1].map(stability => {
+    const flight = createAircraftFlight('su30', true, { physics: { stability } });
+    flight.roll = .6; advance(flight, {}, 3);
+    return flight;
+  });
+  assert.ok(Math.abs(flights[0].roll) > .5); assert.ok(Math.abs(flights[1].roll) < .1);
+});
+
+test('steep maneuver attitudes collide using their rotated airframe rather than level height', () => {
+  const flight = createAircraftFlight('a380', true, { physics: { mode: 'maneuver', stability: 0 } });
+  Object.assign(flight, { y: 22, pitch: Math.PI / 2, gearDown: true, speed: 100, verticalSpeed: 0 });
+  updateAircraftFlight(flight, {}, 1 / 120);
+  assert.equal(flight.status, 'crashed', 'vertical airframe must not pass through the runway');
 });
 
 test('touchdown and rollout finish a flight, unsafe impact stays crashed', () => {

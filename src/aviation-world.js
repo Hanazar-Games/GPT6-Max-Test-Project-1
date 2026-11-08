@@ -138,6 +138,7 @@ export class AviationWorld {
 
   render(flight, dt, input = {}, look = null) {
     const length = flight.aircraft.length;
+    const clearance = Math.hypot(length, flight.aircraft.span) / 2 + this.camera.near + 2;
     const view = this.viewSettings;
     const inside = this.cameraMode === 2 && flight.status !== 'ready';
     this.water.position.set(flight.x, -12, flight.z);
@@ -147,21 +148,28 @@ export class AviationWorld {
       this.model.visible = !inside;
       for (const gear of this.model.userData.gear) gear.visible = flight.gearDown;
     }
-    this.gateMeshes.forEach((mesh, index) => {
-      mesh.visible = index >= flight.gates;
-      const active = index === flight.gates;
-      mesh.material.color.set(active ? 0x57e4e3 : 0xe5cf91);
-      mesh.material.emissive.set(active ? 0x146e72 : 0x463b16);
-    });
+    if (this.lastGates !== flight.gates) {
+      this.lastGates = flight.gates;
+      this.gateMeshes.forEach((mesh, index) => {
+        mesh.visible = index >= flight.gates;
+        const active = index === flight.gates;
+        mesh.material.color.set(active ? 0x57e4e3 : 0xe5cf91);
+        mesh.material.emissive.set(active ? 0x146e72 : 0x463b16);
+      });
+    }
     const ground = islandHeight(flight.x, flight.z);
     this.shadow.position.set(flight.x, Math.max(-11.8, ground + .7), flight.z);
     this.shadow.scale.set(flight.aircraft.span * .48, 1, length * .35);
     this.shadow.rotation.y = -flight.heading;
     this.shadow.material.opacity = .18 * Math.max(0, 1 - (flight.y - ground) / 400);
-    forward.set(Math.sin(flight.heading), 0, -Math.cos(flight.heading));
+    forward.set(0, 0, -1).applyQuaternion(this.aircraftRoot.quaternion);
     target.copy(this.aircraftRoot.position).addScaledVector(forward, length * .12);
     if (flight.status === 'ready') offset.set(length * 1.4, length * .5, -length * 1.1);
-    else offset.set(length * (this.cameraMode ? .15 : .4), length * (this.cameraMode ? .24 : .52), length * (this.cameraMode ? 1.05 : 1.8)).multiplyScalar(view.chaseDistance).clampLength(Math.hypot(length, flight.aircraft.span) / 2 + this.camera.near + 2, Infinity).applyAxisAngle(UP, -flight.heading);
+    else {
+      offset.set(length * (this.cameraMode ? .15 : .4), length * (this.cameraMode ? .24 : .52), length * (this.cameraMode ? 1.05 : 1.8)).multiplyScalar(view.chaseDistance).clampLength(clearance, Infinity);
+      if (flight.physics.mode === 'maneuver') offset.applyQuaternion(this.aircraftRoot.quaternion);
+      else offset.applyAxisAngle(UP, -flight.heading);
+    }
     if (this.cockpit) this.cockpit.visible = inside;
     if (inside && this.cockpit) {
       offset.set(...cockpitSeat(flight.aircraft)).applyQuaternion(this.aircraftRoot.quaternion);
@@ -177,7 +185,13 @@ export class AviationWorld {
       const desired = offset.add(this.aircraftRoot.position);
       desired.y = Math.max(desired.y, Math.max(-12, islandHeight(desired.x, desired.z)) + 4);
       this.camera.position.lerp(desired, this.resetCamera ? 1 : 1 - Math.exp(-dt * 5));
-      this.camera.up.set(0, 1, 0); this.camera.lookAt(target);
+      offset.copy(this.camera.position).sub(this.aircraftRoot.position).clampLength(clearance, Infinity);
+      this.camera.position.copy(this.aircraftRoot.position).add(offset);
+      const floor = Math.max(-12, islandHeight(this.camera.position.x, this.camera.position.z)) + 4;
+      if (this.camera.position.y < floor) this.camera.position.y = Math.max(floor, this.aircraftRoot.position.y + Math.sqrt(Math.max(0, clearance ** 2 - offset.x ** 2 - offset.z ** 2)));
+      this.camera.up.set(0, 1, 0);
+      if (flight.status !== 'ready' && flight.physics.mode === 'maneuver') this.camera.up.applyQuaternion(this.aircraftRoot.quaternion);
+      this.camera.lookAt(target);
     }
     const fov = inside ? view.cockpitFov : 55 + (view.speedFov ? Math.min(18, flight.speed / flight.aircraft.maxSpeed * 18) : 0);
     if (Math.abs(this.camera.fov - fov) > .1) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }

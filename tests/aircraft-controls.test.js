@@ -24,3 +24,11 @@ test('invalid settings and unknown keys cannot poison flight input', () => {
   assert.equal(aircraftInput(new Set(['ArrowDown']), {}, { sensitivity: 100 }).pitch, 1);
   assert.equal(aircraftInput(new Set(), { roll: -.7 }).roll, -.7);
 });
+
+test('reused input output clears released axes and preserves mixed keyboard and touch cancellation', () => {
+  const output = { pitch: 99, roll: 99, yaw: 99, throttle: 99, brake: true };
+  assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown']), { roll: .4 }, {}, output), output);
+  assert.equal(output.roll, -.6); assert.equal(output.pitch, 1);
+  aircraftInput(new Set(), {}, {}, output);
+  assert.deepEqual(output, { pitch: 0, roll: 0, yaw: 0, throttle: 0, brake: false });
+});

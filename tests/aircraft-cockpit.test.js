@@ -72,6 +72,13 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
   assert.equal(world.camera.projectionMatrix.elements[5], world.cockpitCamera.projectionMatrix.elements[5]);
   world.render(flight, 1, {}, .95);
   assert.ok(world.lookAngle > .9);
+  flight.physics.mode = 'maneuver';
+  for (const [pitch, roll] of [[Math.PI / 2 - .001, .3], [Math.PI / 2 + .001, .3], [0, Math.PI], [-Math.PI / 2, -.8]]) {
+    Object.assign(flight, { pitch, roll }); world.lookAngle = 0; world.lookTarget = 0;
+    world.render(flight, 1 / 60);
+    const expected = world.aircraftRoot.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-.08, 0, 0, 'YXZ')));
+    assert.ok(world.camera.quaternion.angleTo(expected) < 1e-7, 'cockpit must preserve full loop and inverted attitudes');
+  }
   world.setCameraMode(0); world.render(flight, 1 / 60);
   assert.equal(model.visible, true); assert.equal(cockpit.visible, false); assert.equal(world.camera.near, 8);
   assert.equal(world.lookTarget, 0);
@@ -85,6 +92,15 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
   world.viewSettings.chaseDistance = .7; world.setCameraMode(1); world.render(flight, 1 / 60);
   const clearance = Math.hypot(flight.aircraft.length, flight.aircraft.span) / 2 + world.camera.near + 2;
   assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) >= clearance - 1e-8, 'closest follow camera must not clip the fighter tail');
+  for (let i = 0; i < 80; i++) {
+    flight.roll += .1; world.render(flight, 1 / 60);
+    assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) >= clearance - 1e-8, 'camera smoothing must retain clearance during rapid rolls');
+    assert.ok(world.camera.up.dot(new THREE.Vector3(0, 1, 0).applyQuaternion(world.aircraftRoot.quaternion)) > .999);
+  }
+  Object.assign(flight, { y: 8, pitch: 0, roll: Math.PI }); world.resetCamera = true;
+  world.render(flight, 1 / 60);
+  assert.ok(world.camera.position.y >= 4, 'inverted low-altitude camera must stay above terrain');
+  assert.ok(world.camera.position.distanceTo(world.aircraftRoot.position) >= clearance - 1e-8);
   disposeAircraftObject(cockpit); disposeAircraftObject(world.shadow);
 });
 
