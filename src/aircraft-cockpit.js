@@ -43,7 +43,7 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   }
   box(dashboard, 'shell', [0, -.78, -1.6], [width, .85, .36]);
   box(dashboard, 'dark', [0, -.32, -1.56], [width + .08, .1, .55]);
-  box(dashboard, 'dark', [airliner ? -.16 : 0, .4, -1.3], [Math.min(width * .62, 2) + .03, .12, .14]);
+  box(dashboard, 'dark', [airliner ? -.16 : 0, .46, -1.3], [Math.min(width * .62, 2) + .03, .24, .14]);
   box(shell, 'shell', [-width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'shell', [width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'dark', [0, -1.45, -.1], [width, .1, 3.3]);
@@ -86,7 +86,7 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   const labels = new THREE.Group(), labelMaterial = labelsTexture ? new THREE.MeshBasicMaterial({ map: labelsTexture, toneMapped: false }) : null;
   COCKPIT_SWITCHES.forEach((control, index) => {
     const overhead = index >= 12;
-    button.position.set((index % COCKPIT_SWITCH_COLUMNS - (COCKPIT_SWITCH_COLUMNS - 1) / 2) * spacing - (airliner ? .16 : 0), overhead ? .4 : -.23 - Math.floor(index / COCKPIT_SWITCH_COLUMNS) * .1, overhead ? -1.2 : -1.25);button.scale.set(spacing * .72, .055, .04);button.updateMatrix();switches.setMatrixAt(index, button.matrix);
+    button.position.set((index % COCKPIT_SWITCH_COLUMNS - (COCKPIT_SWITCH_COLUMNS - 1) / 2) * spacing - (airliner ? .16 : 0), overhead ? .4 + Math.floor((index - 12) / COCKPIT_SWITCH_COLUMNS) * .12 : -.23 - Math.floor(index / COCKPIT_SWITCH_COLUMNS) * .1, overhead ? -1.2 : -1.25);button.scale.set(spacing * .72, .055, .04);button.updateMatrix();switches.setMatrixAt(index, button.matrix);
     switches.setColorAt(index, switchColor.set(0x29434c));
     if (labelMaterial) {
       const geometry = new THREE.PlaneGeometry(spacing * .68, .045), uv = geometry.attributes.uv;
@@ -128,7 +128,7 @@ export function updateCockpitControls(root, flight, input = {}) {
       case 'trim-reset': active = Math.abs(systems.trim.pitch) + Math.abs(systems.trim.roll) + Math.abs(systems.trim.yaw) > .001;break;
       case 'go-around': unavailable ||= !systems.engineOn;break;
     }
-    const armed = action === 'autobrake' && systems.autoBrake !== 'off' && !systems.autoBrakeActive || action === 'apu' && systems.apuOn && !power.apuReady || action === 'spoiler-arm' && systems.spoilerArmed && !flight.speedBrake || action === 'generator' && systems.generatorOn && !power.generatorOnline || action === 'yaw-damper' && systems.yawDamper && (!power.avionics || flight.onGround);
+    const armed = action === 'autobrake' && systems.autoBrake !== 'off' && !systems.autoBrakeActive || action === 'apu' && systems.apuOn && !power.apuReady || action === 'spoiler-arm' && systems.spoilerArmed && !flight.speedBrake || action === 'generator' && systems.generatorOn && !power.generatorOnline || action === 'yaw-damper' && systems.yawDamper && (!power.avionics || flight.onGround) || extra?.lighting && active && (!power.powered || action === 'taxi-lights' && !flight.gearDown);
     const color = unavailable ? 0x59646b : armed ? 0xd9ad63 : active ? 0x4fd6ac : 0x29434c;
     if (switchStates[index] !== color) { switchStates[index] = color;switches.setColorAt(index, switchColor.set(color));changed = true; }
   }

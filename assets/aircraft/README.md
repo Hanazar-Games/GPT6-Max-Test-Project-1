@@ -19,15 +19,17 @@
 
 ## Original fictional aircraft fleet
 
-- Files: `t6.glb`, `b62.glb`, `c24.glb`, `d9.glb`.
+- Files: `t6.glb`, `b62.glb`, `c24.glb`, `d9.glb`, `p72.glb`, `f26.glb`.
 - Author: **Lunar Courier project**.
 - License: **CC0 1.0** — https://creativecommons.org/publicdomain/zero/1.0/
 - T-6: low-wing single-propeller trainer with a bubble canopy.
 - B-62: twin rear-engine business jet with winglets and a high tailplane.
 - C-24: high-wing twin-turboprop transport with a rear cargo ramp.
 - D-9: single-engine delta-wing fighter with canards.
+- P-72: regional high-wing twin turboprop with a T-tail, cabin doors and six-blade animated propellers.
+- F-26: twin-engine fighter with clipped wings, canted twin fins and separate intakes and exhausts.
 - Original fictional designs; these identifiers do not represent certified real-world aircraft. No external meshes or textures are used.
-- Rebuild with Node 22+: `node scripts/build-aircraft-fleet.mjs`. Static geometry is batched by material; landing gear and propeller groups remain separate for runtime animation. Combined GLB size is approximately 255 kB.
+- Rebuild with Node 22+: `node scripts/build-aircraft-fleet.mjs`. Static geometry is batched by material; landing gear and propeller groups remain separate for runtime animation. Combined GLB size is approximately 444 kB. Rebuild only the new pair with `node scripts/build-aircraft-fleet.mjs p72 f26`.
 
 ## Original passenger airliners
 

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { AIR_GATES, islandHeight } from './aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from './airport.js';
-import { createAirport } from './airport-view.js';
+import { createAirportLod, setAirportDetailDistance } from './airport-view.js';
 import { createRunway } from './runway-view.js';
 import { AVIATION_ENVIRONMENT_DEFAULTS, createAviationTerrain, setTerrainDetailDistance } from './aviation-terrain.js';
 import { cockpitSeat, cockpitSwitchSpacing, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
+import { createAircraftLights, updateAircraftLights } from './aircraft-lights.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const forward = new THREE.Vector3(), offset = new THREE.Vector3(), target = new THREE.Vector3();
@@ -72,7 +73,7 @@ export class AviationWorld {
   buildEnvironment() {
     this.water = this.mesh(new THREE.PlaneGeometry(120000, 120000).rotateX(-Math.PI / 2), 0x368fbb, [0, -12, 0], [1, 1, 1], { roughness: .3, metalness: .25 });
     this.boxes(0x6d7a72, [[0, .1, RUNWAY.center, 450, .15, RUNWAY.length + 400]]);
-    this.airport = new THREE.LOD();this.airport.addLevel(createAirport(), 0).addLevel(createAirport({ lowDetail: true }), 2000, .15);
+    this.airport = createAirportLod();
     this.scene.add(createRunway(), this.airport);
     const trees = [], trunks = [];
     for (let i = 0; i < 230; i++) {
@@ -120,7 +121,7 @@ export class AviationWorld {
       if (this.terrain) disposeAircraftObject(this.terrain);
       this.terrain = createAviationTerrain(next.groundDetail, next.detailDistance);this.scene.add(this.terrain);
     } else setTerrainDetailDistance(this.terrain, next.detailDistance);
-    if (this.airport) this.airport.levels[1].distance = next.detailDistance * ({ low: .45, balanced: .8, high: 1.3 }[next.groundDetail]);
+    if (this.airport) setAirportDetailDistance(this.airport, next.detailDistance, next.groundDetail);
     this.environmentSettings = next;
   }
 
@@ -128,10 +129,12 @@ export class AviationWorld {
     this.loadController?.abort();
     const controller = new AbortController(); this.loadController = controller;
     if (this.model) { disposeAircraftObject(this.model); this.model = null; }
+    if (this.aircraftLights) { disposeAircraftObject(this.aircraftLights); this.aircraftLights = null; }
     if (this.cockpit) { disposeAircraftObject(this.cockpit); this.cockpit = null; }
     const model = await loadAircraftModel(aircraft, controller.signal);
     if (this.disposed || controller !== this.loadController) { disposeAircraftObject(model); return false; }
     this.model = model; this.aircraftRoot.add(model); this.resetCamera = true;
+    this.aircraftLights = createAircraftLights(aircraft, model);this.aircraftRoot.add(this.aircraftLights);
     this.cockpitCanvas = document.createElement('canvas'); this.cockpitCanvas.width = ['airliner', 'transport'].includes(aircraft.cockpit) ? 1536 : 960; this.cockpitCanvas.height = 320;
     this.cockpitContext = this.cockpitCanvas.getContext('2d');
     this.cockpitTexture = new THREE.CanvasTexture(this.cockpitCanvas); this.cockpitTexture.colorSpace = THREE.SRGBColorSpace;
@@ -192,6 +195,7 @@ export class AviationWorld {
     this.water.position.set(flight.x, -12, flight.z);
     this.aircraftRoot.position.set(flight.x, flight.y + (flight.onGround ? Math.max(0, Math.sin(flight.pitch)) * length * .12 : 0), flight.z);
     this.aircraftRoot.rotation.set(flight.pitch, -flight.heading, -flight.roll, 'YXZ');
+    if (this.aircraftLights) updateAircraftLights(this.aircraftLights, flight, dt, inside);
     if (this.model) {
       this.model.visible = !inside;
       for (const gear of this.model.userData.gear) gear.visible = flight.gearDown;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { AIRPORT_BUILDINGS, RUNWAY, TAXIWAYS } from '../src/airport.js';
-import { createAirport } from '../src/airport-view.js';
+import { createAirport, createAirportLod, setAirportDetailDistance } from '../src/airport-view.js';
 import { createRunway } from '../src/runway-view.js';
 import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 import { disposeAircraftObject } from '../src/aircraft-models.js';
@@ -15,6 +15,15 @@ test('airport structures leave the runway, parallel taxiway and approach clear',
   }
   assert.ok(TAXIWAYS.some(taxiway => taxiway.x === -170));
   assert.ok(TAXIWAYS.some(taxiway => taxiway.x === -85));
+});
+
+test('jetway corridors connect the terminal facade to their boarding cabins without gaps', () => {
+  const terminal = AIRPORT_BUILDINGS.find(building => building.kind === 'terminal');
+  for (const corridor of AIRPORT_BUILDINGS.filter(building => building.kind === 'jetway' && building.width > 20)) {
+    assert.ok(corridor.x - corridor.width / 2 <= terminal.x + terminal.width / 2, 'corridor must reach the terminal wall');
+    const cabin = AIRPORT_BUILDINGS.find(building => building.kind === 'jetway' && building.width < 20 && building.z === corridor.z);
+    assert.ok(cabin.x - cabin.width / 2 <= corridor.x + corridor.width / 2, 'boarding cabin must reach the corridor');
+  }
 });
 
 test('airport modeling is batched, has named facilities and disposes resources once', () => {
@@ -54,6 +63,32 @@ test('elevated jetways collide at cabin height and permit flight above', () => {
     updateAircraftFlight(above, {}, 1 / 120);
     assert.equal(above.status, 'running');
   }
+});
+
+test('airport has three progressively cheaper levels with reversible hysteresis and no rebuild on tuning', () => {
+  const airport = createAirportLod(), levels = airport.levels.map(level => level.object);
+  const budgets = levels.map(root => {
+    let meshes = 0, triangles = 0;
+    root.traverse(object => { if (object.isMesh) { meshes++;triangles += (object.geometry.index?.count ?? object.geometry.attributes.position.count) / 3; } });
+    return { meshes, triangles };
+  });
+  assert.equal(levels.length, 3);
+  assert.ok(budgets[0].meshes <= 20);
+  assert.ok(budgets[1].triangles < budgets[0].triangles / 4);
+  assert.ok(budgets[2].triangles < budgets[1].triangles / 3);
+  assert.ok(budgets[2].meshes <= 3);
+  const camera = new THREE.PerspectiveCamera();
+  setAirportDetailDistance(airport, 1500, 'low');airport.updateMatrixWorld(true);
+  const near = airport.levels[1].distance, far = airport.levels[2].distance;
+  assert.ok(far > near);
+  for (const [distance, expected] of [[0, 0], [near * 1.01, 1], [near * .95, 1], [near * .8, 0], [far * 1.01, 2], [far * .95, 2], [far * .8, 1]]) {
+    camera.position.set(0, distance, 0);camera.updateMatrixWorld();airport.update(camera);
+    assert.equal(airport.getCurrentLevel(), expected);
+  }
+  setAirportDetailDistance(airport, 12000, 'high');
+  assert.ok(airport.levels[1].distance > near);assert.ok(airport.levels[2].distance > far);
+  assert.deepEqual(airport.levels.map(level => level.object), levels);
+  disposeAircraftObject(airport);
 });
 
 test('runway uses shared dimensions, batched markings, approach and taxiway lights', () => {

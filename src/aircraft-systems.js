@@ -14,10 +14,14 @@ export const AIRCRAFT_SYSTEM_SWITCHES = Object.freeze({
   avionics: { key: 'avionicsOn', label: 'AVIONICS', name: '航电主开关' },
   'yaw-damper': { key: 'yawDamper', label: 'Y/DAMP', name: '偏航阻尼' },
   'spoiler-arm': { key: 'spoilerArmed', label: 'SPLR ARM', name: '扰流板预位' },
+  'nav-lights': { key: 'navLights', label: 'NAV', name: '航行灯', lighting: true },
+  'beacon-lights': { key: 'beaconLights', label: 'BEACON', name: '防撞灯', lighting: true },
+  'landing-lights': { key: 'landingLights', label: 'LAND', name: '着陆灯', lighting: true },
+  'taxi-lights': { key: 'taxiLights', label: 'TAXI', name: '滑行灯', lighting: true },
 });
 
 export function createAircraftSystems(settings) {
-  return { engineOn: true, batteryOn: true, generatorOn: true, apuOn: false, apuRpm: 0, avionicsOn: true, yawDamper: false, spoilerArmed: false, parkingBrake: false, reverse: false, autoBrake: 'off', autoBrakeActive: false, autothrottle: { enabled: false, target: 0, integral: 0, reason: '' }, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false, wheelBrake: 0 } };
+  return { engineOn: true, batteryOn: true, generatorOn: true, apuOn: false, apuRpm: 0, avionicsOn: true, yawDamper: false, spoilerArmed: false, navLights: true, beaconLights: true, landingLights: false, taxiLights: false, parkingBrake: false, reverse: false, autoBrake: 'off', autoBrakeActive: false, autothrottle: { enabled: false, target: 0, integral: 0, reason: '' }, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false, wheelBrake: 0 } };
 }
 
 export function aircraftElectrical(flight) {

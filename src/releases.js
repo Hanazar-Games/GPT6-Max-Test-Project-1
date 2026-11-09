@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 双发客机与座舱电源系统</h2>
-      <p id="release-copy">驾驶新的窄体与宽体客机，管理电源和 APU，准备自动扰流板，并在侧滑中保持更稳的方向。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 扩展机库、外部灯光与机场细节</h2>
+      <p id="release-copy">驾驶支线涡桨与双发战机，用真实作用的外灯开关完成飞行准备，近看更丰富的机场，远看更轻的轮廓。</p>
+      <ul class="release-list">
+        <li><strong>十款飞机与二十二个按钮</strong>新增海燕 P-72 高翼支线涡桨客机和夜隼 F-26 折线翼双发战机，两款原创轻量 GLB，独立起落架、六叶螺旋桨或外倾双垂尾；机型使用独立起降、动力与配乐配置。</li>
+        <li><strong>四组外部灯光</strong>NAV / BEACON / LAND / TAXI 实体按钮与系统面板同步，控制红绿白航行灯、红色双闪和无阴影着陆 / 滑行照明。断电熄灯并保留选择，收轮熄灭滑行灯，暂停冻结闪烁；灯具共用一个实例批次，未变化时不上传矩阵。</li>
+        <li><strong>机场与界面优化</strong>细化航站楼入口雨棚、玻璃幕墙、登机桥伸缩段、机库结构和机位标线；远景增加第三档轮廓，276 个三角形、2 个批次。操作说明折叠，灯光显示真实状态，桌面导航提示避开顶板按钮；1.32.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>91 个版本</span></summary>
+      <article><h3>v1.32.0 · 双发客机与座舱电源系统</h3>
+      <p>驾驶新的窄体与宽体客机，管理电源和 APU，准备自动扰流板，并在侧滑中保持更稳的方向。</p>
       <ul class="release-list">
         <li><strong>两款原创客机</strong>云雀 R-220 窄体客机与远星 W-350 宽体客机加入，八款飞机全部开放；配备翼下双发、客舱舷窗、分片风挡、弯曲翼梢和独立起落架，使用不同起降与响应参数。</li>
         <li><strong>十八个实体按钮</strong>新增 BAT / GEN / APU / AVIONICS / Y/DAMP / SPLR ARM，仪表与面板同步。客机地面重启需 APU READY，断电或关航电会熄屏并退出自动化；默认已启动，可直接起飞。均为游戏简化系统。</li>
         <li><strong>物理与着陆联动</strong>偏航阻尼抑制侧滑并保留手动方向舵；扰流板可预位，在接地收油后自动展开，复飞解除预位。修复陡降制动时位移与空速不一致；1.31.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>90 个版本</span></summary>
+      </article>
       <article><h3>v1.31.0 · 航迹惯性、远景与座舱调节</h3>
       <p>转弯保留惯性，远景按距离简化，按自己的习惯调整驾驶位置与仪表面板。</p>
       <ul class="release-list">

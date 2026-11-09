@@ -11,7 +11,7 @@ export const AIRPORT_BUILDINGS = Object.freeze([
   ...[600, 900].map(z => ({ kind: 'hangar', x: 400, z, width: 180, depth: 190, height: 51 })),
   { kind: 'tower', x: -240, z: -700, width: 48, depth: 48, height: 113 },
   ...[-360, -150, 60, 270].flatMap(z => [
-    { kind: 'jetway', x: -277, z, width: 94, depth: 9, base: 7, height: 13 },
+    { kind: 'jetway', x: -281, z, width: 102, depth: 9, base: 7, height: 13 },
     { kind: 'jetway', x: -224, z, width: 12, depth: 18, base: 4, height: 15 },
   ]),
   { kind: 'depot', x: -700, z: -650, width: 200, depth: 120, height: 24 },

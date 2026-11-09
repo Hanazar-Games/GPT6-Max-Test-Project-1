@@ -32,7 +32,7 @@ test('every GLB normalizes to aircraft dimensions with independent gear and prop
     assert.ok(Math.abs(dimensions.x - aircraft.span) < 1);
     assert.ok(Math.abs(bounds.min.y + aircraft.gearHeight) < .001);
     assert.equal(model.userData.gear.length, 1);
-    assert.equal(model.userData.propellers.length, aircraft.id === 't6' ? 1 : aircraft.id === 'c24' ? 2 : 0);
+    assert.equal(model.userData.propellers.length, aircraft.engineType === 'propeller' ? 1 : aircraft.engineType === 'turboprop' ? 2 : 0);
     model.userData.gear[0].visible = false;
     let visibleMeshes = 0; model.traverseVisible(object => { if (object.isMesh) visibleMeshes++; });
     assert.ok(visibleMeshes > 0);
@@ -40,16 +40,16 @@ test('every GLB normalizes to aircraft dimensions with independent gear and prop
   }
 });
 
-test('the six original fleet assets are compact, attributed and have distinct geometry', async () => {
+test('original fleet assets are compact, attributed and have distinct geometry', async () => {
   const meshes = new Set();
-  for (const id of ['t6', 'b62', 'c24', 'd9', 'r220', 'w350']) {
+  for (const id of ['t6', 'b62', 'c24', 'd9', 'r220', 'w350', 'p72', 'f26']) {
     const { file, json } = await asset(id);
     assert.equal(json.nodes[0].extras.license, 'CC0-1.0');
     assert.ok(file.length < 250000);
     assert.ok(json.meshes.length < 18);
     meshes.add(file.toString('base64'));
   }
-  assert.equal(meshes.size, 6);
+  assert.equal(meshes.size, 8);
 });
 
 test('A380 attribution survives and the fighter is an original self-contained asset', async () => {
@@ -58,6 +58,20 @@ test('A380 attribution survives and the fighter is an original self-contained as
   assert.match(a380.json.asset.extras.author, /zairiq/);
   assert.equal(fighter.json.nodes[0].extras.license, 'CC0-1.0');
   assert.ok(fighter.file.length < 200000);
+});
+
+test('regional T-tail planes join the center fin instead of floating beside it', async () => {
+  const { file } = await asset('p72'), aircraft = AIRCRAFT.find(item => item.id === 'p72');
+  const { scene } = await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
+  let roots = 0;
+  scene.traverse(object => {
+    if (!object.isMesh) return;
+    const position = object.geometry.attributes.position, normal = object.geometry.attributes.normal;
+    for (let index = 0; index < position.count; index++) {
+      if (Math.abs(position.getX(index)) < .001 && Math.abs(position.getY(index) - 1.55 * 2.28) < .001 && position.getZ(index) > aircraft.length * .3 && normal.getY(index) < -.9) roots++;
+    }
+  });
+  assert.ok(roots >= 4, 'both tailplane roots must extend to the center fin');disposeAircraftObject(scene);
 });
 
 test('unload disposes shared mesh resources and image bitmaps exactly once', () => {

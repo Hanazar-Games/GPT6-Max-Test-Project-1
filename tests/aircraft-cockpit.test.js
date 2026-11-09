@@ -95,7 +95,7 @@ test('new cockpit switches show armed autobrake, active speed hold and unavailab
   const flight = createAircraftFlight('a380', true), cockpit = createAircraftCockpit(flight.aircraft);
   const { switches, switchStates } = cockpit.userData.controls;
   const index = action => COCKPIT_SWITCHES.findIndex(control => control.action === action);
-  assert.equal(COCKPIT_SWITCHES.length, 18);
+  assert.equal(COCKPIT_SWITCHES.length, 22);
   updateCockpitControls(cockpit, flight);
   const inactive = switchStates[index('autobrake')], unavailable = switchStates[index('reverse')];
   flight.systems.autoBrake = 'low';flight.systems.autothrottle.enabled = true;
