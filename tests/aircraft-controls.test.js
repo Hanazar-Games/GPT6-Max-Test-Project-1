@@ -1,18 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { aircraftKeyBinding, aircraftInput, aircraftControlHelp } from '../src/aircraft-controls.js';
+import { aircraftKeyBinding, aircraftInput, aircraftControlHelp, aircraftThrottleShortcut } from '../src/aircraft-controls.js';
+import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 
 test('flight keys retain defaults and alternate keys do not amplify an axis', () => {
   assert.deepEqual(aircraftKeyBinding('ArrowDown'), ['pitch', 1]);
   assert.equal(aircraftKeyBinding('KeyV'), undefined);
   const input = aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown', 'KeyW', 'Space']));
-  assert.deepEqual(input, { pitch: 1, roll: -1, yaw: 0, throttle: 1, brake: true });
+  assert.deepEqual(input, { pitch: 1, roll: -1, yaw: 0, throttle: 1, throttleRate: .3, brake: true });
   assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'KeyD'])).roll, 0);
 });
 
 test('WASD preset, pitch inversion and sensitivity apply to keyboard and touch', () => {
-  const settings = { preset: 'wasd', sensitivity: .5, invertPitch: true };
-  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: -.5, roll: .5, yaw: -.5, throttle: 1, brake: false });
+  const settings = { preset: 'wasd', pitchSensitivity: .5, rollSensitivity: .5, yawSensitivity: .5, deadzone: 0, invertPitch: true };
+  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: -.5, roll: .5, yaw: -.5, throttle: 1, throttleRate: .3, brake: false });
   const touch = aircraftInput(new Set(), { pitch: .6, roll: -.8, brake: true }, settings);
   assert.equal(touch.pitch, -.3); assert.equal(touch.roll, -.4); assert.equal(touch.brake, true);
   assert.match(aircraftControlHelp(settings).pitch, /S.*W/);
@@ -20,15 +21,68 @@ test('WASD preset, pitch inversion and sensitivity apply to keyboard and touch',
 });
 
 test('invalid settings and unknown keys cannot poison flight input', () => {
-  assert.deepEqual(aircraftInput(new Set(['Unknown']), { pitch: NaN, roll: Infinity }, { preset: 'unknown', sensitivity: NaN }), { pitch: 0, roll: 0, yaw: 0, throttle: 0, brake: false });
-  assert.equal(aircraftInput(new Set(['ArrowDown']), {}, { sensitivity: 100 }).pitch, 1);
-  assert.equal(aircraftInput(new Set(), { roll: -.7 }).roll, -.7);
+  assert.deepEqual(aircraftInput(new Set(['Unknown']), { pitch: NaN, roll: Infinity }, { preset: 'unknown', pitchSensitivity: NaN, throttleRate: Infinity }), { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false });
+  assert.equal(aircraftInput(new Set(['ArrowDown']), {}, { pitchSensitivity: 100 }).pitch, 1);
+  assert.equal(aircraftInput(new Set(), { roll: -.7 }, { deadzone: 0 }).roll, -.7);
 });
 
 test('reused input output clears released axes and preserves mixed keyboard and touch cancellation', () => {
   const output = { pitch: 99, roll: 99, yaw: 99, throttle: 99, brake: true };
-  assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown']), { roll: .4 }, {}, output), output);
+  assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown']), { roll: .4 }, { deadzone: 0 }, output), output);
   assert.equal(output.roll, -.6); assert.equal(output.pitch, 1);
   aircraftInput(new Set(), {}, {}, output);
-  assert.deepEqual(output, { pitch: 0, roll: 0, yaw: 0, throttle: 0, brake: false });
+  assert.deepEqual(output, { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false });
+});
+
+test('independent axis gains preserve keyboard authority, inversion and opposite input cancellation', () => {
+  const settings = { pitchSensitivity: .2, rollSensitivity: .65, yawSensitivity: 2, invertPitch: true, curve: 3, deadzone: .25 };
+  const input = aircraftInput(new Set(['ArrowDown', 'KeyD', 'KeyE', 'KeyW']), {}, settings);
+  assert.equal(input.pitch, -.2); assert.equal(input.roll, .65); assert.equal(input.yaw, 1); assert.equal(input.throttle, 1);
+  assert.equal(aircraftInput(new Set(['KeyQ']), { yaw: 1 }, settings).yaw, 0);
+  assert.equal(aircraftInput(new Set(['KeyE']), { yaw: -1 }, settings).yaw, 0);
+});
+
+test('touch deadzone is continuous, symmetric and remapped to full travel before its response curve', () => {
+  const settings = { deadzone: .2, curve: 2 };
+  const sample = value => aircraftInput(new Set(), { pitch: value }, settings).pitch;
+  assert.equal(sample(.19), 0); assert.equal(sample(-.2), 0);
+  assert.ok(Math.abs(sample(.6) - .25) < 1e-12);
+  assert.ok(Math.abs(sample(-.6) + .25) < 1e-12);
+  assert.ok(sample(.2001) < 1e-6);
+  assert.equal(sample(1), 1); assert.equal(sample(-1), -1);
+  let previous = 0;
+  for (let i = 0; i <= 100; i++) { const value = sample(i / 100); assert.ok(value >= previous); previous = value; }
+  assert.equal(aircraftInput(new Set(), { throttle: .1 }, settings).throttle, .1);
+  assert.equal(aircraftInput(new Set(['ArrowDown']), {}, settings).pitch, 1);
+});
+
+test('control ranges clamp safely without sharing settings between axes', () => {
+  const input = aircraftInput(new Set(['KeyE']), { pitch: .5, roll: .5 }, { pitchSensitivity: -10, rollSensitivity: 99, yawSensitivity: NaN, deadzone: -1, curve: 99, throttleRate: 99 });
+  assert.equal(input.pitch, .025); assert.equal(input.roll, .25); assert.equal(input.yaw, 1); assert.equal(input.throttleRate, 1);
+  const fallback = aircraftInput(new Set(), { roll: .5 }, { deadzone: NaN, curve: Infinity });
+  assert.ok(Math.abs(fallback.roll - (.5 - .07) / .93) < 1e-12);
+});
+
+test('keyboard throttle rate changes target travel consistently while engine output retains spool lag', () => {
+  for (const rate of [.05, .3, 1]) for (const step of [1 / 30, 1 / 120]) {
+    const flight = createAircraftFlight('a380'); flight.status = 'running';
+    const input = aircraftInput(new Set(['KeyW']), {}, { throttleRate: rate });
+    for (let i = 0; i < Math.round(.5 / step); i++) updateAircraftFlight(flight, input, step);
+    assert.ok(Math.abs(flight.throttle - rate * .5) < 1e-12);
+    assert.ok(flight.engineOutput > 0 && flight.engineOutput < flight.throttle);
+    input.throttle = -1;
+    for (let i = 0; i < Math.round(.5 / step); i++) updateAircraftFlight(flight, input, step);
+    assert.ok(flight.throttle < 1e-12);
+    input.throttle = 0;
+    updateAircraftFlight(flight, input, step); assert.ok(flight.throttle < 1e-12);
+  }
+});
+
+test('throttle shortcuts expose idle, cruise and full power without colliding with held flight axes', () => {
+  for (const [digit, value] of [[1, 0], [2, .65], [3, 1]]) {
+    assert.equal(aircraftThrottleShortcut(`Digit${digit}`), value);
+    assert.equal(aircraftThrottleShortcut(`Numpad${digit}`), value);
+    assert.equal(aircraftKeyBinding(`Digit${digit}`), undefined);
+  }
+  assert.equal(aircraftThrottleShortcut('KeyW'), undefined);
 });

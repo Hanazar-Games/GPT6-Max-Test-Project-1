@@ -5,6 +5,14 @@ const presets = {
 };
 const clamp = value => Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0;
 const axisBits = { pitch: 1, roll: 2, yaw: 4, throttle: 8 };
+export const AIRCRAFT_CONTROL_DEFAULTS = Object.freeze({ preset: 'flight', invertPitch: false, pitchSensitivity: 1, rollSensitivity: 1, yawSensitivity: 1, deadzone: .07, curve: 1, throttleRate: .3 });
+const controlLimits = { pitchSensitivity: [.2, 2], rollSensitivity: [.2, 2], yawSensitivity: [.2, 2], deadzone: [0, .25], curve: [1, 3], throttleRate: [.05, 1] };
+const throttleShortcuts = { Digit1: 0, Numpad1: 0, Digit2: .65, Numpad2: .65, Digit3: 1, Numpad3: 1 };
+const settingValue = (settings, key) => Number.isFinite(settings[key]) ? Math.max(controlLimits[key][0], Math.min(controlLimits[key][1], settings[key])) : AIRCRAFT_CONTROL_DEFAULTS[key];
+
+export function aircraftThrottleShortcut(code) {
+  return throttleShortcuts[code];
+}
 
 export function aircraftKeyBinding(code, preset = 'flight') {
   return (presets[preset] ?? presets.flight)[code];
@@ -21,11 +29,14 @@ export function aircraftInput(held, touch = {}, settings = {}, input = {}) {
     else if (amount < 0) negative |= axisBits[axis];
     else positive |= axisBits[axis];
   }
-  const sensitivity = Number.isFinite(settings.sensitivity) ? Math.max(.4, Math.min(1.5, settings.sensitivity)) : 1;
+  const deadzone = settingValue(settings, 'deadzone'), curve = settingValue(settings, 'curve');
   for (const axis in axisBits) {
-    const value = clamp(touch[axis]), bit = axisBits[axis];
-    input[axis] = clamp(((negative & bit ? -1 : Math.min(0, value)) + (positive & bit ? 1 : Math.max(0, value))) * (axis === 'throttle' ? 1 : sensitivity));
+    let value = clamp(touch[axis]);
+    const bit = axisBits[axis], sensitivity = axis === 'throttle' ? 1 : settingValue(settings, `${axis}Sensitivity`);
+    if (axis !== 'throttle') value = Math.abs(value) <= deadzone ? 0 : Math.sign(value) * ((Math.abs(value) - deadzone) / (1 - deadzone)) ** curve;
+    input[axis] = clamp(((negative & bit ? -1 : Math.min(0, value)) + (positive & bit ? 1 : Math.max(0, value))) * sensitivity);
   }
+  input.throttleRate = settingValue(settings, 'throttleRate');
   if (settings.invertPitch && input.pitch) input.pitch *= -1;
   return input;
 }

@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞行声音与操作体验修复</h2>
-      <p id="release-copy">让发动机出力、失速提醒和声音设置与飞行保持一致。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞机操纵细调与快捷操作</h2>
+      <p id="release-copy">分别调整三轴手感，用独立方向舵和快捷油门完成每次起降。</p>
+      <ul class="release-list">
+        <li><strong>六项操纵细调</strong>俯仰、滚转、方向舵各有 20%–200% 灵敏度，新增 0%–25% 摇杆死区、1×–3× 响应曲线和每秒 5%–100% 键盘油门变化。保留反向升降与两套键位，支持恢复默认操作设置。</li>
+        <li><strong>独立方向舵与快捷油门</strong>手机可同时推杆、用左右舵和制动，双侧用舵抵消；1 / 2 / 3 与数字小键盘，或油门下方按钮，快捷设置怠速 / 65% / 全开，实际推力仍逐步跟随目标。</li>
+        <li><strong>小屏操作完善</strong>横屏工具采用紧凑双列，小屏系统按钮减少导航遮挡；按住按钮支持空格 / Enter，释放、取消、失去捕获、离焦、暂停与退出清理输入。操作设置对六机型共用，仅保留在本次飞机模式；1.25.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>80 个版本</span></summary>
+      <article><h3>v1.25.1 · 飞行声音与操作体验修复</h3>
+      <p>让发动机出力、失速提醒和声音设置与飞行保持一致。</p>
       <ul class="release-list">
         <li><strong>动力声音同步</strong>修复飞机引擎只跟速度发声的问题，改为跟随渐进发动机出力与推力调校；区分喷气、战机、螺旋桨和涡桨合成音色，零推力不再保持高速引擎声。</li>
         <li><strong>配乐与失速提醒</strong>配乐层次按当前调校的速度上限变化，慢速教练机也有完整速度反馈。增加带间隔的失速双音警报，警报期间短暂降低音乐，暂停、静音与离开页面时停止。</li>
         <li><strong>操作与声音状态</strong>修复收起的设置项干扰 Tab 焦点循环；飞机设置增加声音状态和重新启用入口，返回基地保持六机型说明与共用音量。1.25.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>79 个版本</span></summary>
+      </article>
       <article><h3>v1.25.0 · 六机型与飞行动力升级</h3>
       <p>从单发教练机到三角翼战机，感受不同飞机的动力与转弯手感。</p>
       <ul class="release-list">

@@ -136,7 +136,8 @@ function stepFlight(flight, input, dt) {
   if (flight.flaps && flight.speed > aircraft.flapLimit + 5) { flight.flaps = 0; flight.events.push('flaps-limit'); }
   const baseStall = performance.stall * (1 - flight.flaps * .1), takeoff = performance.takeoff * (1 - flight.flaps * .07);
   let stall = baseStall * Math.sqrt(bankLoad(flight));
-  flight.throttle = clamp(flight.throttle + axis(input.throttle) * dt * .3, 0, 1);
+  const throttleRate = Number.isFinite(input.throttleRate) ? clamp(input.throttleRate, .05, 1) : .3;
+  flight.throttle = clamp(flight.throttle + axis(input.throttle) * dt * throttleRate, 0, 1);
   flight.engineOutput += (flight.throttle - flight.engineOutput) * (1 - Math.exp(-performance.engineResponse * dt));
   const authority = clamp((flight.speed / stall) ** 2, .03, 1);
   const pitchInput = axis(input.pitch), rollInput = axis(input.roll), yawInput = axis(input.yaw);
