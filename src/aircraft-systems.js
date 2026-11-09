@@ -1,3 +1,5 @@
+import { aircraftEnvelope } from './aircraft-envelope.js';
+
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
 const editable = flight => ['ready', 'running', 'paused'].includes(flight.status);
@@ -32,10 +34,16 @@ export function toggleParkingBrake(flight) {
   flight.systems.parkingBrake = !flight.systems.parkingBrake;return true;
 }
 
+export function autopilotAvailability(flight) {
+  const minimumSpeed = aircraftEnvelope(flight).stall * 1.15;
+  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < minimumSpeed ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .45 ? 'attitude' : '';
+  return { reason, minimumSpeed };
+}
+
 export function setAutopilot(flight, mode) {
   if (!editable(flight) || !['off', 'level', 'hold'].includes(mode)) return false;
   const autopilot = flight.systems.autopilot;
-  if (mode !== 'off' && (flight.onGround || !flight.systems.engineOn || flight.physics.mode !== 'assisted' || flight.speed < flight.performance.stall * 1.15 || Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .45)) return false;
+  if (mode !== 'off' && autopilotAvailability(flight).reason) return false;
   if (mode !== 'off') { autopilot.heading = flight.heading;autopilot.altitude = flight.y; }
   autopilot.mode = mode;autopilot.reason = '';return true;
 }
@@ -54,7 +62,8 @@ export function updateAircraftSystems(flight, input, dt, stall) {
   for (const key in trim) controls[key] = axis(axis(input[key]) + trim[key] * settings.trimAuthority);
   controls.brake = !!input.brake || flight.systems.parkingBrake;
   if (autopilot.mode === 'off') return controls;
-  const reason = flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < stall * 1.1 ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .55 ? 'attitude' : Math.max(Math.abs(axis(input.pitch)), Math.abs(axis(input.roll)), Math.abs(axis(input.yaw))) >= settings.overrideThreshold ? 'manual' : '';
+  const override = Number.isFinite(input.pilotOverride) ? Math.abs(axis(input.pilotOverride)) : Math.max(Math.abs(axis(input.pitch)), Math.abs(axis(input.roll)), Math.abs(axis(input.yaw)));
+  const reason = flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < stall * 1.1 ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .55 ? 'attitude' : override >= settings.overrideThreshold ? 'manual' : '';
   if (reason) {
     autopilot.mode = 'off';autopilot.reason = reason;flight.events.push('ap-disconnect');return controls;
   }

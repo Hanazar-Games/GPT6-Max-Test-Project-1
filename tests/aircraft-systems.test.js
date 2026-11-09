@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AIRCRAFT, createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
-import { SYSTEM_DEFAULTS, SYSTEM_LIMITS, setSystemSettings, setAircraftTrim, setAutopilot, setAutopilotTarget, toggleEngine, toggleParkingBrake } from '../src/aircraft-systems.js';
+import { AIRCRAFT, createAircraftFlight, updateAircraftFlight, aircraftEnvelope, islandHeight } from '../src/aircraft-flight.js';
+import { aircraftInput } from '../src/aircraft-controls.js';
+import { SYSTEM_DEFAULTS, SYSTEM_LIMITS, setSystemSettings, setAircraftTrim, setAutopilot, setAutopilotTarget, toggleEngine, toggleParkingBrake, autopilotAvailability } from '../src/aircraft-systems.js';
 
 const advance = (flight, seconds, input = {}, step = 1 / 60) => {
   for (let i = 0; i < Math.round(seconds / step); i++) updateAircraftFlight(flight, input, step);
@@ -119,5 +120,88 @@ test('system tuning and autopilot remain consistent across simulation step sizes
   for (const flight of samples.slice(1)) {
     assert.ok(Math.abs(flight.heading - samples[0].heading) < .005);
     assert.ok(Math.abs(flight.y - samples[0].y) < 1);assert.ok(Math.abs(flight.speed - samples[0].speed) < 1);
+  }
+});
+
+test('autopilot engagement uses the current bank and flap stall envelope for every aircraft', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id, true);flight.y = 3000;
+    flight.roll = 50 * Math.PI / 180;flight.speed = flight.performance.stall * 1.2;
+    assert.ok(flight.speed < aircraftEnvelope(flight).stall * 1.15);
+    assert.equal(setAutopilot(flight, 'hold'), false, `${aircraft.id}: banked stall margin`);
+    flight.roll = 0;flight.flaps = 2;flight.speed = flight.performance.stall * .97;
+    assert.ok(flight.speed > aircraftEnvelope(flight).stall * 1.15);
+    assert.equal(setAutopilot(flight, 'level'), true, `${aircraft.id}: flap lift margin`);
+    updateAircraftFlight(flight, {}, 1 / 120);assert.equal(flight.systems.autopilot.mode, 'level');
+  }
+});
+
+test('keyboard and touch can take over autopilot at minimum sensitivity and maximum threshold', () => {
+  for (const [axis, key] of [['pitch', 'ArrowDown'], ['roll', 'KeyA'], ['yaw', 'KeyQ']]) {
+    for (const touch of [false, true]) {
+      const flight = createAircraftFlight('su30', true);flight.y = 3000;
+      setSystemSettings(flight, { overrideThreshold: .6 });setAutopilot(flight, 'hold');
+      const input = aircraftInput(new Set(touch ? [] : [key]), touch ? { [axis]: 1 } : {}, { [`${axis}Sensitivity`]: .2 });
+      assert.equal(Math.abs(input[axis]), .2);
+      updateAircraftFlight(flight, input, 1 / 60);
+      assert.equal(flight.systems.autopilot.mode, 'off', `${axis}: ${touch ? 'touch' : 'keyboard'}`);
+      assert.equal(flight.systems.autopilot.reason, 'manual');assert.ok(flight.events.includes('ap-disconnect'));
+      assert.equal(Math.abs(flight.systems.controls[axis]), .2, 'takeover preserves the selected control sensitivity');
+    }
+  }
+});
+
+test('takeover ignores throttle, cancelled axes and joystick noise, and clears reused input', () => {
+  const input = {};
+  for (const [held, touch] of [[['KeyW'], {}], [['KeyA', 'KeyD'], {}], [[], { roll: .05 }]]) {
+    const flight = createAircraftFlight('su30', true);flight.y = 3000;setAutopilot(flight, 'hold');
+    aircraftInput(new Set(held), touch, { rollSensitivity: 2 }, input);updateAircraftFlight(flight, input, 1 / 60);
+    assert.equal(flight.systems.autopilot.mode, 'hold');
+  }
+  aircraftInput(new Set(['KeyA']), {}, {}, input);
+  const flight = createAircraftFlight('su30', true);flight.y = 3000;setAutopilot(flight, 'hold');
+  aircraftInput(new Set(), {}, {}, input);updateAircraftFlight(flight, input, 1 / 60);
+  assert.equal(flight.systems.autopilot.mode, 'hold');
+});
+
+test('autopilot reports the blocking condition without changing captured targets and still allows disconnection', () => {
+  for (const reason of ['status', 'ground', 'mode', 'engine', 'stall', 'attitude']) {
+    const flight = createAircraftFlight('su30', true);flight.y = 3000;
+    assert.equal(setAutopilot(flight, 'hold'), true);
+    const targets = [flight.systems.autopilot.heading, flight.systems.autopilot.altitude];
+    if (reason === 'status') flight.status = 'crashed';
+    if (reason === 'ground') flight.onGround = true;
+    if (reason === 'mode') flight.physics.mode = 'maneuver';
+    if (reason === 'engine') flight.systems.engineOn = false;
+    if (reason === 'stall') flight.speed = 20;
+    if (reason === 'attitude') flight.pitch = .5;
+    assert.equal(autopilotAvailability(flight).reason, reason);
+    assert.equal(autopilotAvailability(flight).minimumSpeed, aircraftEnvelope(flight).stall * 1.15);
+    assert.equal(setAutopilot(flight, 'level'), false);
+    assert.deepEqual([flight.systems.autopilot.heading, flight.systems.autopilot.altitude], targets);
+    if (reason !== 'status') assert.equal(setAutopilot(flight, 'off'), true, reason);
+  }
+});
+
+test('takeover threshold stays independent of high sensitivity and respects the joystick curve', () => {
+  const flight = createAircraftFlight('su30', true);flight.y = 3000;
+  setSystemSettings(flight, { overrideThreshold: .6 });setAutopilot(flight, 'hold');
+  const settings = { rollSensitivity: 2, curve: 2, deadzone: .1 };
+  const input = aircraftInput(new Set(), { roll: .7 }, settings);
+  assert.ok(input.roll > .6);assert.ok(input.pilotOverride < .6);
+  updateAircraftFlight(flight, input, 1 / 60);assert.equal(flight.systems.autopilot.mode, 'hold');
+  aircraftInput(new Set(), { roll: 1 }, settings, input);updateAircraftFlight(flight, input, 1 / 60);
+  assert.equal(flight.systems.autopilot.mode, 'off');
+});
+
+test('pause preserves autopilot but a collision clears its active state for every aircraft', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id, true);flight.y = 3000;
+    assert.equal(setAutopilot(flight, 'hold'), true);flight.status = 'paused';advance(flight, 1);
+    assert.equal(flight.systems.autopilot.mode, 'hold');
+    flight.status = 'running';flight.x = 4000;flight.z = -6000;flight.y = islandHeight(flight.x, flight.z) + .1;
+    updateAircraftFlight(flight, {}, 1 / 60);
+    assert.equal(flight.status, 'crashed', aircraft.id);assert.equal(flight.systems.autopilot.mode, 'off', aircraft.id);
+    assert.equal(flight.systems.autopilot.reason, 'status');assert.ok(flight.events.includes('crash'));
   }
 });

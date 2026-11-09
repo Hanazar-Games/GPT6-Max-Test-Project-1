@@ -1,6 +1,8 @@
 import { AIRPORT_BUILDINGS, AIRPORT_BOUNDS, RUNWAY } from './airport.js';
 import { Euler, Quaternion, Vector3 } from 'three';
 import { createAircraftSystems, setSystemSettings, updateAircraftSystems } from './aircraft-systems.js';
+import { bankLoad } from './aircraft-envelope.js';
+export { aircraftEnvelope } from './aircraft-envelope.js';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
@@ -76,13 +78,6 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
   setSystemSettings(flight);
   if (airborne) flight.speed = Math.min(flight.performance.maxSpeed * .85, Math.max(aircraft.cruiseSpeed, flight.performance.stall * 1.4));
   return flight;
-}
-
-const bankLoad = flight => flight.onGround ? 1 : 1 / Math.max(.25, Math.abs(Math.cos(flight.roll)));
-
-export function aircraftEnvelope(flight) {
-  const performance = flight.performance;
-  return { stall: performance.stall * (1 - flight.flaps * .1) * Math.sqrt(bankLoad(flight)), takeoff: performance.takeoff * (1 - flight.flaps * .07), landing: performance.landingSpeed, maxSpeed: performance.maxSpeed };
 }
 
 export function setAircraftFlaps(flight, level) {
@@ -249,5 +244,8 @@ export function updateAircraftFlight(flight, input = {}, dt) {
     const step = Math.min(remaining, 1 / 120);
     stepFlight(flight, input, step);
     remaining -= step;
+  }
+  if (flight.status !== 'running' && flight.systems.autopilot.mode !== 'off') {
+    flight.systems.autopilot.mode = 'off';flight.systems.autopilot.reason = 'status';
   }
 }

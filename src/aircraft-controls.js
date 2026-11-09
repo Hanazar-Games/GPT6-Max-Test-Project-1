@@ -21,6 +21,7 @@ export function aircraftKeyBinding(code, preset = 'flight') {
 export function aircraftInput(held, touch = {}, settings = {}, input = {}) {
   let negative = 0, positive = 0;
   input.brake = !!touch.brake;
+  input.pilotOverride = 0;
   for (const code of held) {
     const binding = aircraftKeyBinding(code, settings.preset);
     if (!binding) continue;
@@ -34,7 +35,9 @@ export function aircraftInput(held, touch = {}, settings = {}, input = {}) {
     let value = clamp(touch[axis]);
     const bit = axisBits[axis], sensitivity = axis === 'throttle' ? 1 : settingValue(settings, `${axis}Sensitivity`);
     if (axis !== 'throttle') value = Math.abs(value) <= deadzone ? 0 : Math.sign(value) * ((Math.abs(value) - deadzone) / (1 - deadzone)) ** curve;
-    input[axis] = clamp(((negative & bit ? -1 : Math.min(0, value)) + (positive & bit ? 1 : Math.max(0, value))) * sensitivity);
+    const command = clamp((negative & bit ? -1 : Math.min(0, value)) + (positive & bit ? 1 : Math.max(0, value)));
+    input[axis] = clamp(command * sensitivity);
+    if (axis !== 'throttle') input.pilotOverride = Math.max(input.pilotOverride, Math.abs(command));
   }
   input.throttleRate = settingValue(settings, 'throttleRate');
   if (settings.invertPitch && input.pitch) input.pitch *= -1;

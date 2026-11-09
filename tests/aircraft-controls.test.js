@@ -7,13 +7,13 @@ test('flight keys retain defaults and alternate keys do not amplify an axis', ()
   assert.deepEqual(aircraftKeyBinding('ArrowDown'), ['pitch', 1]);
   assert.equal(aircraftKeyBinding('KeyV'), undefined);
   const input = aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown', 'KeyW', 'Space']));
-  assert.deepEqual(input, { pitch: 1, roll: -1, yaw: 0, throttle: 1, throttleRate: .3, brake: true });
+  assert.deepEqual(input, { pitch: 1, roll: -1, yaw: 0, throttle: 1, throttleRate: .3, brake: true, pilotOverride: 1 });
   assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'KeyD'])).roll, 0);
 });
 
 test('WASD preset, pitch inversion and sensitivity apply to keyboard and touch', () => {
   const settings = { preset: 'wasd', pitchSensitivity: .5, rollSensitivity: .5, yawSensitivity: .5, deadzone: 0, invertPitch: true };
-  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: -.5, roll: .5, yaw: -.5, throttle: 1, throttleRate: .3, brake: false });
+  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: -.5, roll: .5, yaw: -.5, throttle: 1, throttleRate: .3, brake: false, pilotOverride: 1 });
   const touch = aircraftInput(new Set(), { pitch: .6, roll: -.8, brake: true }, settings);
   assert.equal(touch.pitch, -.3); assert.equal(touch.roll, -.4); assert.equal(touch.brake, true);
   assert.match(aircraftControlHelp(settings).pitch, /S.*W/);
@@ -21,7 +21,7 @@ test('WASD preset, pitch inversion and sensitivity apply to keyboard and touch',
 });
 
 test('invalid settings and unknown keys cannot poison flight input', () => {
-  assert.deepEqual(aircraftInput(new Set(['Unknown']), { pitch: NaN, roll: Infinity }, { preset: 'unknown', pitchSensitivity: NaN, throttleRate: Infinity }), { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false });
+  assert.deepEqual(aircraftInput(new Set(['Unknown']), { pitch: NaN, roll: Infinity }, { preset: 'unknown', pitchSensitivity: NaN, throttleRate: Infinity }), { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false, pilotOverride: 0 });
   assert.equal(aircraftInput(new Set(['ArrowDown']), {}, { pitchSensitivity: 100 }).pitch, 1);
   assert.equal(aircraftInput(new Set(), { roll: -.7 }, { deadzone: 0 }).roll, -.7);
 });
@@ -31,7 +31,7 @@ test('reused input output clears released axes and preserves mixed keyboard and 
   assert.equal(aircraftInput(new Set(['KeyA', 'ArrowLeft', 'ArrowDown']), { roll: .4 }, { deadzone: 0 }, output), output);
   assert.equal(output.roll, -.6); assert.equal(output.pitch, 1);
   aircraftInput(new Set(), {}, {}, output);
-  assert.deepEqual(output, { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false });
+  assert.deepEqual(output, { pitch: 0, roll: 0, yaw: 0, throttle: 0, throttleRate: .3, brake: false, pilotOverride: 0 });
 });
 
 test('independent axis gains preserve keyboard authority, inversion and opposite input cancellation', () => {
