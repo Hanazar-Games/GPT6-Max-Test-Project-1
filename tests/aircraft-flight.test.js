@@ -152,6 +152,7 @@ test('touchdown and rollout finish a flight, unsafe impact stays crashed', () =>
   advance(flight, { brake: true }, 6);
   assert.equal(flight.status, 'completed');
   assert.equal(flight.onGround, true);
+  assert.equal(flight.loadFactor, 0);assert.equal(flight.stalling, false);
   const crashed = createAircraftFlight('su30', true);
   Object.assign(crashed, { y: 2.6, verticalSpeed: -20, gearDown: false });
   updateAircraftFlight(crashed, {}, .1);

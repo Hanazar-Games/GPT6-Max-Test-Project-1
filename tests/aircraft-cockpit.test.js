@@ -64,11 +64,12 @@ test('cockpit switches are clickable instances, show actual state and avoid unch
 
 test('instruments wrap headings and use the same units and warnings as the flight HUD', () => {
   const flight = createAircraftFlight('su30', true);
-  Object.assign(flight, { heading: -Math.PI / 2, speed: 200, y: 750, verticalSpeed: -4, stalling: true, gearDown: true, throttle: .7 });
+  Object.assign(flight, { heading: -Math.PI / 2, speed: 200, y: 750, verticalSpeed: -4, stalling: true, gearDown: true, throttle: .7, angleOfAttack: -.3, loadFactor: -2.25 });
   const data = cockpitInstruments(flight);
   assert.equal(data.speed, 720); assert.equal(data.altitude, 750); assert.equal(data.heading, '270');
   assert.equal(data.vertical, '-4.0'); assert.equal(data.throttle, 70); assert.equal(data.warning, 'STALL');
   assert.equal(data.engine, 65, 'engine output must remain distinct from the commanded throttle');
+  assert.equal(data.aoa, '-17.2');assert.equal(data.load, '-2.3');
 });
 
 test('cockpit camera follows the aircraft attitude and side looking preserves its bank', () => {

@@ -88,6 +88,22 @@ test('every aircraft holds altitude and converges toward selected heading in sta
   }
 });
 
+test('autopilot refuses excessive angle of attack and disconnects when airflow separates', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id, true);
+    Object.assign(flight, { y: 3000, speed: flight.performance.stall * 2, pitch: .3, verticalSpeed: -flight.speed * .3 });
+    assert.equal(autopilotAvailability(flight).reason, 'aoa', aircraft.id);
+    assert.equal(setAutopilot(flight, 'hold'), false);
+    flight.pitch = 0;flight.verticalSpeed = 0;
+    assert.equal(setAutopilot(flight, 'hold'), true);
+    flight.verticalSpeed = -flight.speed * .6;
+    updateAircraftFlight(flight, {}, 1 / 120);
+    assert.equal(flight.systems.autopilot.mode, 'off');
+    assert.equal(flight.systems.autopilot.reason, 'aoa');
+    assert.ok(flight.events.includes('ap-disconnect'));
+  }
+});
+
 test('autopilot yields immediately to pilot override, unsafe speed, ground and maneuver mode', () => {
   for (const cause of ['manual', 'stall', 'ground', 'mode']) {
     const flight = createAircraftFlight('su30', true);flight.y = 3000;assert.equal(setAutopilot(flight, 'hold'), true);

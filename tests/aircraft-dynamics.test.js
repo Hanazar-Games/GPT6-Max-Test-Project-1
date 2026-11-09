@@ -68,3 +68,124 @@ test('the six aircraft have distinct propulsion, safe airborne starts and workin
     }
   }
 });
+
+test('a high-angle pull stalls above the level-flight stall speed and unloading recovers', () => {
+  for (const id of ['a380', 'su30', 't6', 'b62', 'c24', 'd9']) {
+    const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
+    Object.assign(flight, { y: 3000, speed: flight.performance.stall * 2, pitch: .75 });
+    updateAircraftFlight(flight, {}, 1 / 120);
+    assert.equal(flight.stalling, true, `${id}: excessive angle of attack`);
+    assert.ok(flight.angleOfAttack > flight.performance.stallAngle);
+    flight.pitch = Math.asin(flight.verticalSpeed / flight.speed);
+    updateAircraftFlight(flight, {}, 1 / 120);
+    assert.equal(flight.stalling, false, `${id}: unloading restores attached flow`);
+  }
+});
+
+test('gravity follows the actual descent path even with the nose above the horizon', () => {
+  const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, thrust: 0, drag: .25, inducedDrag: .25 } });
+  Object.assign(flight, { y: 3000, speed: 100, verticalSpeed: -60, pitch: .02 });
+  updateAircraftFlight(flight, {}, 1 / 120);
+  assert.ok(flight.speed > 100, 'descending exchanges height for speed despite nose-up attitude');
+});
+
+test('pitching the nose does not instantly redirect forward momentum', () => {
+  const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0 } });
+  Object.assign(flight, { y: 3000, speed: 220, pitch: .45, verticalSpeed: 0 });
+  const z = flight.z;
+  updateAircraftFlight(flight, {}, 1 / 120);
+  assert.ok(z - flight.z > 220 / 120 * .99);
+});
+
+test('load limits and induced drag tuning affect pulling forces and speed loss', () => {
+  const flights = [.5, 1.5].map(loadLimit => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, loadLimit } });
+    Object.assign(flight, { y: 3000, speed: 300, pitch: .3 });
+    updateAircraftFlight(flight, {}, 1 / 120);
+    assert.ok(Math.abs(flight.loadFactor) <= flight.performance.loadLimit + .01);
+    return flight;
+  });
+  assert.ok(flights[1].verticalSpeed > flights[0].verticalSpeed + .1);
+  const drag = [.25, 3].map(inducedDrag => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, inducedDrag } });
+    Object.assign(flight, { y: 3000, pitch: .25, throttle: 0, engineOutput: 0 });
+    advance(flight, .5); return flight;
+  });
+  assert.ok(drag[1].speed < drag[0].speed - .5);
+});
+
+test('stall-angle tuning changes the attached-flow envelope and low-speed freefall cannot hover', () => {
+  const flights = [.6, 1.6].map(stallAngle => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, stallAngle } });
+    Object.assign(flight, { y: 3000, speed: 180, pitch: .4 });
+    updateAircraftFlight(flight, {}, 1 / 120);return flight;
+  });
+  assert.equal(flights[0].stalling, true);assert.equal(flights[1].stalling, false);
+  assert.ok(flights[1].verticalSpeed > flights[0].verticalSpeed);
+  for (const speed of [0, .01, 5]) {
+    const flight = createAircraftFlight('su30', true, { physics: { thrust: 0 } });
+    Object.assign(flight, { y: 3000, speed, engineOutput: 0 });
+    advance(flight, 3);
+    assert.ok(flight.y < 2980 && flight.verticalSpeed < -10);
+    assert.ok(Math.abs(flight.verticalSpeed) <= flight.speed);
+  }
+});
+
+test('stall, recovery, load and trajectory remain consistent across frame rates and freeze on pause', () => {
+  for (const { id } of AIRCRAFT) {
+    const flights = [1 / 30, 1 / 60, 1 / 120].map(step => {
+      const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
+      Object.assign(flight, { y: 3000, pitch: .6 });
+      advance(flight, 3, { pitch: -.5, roll: .2 }, step);return flight;
+    });
+    for (const flight of flights) {
+      assert.equal(flight.status, 'running', id);
+      for (const key of ['x', 'y', 'z', 'speed', 'angleOfAttack', 'loadFactor', 'verticalSpeed']) {
+        assert.ok(Number.isFinite(flight[key]) && Math.abs(flight[key] - flights[0][key]) < .001, `${id}: ${key}`);
+      }
+      toggleAircraftPause(flight);const snapshot = structuredClone(flight);
+      advance(flight, 1);assert.deepEqual(flight, { ...snapshot, events: [] });
+    }
+  }
+});
+
+test('airbrakes still dissipate energy in a vertical descent', () => {
+  const flights = [false, true].map(speedBrake => {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, thrust: 0 } });
+    Object.assign(flight, { y: 3000, speed: 120, verticalSpeed: -120, pitch: -Math.PI / 2, speedBrake });
+    advance(flight, .2);return flight;
+  });
+  assert.ok(flights[1].speed < flights[0].speed - 1);
+});
+
+test('a steep established climb is safe at low angle of attack while a negative-angle push stalls', () => {
+  for (const { id } of AIRCRAFT) {
+    const climb = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
+    Object.assign(climb, { y: 3000, speed: climb.performance.stall * 2, pitch: .65 });
+    climb.verticalSpeed = climb.speed * Math.sin(climb.pitch);
+    updateAircraftFlight(climb, {}, 1 / 120);
+    assert.equal(climb.stalling, false, `${id}: attitude alone must not trigger angle-of-attack stall`);
+    assert.ok(Math.abs(climb.angleOfAttack) < .01);
+    const push = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
+    Object.assign(push, { y: 3000, speed: push.performance.stall * 2, pitch: -.65 });
+    updateAircraftFlight(push, {}, 1 / 120);
+    assert.equal(push.stalling, true);assert.ok(push.angleOfAttack < -push.performance.stallAngle);
+    assert.ok(push.loadFactor < 0 && push.loadFactor >= -push.performance.loadLimit);
+  }
+});
+
+test('pilot counter-pitch and power recover every aircraft from a high-angle stall without resetting its pose', () => {
+  for (const { id } of AIRCRAFT) {
+    const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
+    Object.assign(flight, { y: 3000, speed: flight.performance.stall * 2, pitch: .65, throttle: 1, engineOutput: 1 });
+    updateAircraftFlight(flight, {}, 1 / 120);
+    assert.equal(flight.stalling, true);
+    let recovered = false;
+    for (let time = 0; time < 8; time += 1 / 120) {
+      updateAircraftFlight(flight, { pitch: -.8 }, 1 / 120);
+      if (!flight.stalling && Math.abs(flight.angleOfAttack) < flight.performance.stallAngle * .7) { recovered = true;break; }
+    }
+    assert.equal(flight.status, 'running', id);assert.equal(recovered, true, id);
+    assert.ok(flight.distance > 0 && flight.y > 2800);
+  }
+});

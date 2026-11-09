@@ -14,7 +14,7 @@ export function cockpitSeat(aircraft) {
 }
 
 export function cockpitInstruments(flight) {
-  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), engine: Math.round(flight.engineOutput * flight.physics.thrust * 100), flaps: flight.flaps, speedBrake: flight.speedBrake, warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
+  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), engine: Math.round(flight.engineOutput * flight.physics.thrust * 100), aoa: (flight.angleOfAttack * 180 / Math.PI).toFixed(1), load: flight.loadFactor.toFixed(1), flaps: flight.flaps, speedBrake: flight.speedBrake, warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
 }
 
 export function createAircraftCockpit(aircraft, texture = null, labelsTexture = null) {
@@ -123,6 +123,7 @@ export function drawCockpitDisplay(ctx, flight) {
   const second = gap * 2 + tile;
   text('FLIGHT DATA', second + 14, 47, 20); text(`${data.speed}`, second + 14, 104, 42); text('KM/H', second + 14, 133, 18, '#7da6b4');
   text(`${data.altitude} M`, second + 14, 190, 30); text(`V/S ${data.vertical}`, second + 14, 232, 21);
+  text(`AOA ${data.aoa}  G ${data.load}`, second + 14, 258, 18, flight.stalling ? '#ff805c' : '#96efb0');
   text(data.warning, second + 14, height - 39, 20, flight.stalling ? '#ff805c' : '#96efb0');
   const third = gap * 3 + tile * 2;
   text(airliner ? 'ENGINE / ECAM' : 'ENGINE / NAV', third + 14, 47, 20);
