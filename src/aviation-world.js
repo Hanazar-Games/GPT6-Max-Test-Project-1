@@ -9,6 +9,12 @@ import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
 const UP = new THREE.Vector3(0, 1, 0);
 const forward = new THREE.Vector3(), offset = new THREE.Vector3(), target = new THREE.Vector3();
 const cockpitLook = new THREE.Quaternion(), lookRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+export const AVIATION_CAMERAS = ['追随机位', '近距跟随', '驾驶舱', '机首观察', '左翼观察', '俯视机位'];
+export const AVIATION_VIEW_DEFAULTS = Object.freeze({
+  cockpitFov: 68, exteriorFov: 55, chaseDistance: 1, chaseHeight: 1, orbitAngle: 0,
+  followResponse: 5, lookResponse: 9, lookAngle: 55, speedFov: true, speedFovAmount: 18,
+});
+const CAMERA_OFFSETS = [[.4, .52, 1.8], [.15, .24, 1.05], null, [.08, .35, -1.8], [-1.8, .35, .08], [0, 2.4, .3]];
 
 export class AviationWorld {
   constructor(container) {
@@ -34,7 +40,9 @@ export class AviationWorld {
     sunlight.position.set(-6000, 10000, -8000); this.scene.add(sunlight);
     this.aircraftRoot = new THREE.Group(); this.scene.add(this.aircraftRoot);
     this.cameraMode = 0;
-    this.viewSettings = { cockpitFov: 68, chaseDistance: 1, speedFov: true };
+    this.viewSettings = { ...AVIATION_VIEW_DEFAULTS };
+    this.cameraLocked = false;
+    this.displayHz = 10;
     this.lookTarget = 0; this.lookAngle = 0;
     this.quality = matchMedia('(any-pointer: coarse)').matches ? .75 : 1.25;
     this.buildEnvironment();
@@ -123,7 +131,17 @@ export class AviationWorld {
   }
 
   setCameraMode(mode) {
-    this.cameraMode = mode; this.resetCamera = true; this.lookTarget = 0; this.lookAngle = 0;
+    this.cameraMode = AVIATION_CAMERAS[mode] ? mode : 0;
+    this.cameraLocked = false; this.lockedOffset = null;
+    this.resetCamera = true; this.lookTarget = 0; this.lookAngle = 0;
+  }
+
+  toggleCameraLock() {
+    if (this.cameraMode === 2) return false;
+    this.cameraLocked = !this.cameraLocked;
+    this.lockedOffset = this.cameraLocked ? this.camera.position.clone().sub(this.aircraftRoot.position) : null;
+    this.resetCamera = true;
+    return this.cameraLocked;
   }
 
   resize() {
@@ -167,7 +185,9 @@ export class AviationWorld {
     target.copy(this.aircraftRoot.position).addScaledVector(forward, length * .12);
     if (flight.status === 'ready') offset.set(length * 1.4, length * .5, -length * 1.1);
     else {
-      offset.set(length * (this.cameraMode ? .15 : .4), length * (this.cameraMode ? .24 : .52), length * (this.cameraMode ? 1.05 : 1.8)).multiplyScalar(view.chaseDistance).clampLength(clearance, Infinity);
+      offset.fromArray(CAMERA_OFFSETS[this.cameraMode] || CAMERA_OFFSETS[0]);
+      offset.y *= view.chaseHeight;
+      offset.multiplyScalar(length * view.chaseDistance).applyAxisAngle(UP, view.orbitAngle * Math.PI / 180).clampLength(clearance, Infinity);
       if (flight.physics.mode === 'maneuver') offset.applyQuaternion(this.aircraftRoot.quaternion);
       else offset.applyAxisAngle(UP, -flight.heading);
     }
@@ -176,25 +196,30 @@ export class AviationWorld {
       offset.set(...cockpitSeat(flight.aircraft)).applyQuaternion(this.aircraftRoot.quaternion);
       this.cockpit.position.copy(this.aircraftRoot.position).add(offset); this.cockpit.quaternion.copy(this.aircraftRoot.quaternion);
       this.camera.position.copy(this.cockpit.position);
-      this.lookAngle += ((look ?? this.lookTarget) - this.lookAngle) * (this.resetCamera ? 1 : 1 - Math.exp(-dt * 9));
+      this.lookAngle += ((look ?? this.lookTarget) - this.lookAngle) * (this.resetCamera ? 1 : 1 - Math.exp(-dt * view.lookResponse));
       cockpitLook.setFromEuler(lookRotation.set(-.08, this.lookAngle, 0));
       this.camera.quaternion.copy(this.aircraftRoot.quaternion).multiply(cockpitLook);
       updateCockpitControls(this.cockpit, flight, input);
       this.displayTime += dt;
-      if (this.displayTime >= .1 || this.resetCamera) { drawCockpitDisplay(this.cockpitContext, flight); this.cockpitTexture.needsUpdate = true; this.displayTime = 0; }
+      const interval = 1 / this.displayHz;
+      if (this.displayTime + 1e-9 >= interval || this.resetCamera) {
+        drawCockpitDisplay(this.cockpitContext, flight); this.cockpitTexture.needsUpdate = true;
+        this.displayTime = this.resetCamera ? 0 : Math.max(0, this.displayTime - Math.floor((this.displayTime + 1e-9) / interval) * interval);
+      }
     } else {
+      if (this.cameraLocked && flight.status !== 'ready') { offset.copy(this.lockedOffset); target.copy(this.aircraftRoot.position); }
       const desired = offset.add(this.aircraftRoot.position);
       desired.y = Math.max(desired.y, Math.max(-12, islandHeight(desired.x, desired.z)) + 4);
-      this.camera.position.lerp(desired, this.resetCamera ? 1 : 1 - Math.exp(-dt * 5));
+      this.camera.position.lerp(desired, this.resetCamera || this.cameraLocked ? 1 : 1 - Math.exp(-dt * view.followResponse));
       offset.copy(this.camera.position).sub(this.aircraftRoot.position).clampLength(clearance, Infinity);
       this.camera.position.copy(this.aircraftRoot.position).add(offset);
       const floor = Math.max(-12, islandHeight(this.camera.position.x, this.camera.position.z)) + 4;
       if (this.camera.position.y < floor) this.camera.position.y = Math.max(floor, this.aircraftRoot.position.y + Math.sqrt(Math.max(0, clearance ** 2 - offset.x ** 2 - offset.z ** 2)));
       this.camera.up.set(0, 1, 0);
-      if (flight.status !== 'ready' && flight.physics.mode === 'maneuver') this.camera.up.applyQuaternion(this.aircraftRoot.quaternion);
+      if (!this.cameraLocked && flight.status !== 'ready' && flight.physics.mode === 'maneuver') this.camera.up.applyQuaternion(this.aircraftRoot.quaternion);
       this.camera.lookAt(target);
     }
-    const fov = inside ? view.cockpitFov : 55 + (view.speedFov ? Math.min(18, flight.speed / flight.performance.maxSpeed * 18) : 0);
+    const fov = inside ? view.cockpitFov : view.exteriorFov + (view.speedFov ? Math.min(view.speedFovAmount, flight.speed / flight.performance.maxSpeed * view.speedFovAmount) : 0);
     if (Math.abs(this.camera.fov - fov) > .1) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
     if (inside && Math.abs(this.cockpitCamera.fov - fov) > .1) { this.cockpitCamera.fov = fov; this.cockpitCamera.updateProjectionMatrix(); }
     this.resetCamera = false;

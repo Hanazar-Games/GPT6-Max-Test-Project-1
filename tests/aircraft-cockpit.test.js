@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { AIRCRAFT, createAircraftFlight } from '../src/aircraft-flight.js';
 import { createAircraftCockpit, updateCockpitControls, cockpitInstruments, cockpitSeat } from '../src/aircraft-cockpit.js';
 import { disposeAircraftObject } from '../src/aircraft-models.js';
-import { AviationWorld } from '../src/aviation-world.js';
+import { AviationWorld, AVIATION_VIEW_DEFAULTS } from '../src/aviation-world.js';
 
 test('each cockpit has a clear forward window, distinct controls and a seat inside its aircraft', () => {
   for (const aircraft of AIRCRAFT) {
@@ -61,7 +61,7 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
     camera: new THREE.PerspectiveCamera(68, 1, 8, 65000), gateMeshes: [], cameraMode: 2,
     shadow: new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial()),
     displayTime: -100, resetCamera: false, lookTarget: 0, lookAngle: 0,
-    viewSettings: { cockpitFov: 68, chaseDistance: 1, speedFov: true },
+    viewSettings: { ...AVIATION_VIEW_DEFAULTS }, displayHz: 10,
     renderer: { info: { reset() {} }, autoClear: true, clearDepth() {}, render(scene, camera) { passes.push({ scene, near: camera.near, far: camera.far }); } },
   });
   world.render(flight, 1 / 60);

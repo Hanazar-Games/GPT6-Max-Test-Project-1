@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞机操纵细调与快捷操作</h2>
-      <p id="release-copy">分别调整三轴手感，用独立方向舵和快捷油门完成每次起降。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞机多机位与画面调校</h2>
+      <p id="release-copy">用六种机位观察飞行，锁定外部方位，按设备细调镜头与画面。</p>
+      <ul class="release-list">
+        <li><strong>六机位与方位锁</strong>追随、近距、驾驶舱、机首、左翼、俯视可直接选择；C 循环，V 返回上次外部机位。L 固定外部观察方位与地平线，位置仍跟随飞机；R 回正并解除锁定。</li>
+        <li><strong>镜头参数更完整</strong>增加外部视场角、高度、环绕角度、跟随响应、舱内转头幅度与响应、速度扩角幅度；距离扩展至 50%–300%，支持恢复默认。保持六机型的机身和地面净空。</li>
+        <li><strong>画面负担可调</strong>30 / 45 / 60 / 90 / 120 FPS 或跟随屏幕，舱内仪表 5 / 10 / 20 Hz，渲染比例上限 0.5×–2×。飞行物理独立更新，修复仪表计时边界重复上传；手机镜头面板可滚动，1.26.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>81 个版本</span></summary>
+      <article><h3>v1.26.0 · 飞机操纵细调与快捷操作</h3>
+      <p>分别调整三轴手感，用独立方向舵和快捷油门完成每次起降。</p>
       <ul class="release-list">
         <li><strong>六项操纵细调</strong>俯仰、滚转、方向舵各有 20%–200% 灵敏度，新增 0%–25% 摇杆死区、1×–3× 响应曲线和每秒 5%–100% 键盘油门变化。保留反向升降与两套键位，支持恢复默认操作设置。</li>
         <li><strong>独立方向舵与快捷油门</strong>手机可同时推杆、用左右舵和制动，双侧用舵抵消；1 / 2 / 3 与数字小键盘，或油门下方按钮，快捷设置怠速 / 65% / 全开，实际推力仍逐步跟随目标。</li>
         <li><strong>小屏操作完善</strong>横屏工具采用紧凑双列，小屏系统按钮减少导航遮挡；按住按钮支持空格 / Enter，释放、取消、失去捕获、离焦、暂停与退出清理输入。操作设置对六机型共用，仅保留在本次飞机模式；1.25.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>80 个版本</span></summary>
+      </article>
       <article><h3>v1.25.1 · 飞行声音与操作体验修复</h3>
       <p>让发动机出力、失速提醒和声音设置与飞行保持一致。</p>
       <ul class="release-list">

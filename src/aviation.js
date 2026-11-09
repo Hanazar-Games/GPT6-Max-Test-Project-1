@@ -1,10 +1,22 @@
 import './aviation.css';
 import { AIRCRAFT, AIR_GATES, AIRCRAFT_PHYSICS_DEFAULTS, AIRCRAFT_PHYSICS_LIMITS, AIRCRAFT_PRESETS, setAircraftPhysics, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from './aircraft-flight.js';
-import { AviationWorld } from './aviation-world.js';
+import { AviationWorld, AVIATION_CAMERAS, AVIATION_VIEW_DEFAULTS } from './aviation-world.js';
+import { AviationRenderClock } from './aviation-render-clock.js';
 import { AIRCRAFT_CONTROL_DEFAULTS, aircraftInput, aircraftKeyBinding, aircraftControlHelp, aircraftThrottleShortcut } from './aircraft-controls.js';
 import { RUNWAY } from './airport.js';
 
-const cameraNames = ['追随机位', '近距跟随', '驾驶舱'];
+const cameraNames = AVIATION_CAMERAS;
+const viewFields = [
+  ['cockpitFov', '驾驶舱视场角', 50, 100, 1, 1, '°'],
+  ['exteriorFov', '外部视场角', 40, 100, 1, 1, '°'],
+  ['chaseDistance', '外部镜头距离', 50, 300, 5, 100, '%'],
+  ['chaseHeight', '外部镜头高度', 50, 200, 5, 100, '%'],
+  ['orbitAngle', '外部环绕角度', -180, 180, 5, 1, '°'],
+  ['followResponse', '跟随响应', 1, 15, 1, 1, '/秒'],
+  ['lookAngle', '舱内左右观察幅度', 30, 120, 5, 1, '°'],
+  ['lookResponse', '舱内转头响应', 2, 20, 1, 1, '/秒'],
+  ['speedFovAmount', '速度扩角幅度', 0, 30, 1, 1, '°'],
+];
 const flapNames = ['收起', '起飞', '着陆'];
 const maneuverFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['flightPath', '航迹跟随响应'], ['pitchLimit', '辅助俯仰幅度'], ['bankLimit', '辅助滚转幅度'], ['gravity', '重力强度']];
 const powerFields = [['thrust', '发动机推力'], ['engineResponse', '发动机响应'], ['mass', '机体质量'], ['drag', '气动阻力'], ['lift', '升力系数'], ['maxSpeed', '速度上限'], ['airBrake', '空中减速强度'], ['wheelBrake', '轮刹强度']];
@@ -30,7 +42,8 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', '海岛飞行计划');
   root.innerHTML = `
     <div class="av-viewport"></div><div class="av-vignette" aria-hidden="true"></div>
-    <header class="av-header"><div class="av-brand"><span>✈</span><div>海岛飞行计划<small>ISLAND FLIGHT / 01</small></div></div><nav aria-label="飞机操作"><button data-action="sound" aria-pressed="false">声音</button><button data-action="camera">追随机位</button><button data-action="pause">暂停</button><button data-action="exit">返回基地 ↗</button></nav></header>
+    <header class="av-header"><div class="av-brand"><span>✈</span><div>海岛飞行计划<small>ISLAND FLIGHT / 01</small></div></div><nav aria-label="飞机操作"><button data-action="sound" aria-pressed="false">声音</button><button data-action="camera" aria-expanded="false" aria-controls="av-camera-panel">追随机位 ▾</button><button data-action="pause">暂停</button><button data-action="exit">返回基地 ↗</button></nav></header>
+    <section id="av-camera-panel" class="av-camera-panel" aria-label="飞行镜头" hidden><div class="av-camera-heading"><strong>选择飞行镜头</strong><button data-action="camera-close" aria-label="关闭镜头面板">×</button></div><div class="av-camera-presets" role="group" aria-label="镜头机位">${cameraNames.map((name, mode) => `<button data-camera="${mode}" aria-pressed="${mode === 0}">${name}</button>`).join('')}</div><div class="av-camera-actions"><button data-action="camera-lock" aria-pressed="false">锁定方位 · L</button><button data-action="camera-center">镜头回正 · R</button></div><p data-value="camera-note">固定观察方位，位置仍跟随飞机。C 循环镜头，V 进出驾驶舱。</p></section>
     <div class="av-instruments" aria-label="飞行仪表"><div><small>空速 <span>KM/H</span></small><strong data-value="speed">0</strong></div><div><small>高度 <span>M</span></small><strong data-value="altitude">0</strong></div><div><small>升降率 <span>M/S</span></small><strong data-value="vertical">0</strong></div><div><small>航向 <span>DEG</span></small><strong data-value="heading">000</strong></div></div>
     <div class="av-navigation"><small data-value="phase">飞机机库</small><strong data-value="guide">准备前往天空</strong><span data-value="target">海岸跑道 · 自由飞行与六环训练</span><div class="av-attitude" aria-label="姿态仪"><div class="av-horizon"><i></i></div><b aria-hidden="true">— ⌄ —</b></div><span data-value="bank">机翼水平 · 机头水平</span></div>
     <div class="av-flight-tools"><label>油门 <output data-value="throttle">0%</output><input data-control="throttle" type="range" min="0" max="100" value="0" aria-label="飞机油门"><small class="av-engine-readout">实际推力 <output data-value="engine">0%</output></small></label><div class="av-throttle-presets" role="group" aria-label="快捷油门"><button data-throttle="0" aria-label="油门怠速，快捷键 1">怠速</button><button data-throttle="0.65" aria-label="油门 65%，快捷键 2">65%</button><button data-throttle="1" aria-label="油门全开，快捷键 3">全开</button></div><div class="av-systems"><button data-action="gear" aria-pressed="true">轮：放下</button><button data-action="flaps">襟翼：收起</button><button data-action="speed-brake" aria-pressed="false">减速板：收起</button></div><button data-action="navigation" data-value="progress" aria-pressed="false">训练 0/6 · 返航 ↗</button><div class="av-look" role="group" aria-label="驾驶舱观察方向" hidden><button data-action="look-left" aria-label="驾驶舱向左看">左看</button><button data-action="look-center" aria-label="驾驶舱视线回正">正前</button><button data-action="look-right" aria-label="驾驶舱向右看">右看</button></div></div>
@@ -53,21 +66,26 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       ${physicsControls(maneuverFields, 'av-physics-note')}
       <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变加减旋转的快慢；回正辅助为 0% 时，松手逐步停止主动旋转并保留倾斜。航迹响应越高，升降速度越快跟随机头。辅助幅度仅用于稳定模式，自由机动不限制整周旋转。</p></details>
       <details class="av-help"><summary>操作与键位</summary><p data-value="keys"></p>
-      <p><b>A / D</b> 或 <b>← / →</b> 滚转 · <b>Q / E</b> 方向舵<br><b>1 / 2 / 3</b> 油门怠速 / 65% / 全开（支持数字小键盘）<br><b>G</b> 起落架 · <b>F</b> 切换三档襟翼 · <b>B</b> 减速板<br><b>空格</b> 按住制动 · <b>C</b> 切换镜头<br><b>V</b> 进入 / 离开驾驶舱 · <b>Z / X</b> 按住左右观察 · <b>R</b> 视线回正<br><b>Esc / P</b> 暂停并打开设置</p>
+      <p><b>A / D</b> 或 <b>← / →</b> 滚转 · <b>Q / E</b> 方向舵<br><b>1 / 2 / 3</b> 油门怠速 / 65% / 全开（支持数字小键盘）<br><b>G</b> 起落架 · <b>F</b> 切换三档襟翼 · <b>B</b> 减速板<br><b>空格</b> 按住制动 · <b>C</b> 循环六种镜头<br><b>V</b> 驾驶舱 / 上次外部机位 · <b>Z / X</b> 按住左右观察<br><b>L</b> 锁定 / 释放外部方位 · <b>R</b> 镜头回正<br><b>Esc / P</b> 暂停并打开设置</p>
       <label>键位预设<select data-setting="keys"><option value="flight">经典飞行</option><option value="wasd">WASD 升降</option></select></label><label>升降方向<select data-setting="pitch"><option value="normal">标准</option><option value="inverted">反向</option></select></label>
       ${controlFields.map(([key, label, min, max, step, scale]) => `<label>${label}<output data-value="${key}"></output><input data-control-setting="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AIRCRAFT_CONTROL_DEFAULTS[key] * scale}" aria-label="飞机${label}" aria-describedby="av-controls-note"></label>`).join('')}
       <p id="av-controls-note">三轴灵敏度 20%–200%，同时作用于键盘和触屏，满输入以 100% 封顶；更高值让摇杆提早打满。死区过滤中心误触并平滑衔接到满杆；曲线 1× 为线性，越高越适合小幅修正，仅作用于触屏。油门变化为每秒 5%–100%，快捷油门只改变目标，实际推力仍逐步跟随。</p><button data-action="controls-reset">恢复默认操作设置</button>
       <p>手机用左下操纵杆升降与滚转，下方按住左右舵，可同时推杆与用舵；两侧同时按住会抵消。右侧调节油门、襟翼和减速板。起飞前可用起飞襟翼，达到提示速度后拉升，关闭减速板；降落前放轮、放着陆襟翼，降低下降率，接地后油门归零并按住制动。襟翼降低失速速度并增加阻力，超速会自动收起；减速板不代替地面刹车。操作设置对各机型共用，仅保留在本次飞机模式。</p><p data-value="flap-limit"></p></details>
-      <details class="av-help"><summary>镜头与视野</summary><label>驾驶舱视场角 <output data-value="cockpit-fov">68°</output><input data-setting="cockpit-fov" type="range" min="50" max="90" step="1" value="68" aria-label="驾驶舱视场角"></label><label>跟随距离 <output data-value="chase-distance">100%</output><input data-setting="chase-distance" type="range" min="70" max="160" step="5" value="100" aria-label="飞机跟随镜头距离"></label><label>速度扩角<select data-setting="speed-fov"><option value="on">开启</option><option value="off">关闭</option></select></label></details>
-      <details class="av-help av-audio-settings"><summary>画面与声音</summary><label>画面质量<select data-setting="quality"><option value="0.75">省电</option><option value="1.25">标准</option><option value="1.75">精细</option></select></label><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><p data-value="audio-status" role="status" aria-live="polite"></p><button data-action="audio-retry" hidden>重新启用声音</button><small>暂停与离开页面时停止声音；失速警报会暂时降低音乐音量。声音设置与基地共用，仅保留在当前页面；画面和飞行设置仅保留在本次飞机模式。机场尺寸与飞行参数为游戏设计，驾驶舱为原创简化内饰。</small></details>
+      <details class="av-help av-view-settings"><summary>镜头与视野 · 机位与细调</summary><label>飞行机位<select data-setting="camera-mode">${cameraNames.map((name, mode) => `<option value="${mode}">${name}</option>`).join('')}</select></label>
+      ${viewFields.map(([key, label, min, max, step, scale]) => `<label>${label}<output data-view-value="${key}"></output><input data-view="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AVIATION_VIEW_DEFAULTS[key] * scale}" aria-label="飞机${label}" aria-describedby="av-view-note"></label>`).join('')}
+      <label>速度扩角<select data-setting="speed-fov"><option value="on">开启</option><option value="off">关闭</option></select></label><button data-action="view-reset">恢复默认镜头参数</button><p id="av-view-note">响应越高，跟随或转头越快。高度、距离和环绕角度作用于外部机位，始终保留机身与地面净空；驾驶舱视场角同步作用于舱内与远景。L 锁定外部观察方位与地平线，位置仍跟随飞机；切换机位、调整镜头参数、回正或重新起飞解除锁定。驾驶舱不使用外部方位锁。</p></details>
+      <details class="av-help av-audio-settings"><summary>画面与声音</summary><label>渲染比例上限<select data-setting="quality"><option value="0.5">0.5× · 极省电</option><option value="0.75">0.75× · 省电</option><option value="1">1× · 原生</option><option value="1.25">1.25× · 标准</option><option value="1.75">1.75× · 精细</option><option value="2">2× · 高精细</option></select></label><label>画面帧率上限<select data-setting="frame-limit"><option value="30">30 FPS · 省电</option><option value="45">45 FPS</option><option value="60" selected>60 FPS · 标准</option><option value="90">90 FPS</option><option value="120">120 FPS</option><option value="0">跟随屏幕刷新率</option></select></label><label>舱内仪表刷新<select data-setting="display-hz"><option value="5">5 Hz · 省电</option><option value="10" selected>10 Hz · 标准</option><option value="20">20 Hz · 精细</option></select></label><p>渲染比例不超过设备像素比。降低画面帧率或舱内仪表刷新可减少绘制负担，飞行物理与输入继续独立更新。</p><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><p data-value="audio-status" role="status" aria-live="polite"></p><button data-action="audio-retry" hidden>重新启用声音</button><small>暂停与离开页面时停止声音；失速警报会暂时降低音乐音量。声音设置与基地共用，仅保留在当前页面；画面和飞行设置仅保留在本次飞机模式。机场尺寸与飞行参数为游戏设计，驾驶舱为原创简化内饰。</small></details>
       <details class="av-credits"><summary>模型署名</summary><p>Airbus A380：<a href="https://sketchfab.com/3d-models/singapore-airlines-a380-fd047ccf175c4db5b7e3e400c67c47a0" target="_blank" rel="noopener noreferrer">Singapore Airlines A380</a>，作者 zairiq-zairiq-123-pixar-cars-bfdi，用户提供，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。游戏中调整了大小、朝向和起落架显示。</p><p>Su-30：本项目原创简化模型（CC0），依据双发、双垂尾与前翼轮廓制作。</p><p>星雀 T-6、云帆 B-62、山海 C-24、岚影 D-9：本项目原创架空机型与简化 GLB，采用 CC0。</p></details>
     </aside>
     <div class="av-notice" role="status" aria-live="polite"></div><footer class="av-footer"><span data-value="aircraft">Airbus A380</span><span data-value="keyhint"></span><span data-value="time">00:00</span></footer>`;
   document.body.append(root);
   const $ = selector => root.querySelector(selector);
-  const action = name => $(`[data-action="${name}"]`);
+  const actions = Object.fromEntries([...root.querySelectorAll('[data-action]')].map(element => [element.dataset.action, element]));
+  const action = name => actions[name];
   const values = Object.fromEntries([...root.querySelectorAll('[data-value]')].map(element => [element.dataset.value, element]));
   const panel = $('.av-panel'), loadStatus = $('.av-load-status'), stick = $('.av-stick-pad'), knob = $('.av-stick-knob');
+  const cameraPanel = $('.av-camera-panel'), renderClock = new AviationRenderClock();
+  const viewControls = viewFields.map(([key, , , , , scale, unit]) => ({ key, scale, unit, slider: $(`[data-view="${key}"]`), output: $(`[data-view-value="${key}"]`) }));
   const listeners = new AbortController(), held = new Set();
   const controlSettings = { ...AIRCRAFT_CONTROL_DEFAULTS };
   const holdControls = Object.fromEntries([...root.querySelectorAll('[data-hold]')].map(button => [button.dataset.hold, { button, pointer: null, keys: new Set(), active: false }]));
@@ -80,6 +98,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   catch (error) { root.remove(); throw error; }
   let flight = createAircraftFlight(), loaded = false, disposed = false, returning = false, loadVersion = 0, raf = 0;
   let previousTime = performance.now(), accumulator = 0, uiTime = 0, dirty = true, stickPointer = null, stickPitch = 0, stickRoll = 0, noticeTimer;
+  let frameLimit = 60, lastExterior = 0;
   const listen = (target, event, callback, options = {}) => target.addEventListener(event, callback, { ...options, signal: listeners.signal });
   const text = (element, value) => { if (element.textContent !== String(value)) element.textContent = value; };
   let lastAudioState;
@@ -173,6 +192,46 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     clearTimeout(noticeTimer); noticeTimer = setTimeout(() => $('.av-notice').classList.remove('visible'), 3500);
   }
 
+  function setCameraPanel(open) {
+    const focused = cameraPanel.contains(document.activeElement);
+    cameraPanel.hidden = !open;
+    action('camera').setAttribute('aria-expanded', String(open));
+    if (open) cameraPanel.querySelector(`[data-camera="${world.cameraMode}"]`).focus({ preventScroll: true });
+    else if (focused) action('camera').focus({ preventScroll: true });
+  }
+
+  function syncCameraUI() {
+    text(action('camera'), flight.status === 'ready' ? '预览机位' : `${cameraNames[world.cameraMode]}${world.cameraLocked ? ' · 锁' : ''} ▾`);
+    for (const button of cameraPanel.querySelectorAll('[data-camera]')) button.setAttribute('aria-pressed', String(Number(button.dataset.camera) === world.cameraMode));
+    action('camera-lock').disabled = world.cameraMode === 2;
+    action('camera-lock').setAttribute('aria-pressed', String(world.cameraLocked));
+    text(action('camera-lock'), world.cameraLocked ? '释放方位 · L' : '锁定方位 · L');
+    text(values['camera-note'], world.cameraMode === 2 ? '驾驶舱随飞机姿态旋转，使用 Z / X 或左右观察按钮。V 返回上次外部机位。' : world.cameraLocked ? '方位已锁定，地平线保持水平。镜头位置仍跟随飞机；L 释放，R 回正。' : '固定观察方位，位置仍跟随飞机。C 循环镜头，V 进出驾驶舱。');
+    $('[data-setting="camera-mode"]').value = world.cameraMode;
+  }
+
+  function chooseCamera(mode) {
+    world.setCameraMode(mode);
+    if (world.cameraMode !== 2) lastExterior = world.cameraMode;
+    syncCameraUI(); updateUI(); dirty = true;
+  }
+
+  function centerCamera() {
+    world.viewSettings.orbitAngle = 0;
+    world.setCameraMode(world.cameraMode);
+    held.delete('KeyZ'); held.delete('KeyX');
+    syncViewSettings(); dirty = true;
+  }
+
+  function syncViewSettings() {
+    for (const { key, scale, unit, slider, output } of viewControls) {
+      slider.value = Math.round(world.viewSettings[key] * scale);
+      text(output, `${slider.value}${unit}`);
+    }
+    $('[data-setting="speed-fov"]').value = world.viewSettings.speedFov ? 'on' : 'off';
+    syncCameraUI();
+  }
+
   function showPanel() {
     const ready = flight.status === 'ready', paused = flight.status === 'paused';
     panel.hidden = flight.status === 'running';
@@ -186,8 +245,8 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text($('#av-panel-title'), ready ? '这次，真的飞起来。' : paused ? '云端，稍作停留。' : flight.status === 'completed' ? '平稳返航，欢迎回来。' : '飞行结束，再试一次。');
     text($('#av-panel-copy'), ready ? '从海岸跑道起飞，掠过云层、群山与城市。自由探索，或依次穿过六座导航环，再返回跑道。' : paused ? '飞行已暂停，声音已停止。准备好后继续，或返回机库更换飞机。' : flight.status === 'completed' ? `已飞行 ${(flight.distance / 1000).toFixed(1)} 公里，通过 ${flight.gates} / 6 座训练环。` : flight.reason);
     text(action('pause'), paused ? '继续' : '设置');
-    text(action('camera'), ready ? '预览机位' : cameraNames[world.cameraMode]);
-    action('camera').disabled = ready;
+    setCameraPanel(false); syncCameraUI(); renderClock.reset();
+    action('camera').disabled = flight.status !== 'running';
     action('pause').disabled = !['running', 'paused'].includes(flight.status);
     root.classList.toggle('av-flying', flight.status === 'running');
     for (const element of [$('.av-instruments'), $('.av-navigation'), $('.av-flight-tools'), $('.av-joystick'), $('.av-brake')]) element.inert = !panel.hidden;
@@ -206,7 +265,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     for (const button of root.querySelectorAll('[data-aircraft]')) button.setAttribute('aria-pressed', String(button.dataset.aircraft === id));
     text(values.aircraft, flight.aircraft.name);
     text(values['flap-limit'], `本机襟翼展开上限 ${Math.round(flight.aircraft.flapLimit * 3.6)} km/h；超过上限 18 km/h 自动收起。`);
-    world.setCameraMode(0); text(action('camera'), cameraNames[0]);
+    world.setCameraMode(0); lastExterior = 0;
     showPanel();
     try {
       const installed = await world.setAircraft(flight.aircraft);
@@ -224,7 +283,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   function start(airborne) {
     if (!loaded) return;
     flight = createAircraftFlight(flight.aircraft.id, airborne, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); flight.status = 'running'; returning = false;
-    accumulator = 0; previousTime = performance.now(); world.resetCamera = true;
+    accumulator = 0; previousTime = performance.now(); world.setCameraMode(world.cameraMode);
     unlockAudio(); showPanel();
     const help = aircraftControlHelp(controlSettings);
     notify(airborne ? `已进入空中 · ${help.pitch} 升降 · V 进入驾驶舱` : `油门推满，达到 ${Math.round(aircraftEnvelope(flight).takeoff * 3.6)} km/h 后按 ${help.pitch.split(' / ')[0]} 拉升`);
@@ -311,6 +370,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen(root, 'click', event => {
     const button = event.target.closest('button'); if (!button || button.disabled) return;
     if (button.dataset.throttle !== undefined) { setThrottle(Number(button.dataset.throttle)); return; }
+    if (button.dataset.camera !== undefined) { chooseCamera(Number(button.dataset.camera)); setCameraPanel(false); root.focus({ preventScroll: true }); return; }
     if (button.dataset.aircraft) { if (button.dataset.aircraft !== flight.aircraft.id) selectAircraft(button.dataset.aircraft); return; }
     if (button.dataset.flightPreset) {
       Object.assign(physicsSettings, AIRCRAFT_PRESETS.find(preset => preset.id === button.dataset.flightPreset).physics);
@@ -326,15 +386,22 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       case 'speed-brake': speedBrake(); break;
       case 'navigation': returning = !returning; updateUI(); break;
       case 'retry': selectAircraft(flight.aircraft.id); break;
-      case 'hangar': flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); audio.setState('menu'); world.resetCamera = true; showPanel(); break;
-      case 'camera': world.setCameraMode((world.cameraMode + 1) % 3); text(button, cameraNames[world.cameraMode]); updateUI(); dirty = true; break;
-      case 'look-left': world.lookTarget = .95; dirty = true; break;
+      case 'hangar': flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); audio.setState('menu'); world.setCameraMode(0); lastExterior = 0; showPanel(); break;
+      case 'camera': setCameraPanel(cameraPanel.hidden); break;
+      case 'camera-close': setCameraPanel(false); break;
+      case 'camera-lock': world.toggleCameraLock(); syncCameraUI(); dirty = true; break;
+      case 'camera-center': centerCamera(); break;
+      case 'view-reset': Object.assign(world.viewSettings, AVIATION_VIEW_DEFAULTS); world.setCameraMode(world.cameraMode); syncViewSettings(); dirty = true; break;
+      case 'look-left': world.lookTarget = world.viewSettings.lookAngle * Math.PI / 180; dirty = true; break;
       case 'look-center': world.lookTarget = 0; dirty = true; break;
-      case 'look-right': world.lookTarget = -.95; dirty = true; break;
+      case 'look-right': world.lookTarget = -world.viewSettings.lookAngle * Math.PI / 180; dirty = true; break;
       case 'sound': onToggleAudio(); updateUI(); break;
       case 'audio-retry': unlockAudio(); break;
       case 'controls-reset': Object.assign(controlSettings, AIRCRAFT_CONTROL_DEFAULTS); clearInput(); syncControlHelp(); dirty = true; break;
     }
+  });
+  listen(root, 'pointerdown', event => {
+    if (!cameraPanel.hidden && !cameraPanel.contains(event.target) && !event.target.closest('[data-action="camera"]')) setCameraPanel(false);
   });
   listen($('[data-control="throttle"]'), 'input', event => {
     setThrottle(Number(event.target.value) / 100);
@@ -366,15 +433,20 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
   const quality = $('[data-setting="quality"]'); quality.value = world.quality < 1 ? '0.75' : '1.25';
   listen(quality, 'change', () => { world.quality = Number(quality.value); world.resize(); dirty = true; });
+  listen($('[data-setting="frame-limit"]'), 'change', event => { frameLimit = Number(event.target.value); renderClock.reset(); dirty = true; });
+  listen($('[data-setting="display-hz"]'), 'change', event => { world.displayHz = Number(event.target.value); world.displayTime = 1; dirty = true; });
   listen($('[data-setting="runway"]'), 'change', event => {
     if (flight.status !== 'ready') return;
     flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: event.target.value, physics: physicsSettings }); world.resetCamera = true; dirty = true;
   });
-  for (const name of ['cockpit-fov', 'chase-distance', 'speed-fov']) listen($(`[data-setting="${name}"]`), name === 'speed-fov' ? 'change' : 'input', event => {
-    if (name === 'cockpit-fov') { world.viewSettings.cockpitFov = Number(event.target.value); text(values[name], `${event.target.value}°`); }
-    if (name === 'chase-distance') { world.viewSettings.chaseDistance = Number(event.target.value) / 100; text(values[name], `${event.target.value}%`); }
-    if (name === 'speed-fov') world.viewSettings.speedFov = event.target.value === 'on';
-    world.resetCamera = true; dirty = true;
+  for (const { key, scale, unit, slider, output } of viewControls) listen(slider, 'input', () => {
+    world.viewSettings[key] = Number(slider.value) / scale; text(output, `${slider.value}${unit}`);
+    world.setCameraMode(world.cameraMode); syncCameraUI(); dirty = true;
+  });
+  listen($('[data-setting="camera-mode"]'), 'change', event => chooseCamera(Number(event.target.value)));
+  listen($('[data-setting="speed-fov"]'), 'change', event => {
+    world.viewSettings.speedFov = event.target.value === 'on';
+    world.setCameraMode(world.cameraMode); syncCameraUI(); dirty = true;
   });
   for (const name of ['keys', 'pitch']) listen($(`[data-setting="${name}"]`), 'change', event => {
     if (name === 'keys') controlSettings.preset = event.target.value;
@@ -387,6 +459,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   });
   listen(window, 'keydown', event => {
     if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.code === 'Escape' && !cameraPanel.hidden && !event.repeat) { event.preventDefault(); setCameraPanel(false); return; }
     if (event.code === 'Tab' && !panel.hidden) {
       const focusable = [...root.querySelectorAll('button, input, select, summary, a[href]')].filter(element => !element.disabled && !element.closest('[inert]') && element.checkVisibility());
       const first = focusable[0], last = focusable.at(-1);
@@ -404,9 +477,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     else if (!event.repeat && event.code === 'KeyG') { event.preventDefault(); gear(); }
     else if (!event.repeat && event.code === 'KeyF') { event.preventDefault(); flaps(); }
     else if (!event.repeat && event.code === 'KeyB') { event.preventDefault(); speedBrake(); }
-    else if (!event.repeat && event.code === 'KeyC') { event.preventDefault(); action('camera').click(); }
-    else if (!event.repeat && event.code === 'KeyV') { event.preventDefault(); world.setCameraMode(world.cameraMode === 2 ? 0 : 2); text(action('camera'), cameraNames[world.cameraMode]); updateUI(); dirty = true; }
-    else if (!event.repeat && event.code === 'KeyR') { event.preventDefault(); world.lookTarget = 0; dirty = true; }
+    else if (!event.repeat && event.code === 'KeyC') { event.preventDefault(); chooseCamera((world.cameraMode + 1) % cameraNames.length); }
+    else if (!event.repeat && event.code === 'KeyV') { event.preventDefault(); chooseCamera(world.cameraMode === 2 ? lastExterior : 2); }
+    else if (!event.repeat && event.code === 'KeyL') { event.preventDefault(); world.toggleCameraLock(); syncCameraUI(); dirty = true; }
+    else if (!event.repeat && event.code === 'KeyR') { event.preventDefault(); centerCamera(); }
   });
   listen(window, 'keyup', event => {
     held.delete(event.code);
@@ -476,12 +550,15 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       audioFrame.engineOutput = flight.engineOutput * physicsSettings.thrust; audioFrame.stalling = flight.stalling;
       audio.update(audioFrame);
       syncAudioStatus();
-      const look = held.has('KeyZ') || held.has('KeyX') ? (Number(held.has('KeyZ')) - Number(held.has('KeyX'))) * .95 : null;
-      if (dirty || flight.status === 'running') world.render(flight, dt, input, look);
+      const look = held.has('KeyZ') || held.has('KeyX') ? (Number(held.has('KeyZ')) - Number(held.has('KeyX'))) * world.viewSettings.lookAngle * Math.PI / 180 : null;
+      if (dirty || flight.status === 'running') {
+        const renderDt = renderClock.tick(dt, frameLimit, dirty);
+        if (renderDt !== null) world.render(flight, renderDt, input, look);
+      }
       dirty = false;
     }
     raf = requestAnimationFrame(frame);
   }
-  syncControlHelp(); selectAircraft('a380'); raf = requestAnimationFrame(frame);
+  syncControlHelp(); syncViewSettings(); selectAircraft('a380'); raf = requestAnimationFrame(frame);
   return { dispose };
 }
