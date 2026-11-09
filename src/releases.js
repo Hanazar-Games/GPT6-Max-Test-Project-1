@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 保速、反推与复飞操作</h2>
-      <p id="release-copy">用两排驾驶舱按钮控制速度、准备落地制动，必要时一键恢复复飞推力。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞行告警与小屏操作修复</h2>
+      <p id="release-copy">看清自动化退出原因，稳定切换键盘焦点，让小屏驾驶舱留出操纵空间。</p>
+      <ul class="release-list">
+        <li><strong>告警只响一次</strong>自动驾驶与自动油门同时退出时，合并提示音并保留两项原因。退出警音使用预留声部，期间短暂降低配乐，随后恢复所选音量；暂停和静音仍生效。</li>
+        <li><strong>键盘焦点更稳定</strong>飞行中 Tab 和 Shift+Tab 在飞机界面循环，修复跳出页面后意外暂停的问题；隐藏设置不参与循环，输入框仍可正常编辑与删除。</li>
+        <li><strong>小屏操纵区更清楚</strong>修正小竖屏和短横屏驾驶舱导航遮挡，系统面板保留滚动关闭入口、目标编辑和手动接管。1.30.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>87 个版本</span></summary>
+      <article><h3>v1.30.0 · 保速、反推与复飞操作</h3>
+      <p>用两排驾驶舱按钮控制速度、准备落地制动，必要时一键恢复复飞推力。</p>
       <ul class="release-list">
         <li><strong>自动油门与复飞</strong>U 接通 A/THR，捕获当前空速并可修改目标，独立于姿态 AP；手动油门或制动接管。Y 设置全前向推力、收减速板并退出自动化，起落架、襟翼和驻车需手动确认。</li>
         <li><strong>反推与自动刹车</strong>A380、公务机与运输机接地后可按 M 展开反推，油门控制大小。O 切换自动刹车关闭 / 低 / 高，空中待命、接地后收油或反推时制动；手动轮刹取消待命。</li>
         <li><strong>十二按钮与十项系统调校</strong>实体按钮分为两排，灯色区分接通、待命和不可用，仪表同步 A/T、REV 与 A/BRK。增加保速响应、反推和自动刹车强度，完善手机系统面板与接管入口；所有系统为游戏简化设计。1.29.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>86 个版本</span></summary>
+      </article>
       <article><h3>v1.29.0 · 迎角失速与飞行载荷</h3>
       <p>看迎角、控载荷，在拉升与转弯中管理速度，卸载后恢复飞行。</p>
       <ul class="release-list">

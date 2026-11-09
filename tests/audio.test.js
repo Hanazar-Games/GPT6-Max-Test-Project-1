@@ -457,6 +457,29 @@ test('cockpit switch and autopilot disconnect cues stay on the effects bus and o
   }
 });
 
+test('automation disconnect retains warning headroom and briefly ducks music without changing its volume', async () => {
+  const audio = await setup();
+  audio.update(running);
+  for (let i = 0; i < 30; i++) audio.event('challenge', 'precision');
+  assert.equal(audio.voices.size, 44);
+  const before = audio.context.oscillators.length;
+  audio.event('ap-disconnect');
+  assert.deepEqual(audio.context.oscillators.slice(before).map(node => node.frequency.value), [880, 660]);
+  assert.equal(audio.music.gain.value, audio.volumes.music * .4);
+  assert.equal(audio.volumes.music, .45);
+  audio.context.currentTime = .5;audio.update(running);
+  assert.equal(audio.music.gain.value, audio.volumes.music);
+  for (const stop of [() => audio.setState('paused'), () => audio.setBackground(true), () => audio.toggle(), () => audio.setVolume('sfx', 0)]) {
+    audio.stopVoices();audio.event('ap-disconnect');
+    assert.equal(audio.music.gain.value, audio.volumes.music * .4);
+    stop();audio.event('ap-disconnect');
+    assert.equal(audio.voices.size, 0);
+    assert.equal(audio.music.gain.value, audio.volumes.music);
+    audio.setState('running');audio.setBackground(false);audio.setVolume('sfx', .8);
+    if (!audio.enabled) audio.toggle();
+  }
+});
+
 test('traffic impacts sound distinct while retaining alert headroom, music ducking and mute behavior', async () => {
   const audio = await setup();
   audio.update(running);

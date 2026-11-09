@@ -181,7 +181,7 @@ export class AudioEngine {
 
   event(type, kind) {
     if (type === 'cockpit-switch') this.tone(920, .045, 0, 'triangle', 'sfx', .08);
-    if (type === 'ap-disconnect') { this.tone(880, .12, 0, 'triangle', 'sfx', .16);this.tone(660, .16, .15, 'triangle', 'sfx', .16); }
+    if (type === 'ap-disconnect') { this.tone(880, .12, 0, 'triangle', 'sfx', .16, 'alert');this.tone(660, .16, .15, 'triangle', 'sfx', .16, 'alert'); }
     const alertTone = (frequency, duration, offset = 0, wave = 'triangle') => this.tone(frequency, duration, offset, wave, 'sfx', .3, 'alert');
     if (type === 'powerup') {
       const notes = { shield: [392, 523, 784], magnet: [523, 659, 988], repair: [440, 554, 659], battery: [660, 1320], overdrive: [220, 440, 660, 880] }[kind];

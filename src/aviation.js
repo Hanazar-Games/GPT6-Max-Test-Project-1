@@ -645,10 +645,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.code === 'Escape' && !systemPanel.hidden && !event.repeat) { event.preventDefault();setSystemPanel(false);return; }
     if (event.code === 'Escape' && !cameraPanel.hidden && !event.repeat) { event.preventDefault(); setCameraPanel(false); return; }
-    if (event.code === 'Tab' && !panel.hidden) {
+    if (event.code === 'Tab') {
       const focusable = [...root.querySelectorAll('button, input, select, summary, a[href]')].filter(element => !element.disabled && !element.closest('[inert]') && element.checkVisibility());
       const first = focusable[0], last = focusable.at(-1);
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === $('#av-panel-title'))) { event.preventDefault(); last?.focus(); }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === root || document.activeElement === $('#av-panel-title'))) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       return;
     }
@@ -724,13 +724,17 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
         accumulator += dt;
         while (accumulator >= 1 / 60 && flight.status === 'running') {
           updateAircraftFlight(flight, input, 1 / 60); accumulator -= 1 / 60;
+          if (flight.events.includes('ap-disconnect') || flight.events.includes('at-disconnect')) {
+            const disconnected = [];
+            if (flight.events.includes('ap-disconnect')) disconnected.push(`自动驾驶已退出 · ${{ manual: '已手动接管', stall: '空速不足', aoa: '迎角过大，请先卸载', ground: '已接地', mode: '切换自由机动', engine: '发动机关闭', attitude: '姿态超出范围' }[flight.systems.autopilot.reason]}`);
+            if (flight.events.includes('at-disconnect')) disconnected.push(`自动油门已退出 · ${atReasons[flight.systems.autothrottle.reason]}`);
+            audio.event('ap-disconnect');notify(disconnected.join('；'));
+          }
           for (const event of flight.events) {
             if (event === 'gate') { audio.event('gate'); notify(`通过导航环 ${flight.gates} / 6`); }
             if (event === 'takeoff') { audio.event('glide'); notify('已离地 · 按 G 收起起落架'); }
             if (event === 'flaps-limit') notify('襟翼超过安全速度，已自动收起。');
             if (event === 'touchdown') { audio.event('land'); notify('成功接地 · 油门归零，按住制动'); }
-            if (event === 'ap-disconnect') { audio.event('ap-disconnect');notify(`自动驾驶已退出 · ${{ manual: '已手动接管', stall: '空速不足', aoa: '迎角过大，请先卸载', ground: '已接地', mode: '切换自由机动', engine: '发动机关闭', attitude: '姿态超出范围' }[flight.systems.autopilot.reason]}`); }
-            if (event === 'at-disconnect') { audio.event('ap-disconnect');notify(`自动油门已退出 · ${atReasons[flight.systems.autothrottle.reason]}`); }
             if (event === 'crash' || event === 'completed') { audio.setState(event === 'crash' ? 'lost' : 'won'); audio.event(event === 'crash' ? 'lost' : 'won'); showPanel(); }
           }
         }
