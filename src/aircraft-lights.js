@@ -61,12 +61,13 @@ export function updateAircraftLights(root, flight, dt, inside) {
   if (['ready', 'running'].includes(flight.status) && Number.isFinite(dt) && dt > 0) data.time = (data.time + Math.min(dt, .25)) % 1.2;
   const powered = aircraftElectrical(flight).powered;
   landing.visible = powered && flight.systems.landingLights;
-  taxi.visible = powered && flight.systems.taxiLights && flight.gearDown;
+  const gearLocked = flight.gearDown && flight.gearPosition >= .999;
+  taxi.visible = powered && flight.systems.taxiLights && gearLocked;
   lamps.visible = powered && !inside;
   if (!lamps.visible) return;
   let changed = false, any = false;
   fixtures.forEach((fixture, index) => {
-    const active = !!flight.systems[fixture.key] && (fixture.key !== 'beaconLights' || data.time < .16 || data.time > .29 && data.time < .39) && (fixture.key !== 'taxiLights' || flight.gearDown);
+    const active = !!flight.systems[fixture.key] && (fixture.key !== 'beaconLights' || data.time < .16 || data.time > .29 && data.time < .39) && (fixture.key !== 'taxiLights' || gearLocked);
     any ||= active;
     if (states[index] === active) return;
     states[index] = active;transform.position.fromArray(fixture.position);transform.scale.setScalar(active ? 1 : 0);transform.updateMatrix();lamps.setMatrixAt(index, transform.matrix);changed = true;

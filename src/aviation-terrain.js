@@ -1,18 +1,21 @@
 import * as THREE from 'three';
-import { islandHeight } from './aircraft-flight.js';
+import { AIRPORTS, airportHeight } from './airport.js';
 
 export const AVIATION_ENVIRONMENT_DEFAULTS = Object.freeze({ viewDistance: 100000, detailDistance: 4500, groundDetail: 'low' });
 const segments = { low: [16, 8, 4], balanced: [24, 12, 6], high: [40, 20, 10] };
 const sand = new THREE.Color('#bfbd8b'), grass = new THREE.Color('#598567'), rock = new THREE.Color('#6d8176');
 
-function tileGeometry(x, z, count, edgeCount) {
+function tileGeometry(x, z, count, edgeCount, airport) {
+  const islandHeight = (x, z) => airportHeight(x, z, airport);
+  const desert = new THREE.Color('#bd9863'), alpine = new THREE.Color('#72866d');
   const vertices = [], normals = [], colors = [], indices = [], size = 4000, step = size / count;
   function vertex(dx, dz) {
     if (Math.abs(Math.abs(dx) - size / 2) < 1e-6 || Math.abs(Math.abs(dz) - size / 2) < 1e-6) {
       dx = Math.round((dx + size / 2) / size * edgeCount) / edgeCount * size - size / 2;
       dz = Math.round((dz + size / 2) / size * edgeCount) / edgeCount * size - size / 2;
     }
-    const height = islandHeight(x + dx, z + dz), color = height < -.1 ? sand : height > 120 ? rock : grass;
+    const height = islandHeight(x + dx, z + dz), relative = height - airport.elevation;
+    const color = airport.biome === 'desert' ? desert : height < -.1 ? sand : relative > 120 ? rock : airport.biome === 'alpine' ? alpine : grass;
     const variation = .93 + .07 * Math.sin((x + dx) * .008 + (z + dz) * .006);
     const nx = (islandHeight(x + dx - 2, z + dz) - islandHeight(x + dx + 2, z + dz)) / 4;
     const nz = (islandHeight(x + dx, z + dz - 2) - islandHeight(x + dx, z + dz + 2)) / 4, length = Math.hypot(nx, 1, nz);
@@ -43,13 +46,13 @@ function tileGeometry(x, z, count, edgeCount) {
   return geometry;
 }
 
-export function createAviationTerrain(detail = 'low', distance = 4500) {
+export function createAviationTerrain(detail = 'low', distance = 4500, airport = AIRPORTS[0]) {
   const root = new THREE.Group();root.name = 'island-terrain';
   const material = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .85 });
   const resolution = segments[detail] ?? segments.low;
   for (let z = -12000; z <= 12000; z += 4000) for (let x = -10000; x <= 10000; x += 4000) {
     const lod = new THREE.LOD();lod.position.set(x, 0, z);
-    resolution.forEach((count, level) => lod.addLevel(new THREE.Mesh(tileGeometry(x, z, count, resolution[0]), material), [0, distance, distance * 2.5][level], .12));
+    resolution.forEach((count, level) => lod.addLevel(new THREE.Mesh(tileGeometry(x, z, count, resolution[0], airport), material), [0, distance, distance * 2.5][level], .12));
     root.add(lod);
   }
   return root;

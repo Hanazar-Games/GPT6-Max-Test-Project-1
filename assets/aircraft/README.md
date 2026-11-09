@@ -33,11 +33,13 @@
 
 ## Original passenger airliners
 
-- Files: `r220.glb`, `w350.glb`, approximately 250 kB combined.
+- Files: `r220.glb`, `w350.glb`, `j90.glb`, `l440.glb`, approximately 618 kB combined.
 - Author: **Lunar Courier project**. License: **CC0 1.0** — https://creativecommons.org/publicdomain/zero/1.0/
 - R-220: fictional narrow-body twinjet with underwing turbofans, raised wing tips and twin-axle main gear.
 - W-350: fictional wide-body twinjet with longer swept wings, curved tips and triple-axle main gear.
-- Both include segmented windshields, cabin windows, doors, engine fan blades and independent landing gear. Static meshes are batched by material. No external meshes, textures or real-world aircraft data are used.
+- J-90: fictional regional jet with a slender fuselage and two rear-mounted turbofans.
+- L-440: fictional long-range wide-body airliner with four underwing turbofans and triple-axle main gear.
+- All include segmented windshields, cabin windows, doors, engine fan blades and independent landing gear with struts, braces and wheel axles. Static meshes are batched by material. No external meshes, textures or real-world aircraft data are used. Runtime retraction uses a simplified vertical telescoping animation.
 - Rebuild with Node 22+: `node scripts/build-airliners.mjs`.
 
 In-game aircraft dimensions, performance, cockpit systems and flight assistance are tuned for gameplay.

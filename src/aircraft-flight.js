@@ -1,4 +1,4 @@
-import { AIRPORT_BUILDINGS, AIRPORT_BOUNDS, RUNWAY } from './airport.js';
+import { AIRPORTS, airportSurfaceHeight } from './airport.js';
 import { Euler, Quaternion, Vector3 } from 'three';
 import { createAircraftSystems, setSystemSettings, updateAircraftSystems, aircraftElectrical, deployArmedSpoilers } from './aircraft-systems.js';
 import { bankLoad, aircraftAirflow } from './aircraft-envelope.js';
@@ -51,31 +51,21 @@ export const AIRCRAFT = Object.freeze([
   Object.freeze({ id: 'w350', engineType: 'jet', name: '远星 W-350', subtitle: '原创宽体客机 · 长航程与柔弯翼梢', role: '远程客运', configuration: '双发宽体客机', cockpit: 'airliner', engines: 2, engineResponse: .72, reverseThrust: .36, turnDrag: 1.45, cruiseSpeed: 145, length: 64.8, span: 60.1, gearHeight: 6.3, takeoff: 73, stall: 59, flapLimit: 130, maxSpeed: 295, landingSpeed: 98, acceleration: 5.5, drag: .000043, pitchLimit: .38, bankLimit: .8, pitchRate: .24, rollRate: .52, response: 1.8, yawRate: .065, sinkLimit: 7 }),
   Object.freeze({ id: 'p72', engineType: 'turboprop', name: '海燕 P-72', subtitle: '原创支线客机 · 高翼双涡桨与 T 形尾翼', role: '海岛通勤', configuration: '双发涡桨客机', cockpit: 'airliner', engines: 2, engineResponse: 1.9, reverseThrust: .38, turnDrag: 1.4, cruiseSpeed: 92, length: 27.2, span: 27.6, gearHeight: 3.2, takeoff: 42, stall: 33, flapLimit: 88, maxSpeed: 165, landingSpeed: 64, acceleration: 5.7, drag: .00011, pitchLimit: .42, bankLimit: .82, pitchRate: .35, rollRate: .75, response: 2.1, yawRate: .11, sinkLimit: 6 }),
   Object.freeze({ id: 'f26', engineType: 'fighter', name: '夜隼 F-26', subtitle: '原创双发战机 · 折线机翼与外倾双垂尾', role: '高速巡弋', configuration: '双发战斗机', cockpit: 'fighter', engines: 2, engineResponse: 1.55, turnDrag: 1.9, cruiseSpeed: 230, length: 19.4, span: 13.6, gearHeight: 2.6, takeoff: 64, stall: 51, flapLimit: 160, maxSpeed: 690, landingSpeed: 128, acceleration: 18, drag: .000037, pitchLimit: .68, bankLimit: 1.2, pitchRate: .95, rollRate: 1.95, response: 3, yawRate: .17, sinkLimit: 9 }),
+  Object.freeze({ id: 'j90', engineType: 'jet', name: '银燕 J-90', subtitle: '原创支线喷气客机 · 后置双发与修长机身', role: '山地客运', configuration: '后置双发客机', cockpit: 'airliner', engines: 2, engineResponse: 1.05, reverseThrust: .32, turnDrag: 1.35, cruiseSpeed: 115, length: 35.8, span: 29.4, gearHeight: 3.6, takeoff: 55, stall: 43, flapLimit: 110, maxSpeed: 250, landingSpeed: 82, acceleration: 7.1, drag: .00006, pitchLimit: .42, bankLimit: .85, pitchRate: .33, rollRate: .7, response: 2.15, yawRate: .09, sinkLimit: 6 }),
+  Object.freeze({ id: 'l440', engineType: 'jet', name: '天穹 L-440', subtitle: '原创四发宽体客机 · 四具涡扇与多轴主轮', role: '洲际客运', configuration: '四发宽体客机', cockpit: 'airliner', engines: 4, engineResponse: .68, reverseThrust: .38, turnDrag: 1.45, cruiseSpeed: 142, length: 72, span: 68.5, gearHeight: 7, takeoff: 76, stall: 62, flapLimit: 134, maxSpeed: 290, landingSpeed: 102, acceleration: 5.2, drag: .000044, pitchLimit: .38, bankLimit: .8, pitchRate: .23, rollRate: .5, response: 1.75, yawRate: .06, sinkLimit: 7 }),
 ]);
 
-const gatePositions = [[0, 180, -2000], [0, 420, -4600], [2600, 650, -6600], [5600, 650, -3400], [3200, 420, 3600], [0, 180, 3000]];
-export const AIR_GATES = Object.freeze(gatePositions.map(([x, y, z], index) => {
-  const previous = gatePositions[index - 1] ?? [0, 0, 1000];
-  const direction = [x - previous[0], y - previous[1], z - previous[2]];
-  const length = Math.hypot(...direction);
-  return Object.freeze({ x, y, z, radius: 155, normal: Object.freeze(direction.map(value => value / length)) });
-}));
+export const AIR_GATES = AIRPORTS[0].gates;
+export { airportHeight as islandHeight } from './airport.js';
 
-export function islandHeight(x, z) {
-  const island = 1 - (x / 8500) ** 2 - (z / 11000) ** 2;
-  const coast = clamp(island * 18, -32, 0);
-  const hills = Math.max(0, Math.abs(x) - 1500) / 6500;
-  const north = clamp((-z - 3000) / 2500, 0, 1);
-  return coast + Math.max(0, island) * hills * north * (700 + 450 * Math.sin(x * .0011) * Math.cos(z * .0008));
-}
-
-export function createAircraftFlight(id = 'a380', airborne = false, { runwayDirection = '36', physics, systems } = {}) {
+export function createAircraftFlight(id = 'a380', airborne = false, { runwayDirection = '36', airport = 'coast', physics, systems } = {}) {
   const aircraft = AIRCRAFT.find(item => item.id === id) ?? AIRCRAFT[0];
+  const site = AIRPORTS.find(item => item.id === airport) ?? AIRPORTS[0], RUNWAY = site.runway;
   const south = runwayDirection === '18';
   const flight = {
-    aircraft, status: airborne ? 'running' : 'ready', x: 0, y: airborne ? 420 : aircraft.gearHeight, z: airborne ? RUNWAY.center : south ? RUNWAY.end + 180 : RUNWAY.start - 180,
+    aircraft, airport: site, status: airborne ? 'running' : 'ready', x: 0, y: site.elevation + (airborne ? 420 : aircraft.gearHeight + RUNWAY.surfaceHeight), z: airborne ? RUNWAY.center : south ? RUNWAY.end + 180 : RUNWAY.start - 180,
     heading: south ? Math.PI : 0, trackHeading: south ? Math.PI : 0, sideslip: 0, pitch: 0, roll: 0, speed: 0,
-    verticalSpeed: 0, throttle: airborne ? .65 : 0, engineOutput: airborne ? .65 : 0, gearDown: !airborne, onGround: !airborne,
+    verticalSpeed: 0, throttle: airborne ? .65 : 0, engineOutput: airborne ? .65 : 0, gearDown: !airborne, gearPosition: airborne ? 0 : 1, onGround: !airborne,
     flaps: 0, speedBrake: false, runwayDirection: south ? '18' : '36',
     hasFlown: airborne, stalling: false, elapsed: 0, distance: 0, gates: 0, events: [], reason: '',
     pitchRate: 0, rollRate: 0, yawRate: 0, angleOfAttack: 0, loadFactor: airborne ? 1 : 0,
@@ -112,9 +102,10 @@ export function toggleAircraftPause(flight) {
 }
 
 export function runwayContact(flight, aircraft) {
+  const RUNWAY = flight.airport.runway;
   const alignment = Math.abs(Math.sin(flight.heading));
   const extentY = Math.abs(Math.sin(flight.roll) * Math.cos(flight.pitch)) * aircraft.span * .42 + Math.abs(Math.sin(flight.pitch)) * aircraft.length * .35 + Math.abs(Math.cos(flight.roll) * Math.cos(flight.pitch)) * aircraft.gearHeight * .45;
-  return flight.gearDown && Math.abs(flight.x) < RUNWAY.width / 2 - aircraft.span * .12
+  return flight.gearDown && flight.gearPosition >= .999 && Math.abs(flight.x) < RUNWAY.width / 2 - aircraft.span * .12
     && flight.z > RUNWAY.end && flight.z < RUNWAY.start && alignment < .28
     && Math.abs(Math.sin(flight.trackHeading)) < .28 && Math.cos(flight.trackHeading - flight.heading) > .98
     && Math.abs(flight.roll) < .2 && flight.pitch > -.12 && flight.pitch < .3
@@ -138,6 +129,9 @@ function crash(flight, reason) {
 
 function stepFlight(flight, input, dt) {
   const aircraft = flight.aircraft, physics = flight.physics, performance = flight.performance, gravity = 9.81 * physics.gravity;
+  const site = flight.airport, RUNWAY = site.runway;
+  const gearTarget = flight.gearDown ? 1 : 0, gearStep = dt / (aircraft.cockpit === 'airliner' ? 7 : 4);
+  flight.gearPosition += clamp(gearTarget - flight.gearPosition, -gearStep, gearStep);
   from.set(flight.x, flight.y, flight.z);
   flight.elapsed += dt;
   if (flight.flaps && flight.speed > aircraft.flapLimit + 5) { flight.flaps = 0; flight.events.push('flaps-limit'); }
@@ -183,7 +177,7 @@ function stepFlight(flight, input, dt) {
   const inducedDrag = flight.onGround ? 0 : aircraft.turnDrag * physics.inducedDrag * (
     .35 * (aerodynamicLoad ** 2 - 1) * Math.min(4, (baseStall / Math.max(flight.speed, 1)) ** 2)
     + (3 * flow.separation + 1.5 * Math.sin(flight.sideslip) ** 2) * Math.min(4, (flight.speed / baseStall) ** 2));
-  const drag = performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2 + inducedDrag;
+  const drag = performance.drag * (1 + flight.gearPosition * .55) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2 + inducedDrag;
   const braking = flight.onGround ? controls.wheelBrake * performance.wheelBrake : (controls.brake || flight.speedBrake ? performance.airBrake : 0);
   const verticalAcceleration = normal * Math.cos(flight.roll) * Math.cos(flight.pitch) - gravity;
   const pathSine = clamp((flight.verticalSpeed + verticalAcceleration * dt * .5) / Math.max(flight.speed, .01), -1, 1);
@@ -220,19 +214,20 @@ function stepFlight(flight, input, dt) {
   }
   flight.angleOfAttack = aircraftAirflow(flight).angle;
   flight.loadFactor = flight.onGround ? 0 : normal / gravity;
-  const surface = Math.max(-12, islandHeight(flight.x, flight.z));
+  const surface = Math.max(-12, airportSurfaceHeight(flight.x, flight.z, site));
   pose.setFromEuler(angles.set(flight.pitch, -flight.heading, -flight.roll));
   forward.set(0, 0, -1).applyQuaternion(pose); up.set(0, 1, 0).applyQuaternion(pose); right.set(1, 0, 0).applyQuaternion(pose);
   const sideways = aircraft.span * .42, lengthwise = aircraft.length * .35, depth = aircraft.gearHeight * .45;
   const extentY = Math.abs(right.y) * sideways + Math.abs(forward.y) * lengthwise + Math.abs(up.y) * depth;
-  const contactHeight = surface + (flight.onGround ? aircraft.gearHeight : Math.max(flight.gearDown ? aircraft.gearHeight : depth, extentY));
+  const contactHeight = surface + (flight.onGround ? aircraft.gearHeight : Math.max(depth + (aircraft.gearHeight - depth) * flight.gearPosition, extentY));
+  if (flight.onGround) flight.y = contactHeight;
   flight.stalling = !flight.onGround && (speed < stall || Math.abs(flight.angleOfAttack) > performance.stallAngle);
-  if (flight.y > aircraft.gearHeight + 20) flight.hasFlown = true;
-  if (Math.abs(flight.x) < AIRPORT_BOUNDS.x && Math.abs(flight.z) < AIRPORT_BOUNDS.z) {
+  if (flight.y > surface + aircraft.gearHeight + 20) flight.hasFlown = true;
+  if (Math.abs(flight.x) < site.bounds.x && Math.abs(flight.z) < site.bounds.z) {
     const extentX = Math.abs(right.x) * sideways + Math.abs(forward.x) * lengthwise + Math.abs(up.x) * depth;
     const extentZ = Math.abs(right.z) * sideways + Math.abs(forward.z) * lengthwise + Math.abs(up.z) * depth;
-    for (const building of AIRPORT_BUILDINGS) {
-      if (flight.y - extentY < building.height && flight.y + extentY > building.base && Math.abs(flight.x - building.x) < building.width / 2 + extentX && Math.abs(flight.z - building.z) < building.depth / 2 + extentZ) {
+    for (const building of site.buildings) {
+      if (flight.y - extentY < site.elevation + building.height && flight.y + extentY > site.elevation + building.base && Math.abs(flight.x - building.x) < building.width / 2 + extentX && Math.abs(flight.z - building.z) < building.depth / 2 + extentZ) {
         crash(flight, '碰到机场建筑或城市。拉起机头，保持足够净空。');
         return;
       }
@@ -242,7 +237,7 @@ function stepFlight(flight, input, dt) {
     flight.y = contactHeight;
     if (!flight.onGround) {
       if (!runwayContact(flight, aircraft)) {
-        crash(flight, surface < -1 ? '飞机触水。保持高度后再进近跑道。' : !flight.gearDown ? '起落架未放下。进近时按 G 放轮。' : '着地过重或偏离跑道。降低下降率、速度并摆正机翼。');
+        crash(flight, surface < -1 ? '飞机触水。保持高度后再进近跑道。' : !flight.gearDown || flight.gearPosition < .999 ? '起落架未放下锁定。提前按 G 放轮，等待锁定后着陆。' : '着地过重或偏离跑道。降低下降率、速度并摆正机翼。');
         return;
       }
       flight.events.push('touchdown');
@@ -257,7 +252,7 @@ function stepFlight(flight, input, dt) {
     }
   }
   flight.distance += Math.hypot(flight.x - from.x, flight.y - from.y, flight.z - from.z);
-  if (AIR_GATES[flight.gates] && crossesAirGate(from, flight, AIR_GATES[flight.gates])) {
+  if (site.gates[flight.gates] && crossesAirGate(from, flight, site.gates[flight.gates])) {
     flight.gates++;
     flight.events.push('gate');
   }

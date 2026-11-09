@@ -12,6 +12,8 @@ export const AIRCRAFT_MODEL_URLS = {
   w350: new URL('../assets/aircraft/w350.glb', import.meta.url).href,
   p72: new URL('../assets/aircraft/p72.glb', import.meta.url).href,
   f26: new URL('../assets/aircraft/f26.glb', import.meta.url).href,
+  j90: new URL('../assets/aircraft/j90.glb', import.meta.url).href,
+  l440: new URL('../assets/aircraft/l440.glb', import.meta.url).href,
 };
 
 export function disposeAircraftObject(root) {
@@ -58,8 +60,23 @@ export function normalizeAircraftModel(scene, aircraft) {
     if (object.isMesh) { object.castShadow = false; object.receiveShadow = false; }
   });
   model.updateMatrixWorld(true);
+  for (const part of gear) {
+    const localBounds = new THREE.Box3().setFromObject(part).applyMatrix4(part.matrixWorld.clone().invert());
+    part.userData.retraction = { position: part.position.clone(), scale: part.scale.clone(), top: localBounds.max.y };
+  }
   model.userData.gear = gear; model.userData.propellers = propellers;
   return model;
+}
+
+export function updateAircraftGearModel(model, position) {
+  const extension = Math.max(0, Math.min(1, position)), factor = .04 + .96 * extension;
+  for (const gear of model.userData.gear) {
+    gear.visible = extension > .001;
+    const rest = gear.userData.retraction;
+    if (!rest) continue;
+    gear.scale.y = rest.scale.y * factor;
+    gear.position.y = rest.position.y + rest.top * rest.scale.y * (1 - factor);
+  }
 }
 
 export async function loadAircraftModel(aircraft, signal) {

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { RUNWAY, TAXIWAYS } from './airport.js';
+import { AIRPORTS } from './airport.js';
 import { batchMeshes } from './model-utils.js';
 
-export function createRunway() {
+export function createRunway(airport = AIRPORTS[0]) {
   const root = new THREE.Group(); root.name = 'airport-runway';
+  root.position.y = airport.elevation;
+  const RUNWAY = airport.runway, TAXIWAYS = airport.taxiways;
   const groups = {};
   for (const name of ['surface', 'shoulders', 'markings', 'edge-lights', 'threshold-lights', 'approach-lights', 'taxiway-edge-lights']) {
     const group = new THREE.Group(); group.name = name.startsWith('taxiway') ? name : `runway-${name}`; groups[name] = group; root.add(group);
@@ -17,7 +19,7 @@ export function createRunway() {
     mesh.position.set(x, y, z); groups[group].add(mesh); return mesh;
   }
   const { width, length, start, end, center, shoulder } = RUNWAY;
-  box('surface', 'surface', 0, .3, center, width, .3, length);
+  box('surface', 'surface', 0, RUNWAY.surfaceHeight - .15, center, width, .3, length);
   for (const side of [-1, 1]) box('shoulders', 'shoulder', side * (width + shoulder) / 2, .24, center, shoulder, .2, length);
   const mark = (x, z, w, d) => box('markings', 'marking', x, .5, z, w, .04, d);
   for (const side of [-1, 1]) mark(side * (width / 2 - .75), center, .9, length - 10);
@@ -25,7 +27,8 @@ export function createRunway() {
   const digits = { 1: 'bc', 3: 'abgcd', 6: 'afgecd', 8: 'abcdefg' };
   const segments = { a: [0, -10, 6, 1.5], b: [3, -5, 1.5, 9], c: [3, 5, 1.5, 9], d: [0, 10, 6, 1.5], e: [-3, 5, 1.5, 9], f: [-3, -5, 1.5, 9], g: [0, 0, 6, 1.5] };
   for (const [threshold, direction, number] of [[start, -1, '36'], [end, 1, '18']]) {
-    for (const side of [-1, 1]) for (let i = 0; i < 8; i++) mark(side * (2.7 + i * 3.6), threshold + direction * 35, 1.8, 30);
+    const stripes = width >= 60 ? 8 : 6, stripeSpacing = (width / 2 - 4) / (stripes - 1);
+    for (const side of [-1, 1]) for (let i = 0; i < stripes; i++) mark(side * (2.7 + i * stripeSpacing), threshold + direction * 35, 1.8, 30);
     for (let digit = 0; digit < 2; digit++) for (const segment of digits[number[digit]]) {
       const [x, z, w, d] = segments[segment];
       mark((digit * 11 - 5.5 + x) * -direction, threshold + direction * (100 - z), w, d);

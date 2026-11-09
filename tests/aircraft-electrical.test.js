@@ -81,7 +81,7 @@ test('yaw damper reduces real sideslip while deliberate rudder input remains ava
 test('armed ground spoilers deploy only on touchdown with idle thrust and go-around cancels the arm', () => {
   for (const throttle of [0, 1]) {
     const flight = createAircraftFlight('a380', true);
-    Object.assign(flight, { y: flight.aircraft.gearHeight + .005, z: 0, speed: 65, verticalSpeed: -2, throttle, gearDown: true });
+    Object.assign(flight, { y: flight.aircraft.gearHeight + .005, z: 0, speed: 65, verticalSpeed: -2, throttle, gearDown: true, gearPosition: 1 });
     systems.toggleAircraftSystem(flight, 'spoiler-arm');
     updateAircraftFlight(flight, {}, 1 / 120);
     assert.equal(flight.onGround, true);assert.equal(flight.speedBrake, throttle === 0);

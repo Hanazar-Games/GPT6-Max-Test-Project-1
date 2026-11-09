@@ -140,7 +140,7 @@ function updatePowerSystems(flight, input, dt) {
   control.target = clamp(control.target, availability.minimum, availability.maximum);
   const error = control.target - flight.speed, response = systems.settings.speedResponse;
   const gravity = 9.81 * flight.physics.gravity * clamp(flight.verticalSpeed / Math.max(1, flight.speed), -1, 1);
-  const drag = flight.performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35) * flight.speed ** 2;
+  const drag = flight.performance.drag * (1 + flight.gearPosition * .55) * (1 + flight.flaps * .35) * flight.speed ** 2;
   const demand = (drag + gravity) / flight.performance.acceleration + error * .025 * response + control.integral;
   if ((demand > 0 && demand < 1) || (demand >= 1 && error < 0) || (demand <= 0 && error > 0)) control.integral = clamp(control.integral + error * .002 * response * dt, -.3, .3);
   flight.throttle += clamp(clamp(demand, 0, 1) - flight.throttle, -.4 * dt, .4 * dt);

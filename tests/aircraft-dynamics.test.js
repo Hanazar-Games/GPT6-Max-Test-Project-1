@@ -102,10 +102,10 @@ test('spooling and turning remain consistent across frame rates and pause cannot
   }
 });
 
-test('the fleet includes four distinct airliners with safe starts and working custom settings', () => {
-  assert.equal(AIRCRAFT.length, 10);
-  assert.equal(new Set(AIRCRAFT.map(aircraft => aircraft.id)).size, 10);
-  assert.equal(AIRCRAFT.filter(aircraft => aircraft.cockpit === 'airliner').length, 4);
+test('the fleet includes six distinct airliners with safe starts and working custom settings', () => {
+  assert.equal(AIRCRAFT.length, 12);
+  assert.equal(new Set(AIRCRAFT.map(aircraft => aircraft.id)).size, 12);
+  assert.equal(AIRCRAFT.filter(aircraft => aircraft.cockpit === 'airliner').length, 6);
   for (const aircraft of AIRCRAFT) {
     assert.ok(aircraft.engines >= 1 && aircraft.engineResponse > 0 && aircraft.turnDrag > 0);
     for (const physics of [{}, { mass: 2, lift: .5 }, { maxSpeed: .5 }, { thrust: 0 }]) {

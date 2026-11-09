@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { AIRPORT_BUILDINGS, TAXIWAYS } from './airport.js';
+import { AIRPORTS } from './airport.js';
 import { batchMeshes } from './model-utils.js';
 
-export function createAirportLod() {
-  return new THREE.LOD().addLevel(createAirport(), 0).addLevel(createAirport({ lowDetail: true }), 2000, .15).addLevel(createAirport({ distant: true }), 9000, .15);
+export function createAirportLod(airport = AIRPORTS[0]) {
+  const lod = new THREE.LOD().addLevel(createAirport({ airport }), 0).addLevel(createAirport({ airport, lowDetail: true }), 2000, .15).addLevel(createAirport({ airport, distant: true }), 9000, .15);
+  lod.position.y = airport.elevation;
+  return lod;
 }
 
 export function setAirportDetailDistance(airport, distance, detail) {
@@ -11,12 +13,16 @@ export function setAirportDetailDistance(airport, distance, detail) {
   airport.levels[2].distance = Math.max(6500, airport.levels[1].distance * 3);
 }
 
-export function createAirport({ lowDetail = false, distant = false } = {}) {
+export function createAirport({ lowDetail = false, distant = false, airport = AIRPORTS[0] } = {}) {
   const root = new THREE.Group(); root.name = 'island-airport';
+  root.scale.x = airport.side;root.position.z = airport.offsetZ;
+  const AIRPORT_BUILDINGS = airport.localBuildings, TAXIWAYS = airport.taxiways.map(item => ({ ...item, x: item.x * airport.side, z: item.z - airport.offsetZ }));
   const architecture = new THREE.Group(), pavement = new THREE.Group();
   architecture.name = 'airport-architecture'; pavement.name = 'airport-pavement'; root.add(architecture, pavement);
   const materials = Object.fromEntries(Object.entries({ concrete: 0xc1c8c2, roof: 0xe2e0cb, metal: 0x647b83, glass: 0x355d70, dark: 0x263a45, yellow: 0xe1bd63, white: 0xf1ecdc, orange: 0xf1874e, asphalt: 0x404f58, line: 0xceb161 }).map(([name, color]) => [name, new THREE.MeshStandardMaterial({ color, roughness: name === 'glass' ? .25 : .8, metalness: name === 'glass' ? .35 : .05 })]));
   const surfaceMaterials = {};
+  if (airport.biome === 'alpine') materials.roof.color.setHex(0x456a78);
+  if (airport.biome === 'desert') { materials.concrete.color.setHex(0xcbb38e);materials.roof.color.setHex(0xe9d6b3); }
   function box(group, material, x, y, z, width, height, depth) {
     let paint = materials[material];
     if (group === pavement) {
@@ -30,24 +36,25 @@ export function createAirport({ lowDetail = false, distant = false } = {}) {
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, sides), materials[material]);
     mesh.position.set(x, y, z); architecture.add(mesh); return mesh;
   }
-  box(pavement, 'asphalt', -325, .23, -100, 310, .22, 1300);
-  box(pavement, 'asphalt', 330, .23, 850, 370, .22, 900);
-  box(pavement, 'asphalt', -610, .2, -100, 30, .2, 1150);
-  box(pavement, 'asphalt', -790, .2, -100, 280, .2, 700);
+  for (const { x, z, width, depth, surfaceHeight } of airport.localPavements) box(pavement, 'asphalt', x, surfaceHeight - .11, z, width, .22, depth);
   if (distant) {
     for (const { x, z, width, depth } of TAXIWAYS) box(pavement, 'asphalt', x, .29, z, width, .22, depth);
     for (const { kind, x, z, width, depth, height } of AIRPORT_BUILDINGS) {
-      if (['windsock', 'jetway', 'city'].includes(kind)) continue;
+      if (['windsock', 'jetway', 'city', 'service-vehicle', 'fire-truck', 'fence'].includes(kind)) continue;
       box(architecture, 'concrete', x, height / 2, z, width, height, depth);
     }
-    for (let row = 0; row < 7; row++) box(architecture, 'concrete', -1795, 58, 700 + row * 150, 1050, 116, 70);
+    const cities = AIRPORT_BUILDINGS.filter(building => building.kind === 'city');
+    for (const z of new Set(cities.map(building => building.z))) {
+      const row = cities.filter(building => building.z === z), min = Math.min(...row.map(building => building.x - building.width / 2)), max = Math.max(...row.map(building => building.x + building.width / 2));
+      box(architecture, 'concrete', (min + max) / 2, 58, z, max - min, 116, 70);
+    }
     for (const group of [architecture, pavement]) batchMeshes(group);
     return root;
   }
   if (lowDetail) {
     for (const { x, z, width, depth } of TAXIWAYS) box(pavement, 'asphalt', x, .29, z, width, .22, depth);
     for (const { kind, x, z, width, depth, base, height } of AIRPORT_BUILDINGS) {
-      if (kind === 'windsock' || kind === 'jetway') continue;
+      if (['windsock', 'jetway', 'service-vehicle', 'fire-truck', 'fence'].includes(kind)) continue;
       box(architecture, kind === 'city' ? 'concrete' : kind === 'fuel' ? 'white' : 'metal', x, (height + base) / 2, z, width, height - base, depth);
       if (kind === 'tower') box(architecture, 'glass', x, 95, z, 42, 13, 42);
     }
@@ -69,7 +76,21 @@ export function createAirport({ lowDetail = false, distant = false } = {}) {
   }
   for (const building of AIRPORT_BUILDINGS) {
     const { kind, x, z, width, depth, base } = building, height = building.roofHeight ?? building.height;
-    if (kind === 'tower') {
+    if (kind === 'fence') {
+      for (let dz = -depth / 2; dz <= depth / 2; dz += 16) box(architecture, 'metal', x, 1.75, z + dz, .18, 3.5, .18);
+      for (const y of [.5, 1.8, 3.2]) box(architecture, 'metal', x, y, z, .09, .09, depth);
+    } else if (kind === 'service-vehicle' || kind === 'fire-truck') {
+      const bodyHeight = height - base;
+      box(architecture, kind === 'fire-truck' ? 'orange' : 'white', x, base + bodyHeight * .5, z, width - .3, bodyHeight * .6, depth - .5);
+      box(architecture, 'glass', x, base + bodyHeight * .65, z - depth * .25, width - .2, bodyHeight * .45, depth * .22);
+      for (const dx of [-width * .38, width * .38]) for (const dz of [-depth * .3, depth * .3]) {
+        const wheel = cylinder('dark', x + dx, base + .65, z + dz, .65, .45, 10);wheel.rotation.z = Math.PI / 2;
+      }
+      box(architecture, 'yellow', x, height - .15, z + depth * .1, width * .7, .3, depth * .5);
+    } else if (kind === 'radar') {
+      cylinder('concrete', x, 17, z, 8, 34, 12);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(12, 12, 8), materials.white);dome.position.set(x, 36, z);architecture.add(dome);
+    } else if (kind === 'tower') {
       box(architecture, 'concrete', x, 43, z, 20, 86, 20);
       box(architecture, 'dark', x, 87, z, 36, 3, 36);
       box(architecture, 'glass', x, 95, z, 42, 13, 42);
@@ -132,6 +153,11 @@ export function createAirport({ lowDetail = false, distant = false } = {}) {
         for (const side of [-1, 1]) {
           box(architecture, 'glass', x, 35, z + side * (depth / 2 + .1), width - 12, 7, .15);
           for (let dx = -width / 2 + 10; dx < width / 2; dx += 14) box(architecture, 'white', x + dx, 23, z + side * (depth / 2 + .25), .65, 44, .4);
+        }
+      } else if (kind === 'fire-station' || kind === 'cargo') {
+        for (let dz = -depth / 2 + 20; dz < depth / 2 - 10; dz += 30) {
+          box(architecture, 'dark', x - width / 2 - .1, 8, z + dz, .2, 14, 22);
+          for (let y = 3; y < 15; y += 3) box(architecture, kind === 'fire-station' ? 'orange' : 'metal', x - width / 2 - .25, y, z + dz, .2, .6, 21);
         }
       } else if (kind === 'city') box(architecture, 'glass', x + width / 2 + .1, height * .55, z, .2, height * .65, depth - 11);
     }

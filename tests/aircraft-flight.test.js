@@ -112,7 +112,7 @@ test('low airspeed loses lift, falls under gravity and cannot hover', () => {
 });
 
 test('safe runway touchdown needs gear, alignment, moderate bank, speed and descent', () => {
-  const sample = { ...createAircraftFlight('a380', true), x: 0, z: 0, heading: 0, roll: .03, pitch: .05, speed: 80, verticalSpeed: -2, gearDown: true };
+  const sample = { ...createAircraftFlight('a380', true), x: 0, z: 0, heading: 0, roll: .03, pitch: .05, speed: 80, verticalSpeed: -2, gearDown: true, gearPosition: 1 };
   assert.equal(runwayContact(sample, AIRCRAFT[0]), true);
   for (const change of [{ gearDown: false }, { x: 90 }, { z: -4000 }, { heading: .8 }, { trackHeading: .4 }, { roll: .5 }, { speed: 180 }, { verticalSpeed: -15 }, { pitch: -.3 }]) {
     assert.equal(runwayContact({ ...sample, ...change }, AIRCRAFT[0]), false);
@@ -149,7 +149,7 @@ test('steep maneuver attitudes collide using their rotated airframe rather than 
 
 test('touchdown and rollout finish a flight, unsafe impact stays crashed', () => {
   const flight = createAircraftFlight('a380', true);
-  Object.assign(flight, { x: 0, y: AIRCRAFT[0].gearHeight + .01, z: 0, verticalSpeed: -2, speed: 65, throttle: 0, gearDown: true, hasFlown: true });
+  Object.assign(flight, { x: 0, y: AIRCRAFT[0].gearHeight + .01, z: 0, verticalSpeed: -2, speed: 65, throttle: 0, gearDown: true, gearPosition: 1, hasFlown: true });
   advance(flight, { brake: true }, 6);
   assert.equal(flight.status, 'completed');
   assert.equal(flight.onGround, true);

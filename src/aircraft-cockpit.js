@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { batchMeshes } from './model-utils.js';
-import { RUNWAY } from './airport.js';
 import { autopilotAvailability, autothrottleAvailability, reverseThrustAvailability, AIRCRAFT_SYSTEM_SWITCHES, aircraftElectrical, aircraftSystemAvailability, engineStartAvailability } from './aircraft-systems.js';
 
 export const COCKPIT_SWITCH_COLUMNS = 6;
@@ -18,7 +17,8 @@ export function cockpitSeat(aircraft) {
 }
 
 export function cockpitInstruments(flight) {
-  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), engine: Math.round(flight.engineOutput * flight.physics.thrust * 100), aoa: (flight.angleOfAttack * 180 / Math.PI).toFixed(1), load: flight.loadFactor.toFixed(1), flaps: flight.flaps, speedBrake: flight.speedBrake, reverse: flight.systems.reverse, speedHold: flight.systems.autothrottle.enabled, autoBrake: flight.systems.autoBrake.toUpperCase(), warning: flight.stalling ? 'STALL' : flight.gearDown ? 'GEAR DOWN' : 'GEAR UP' };
+  const gear = flight.gearPosition > .001 && flight.gearPosition < .999 ? 'GEAR TRANSIT' : flight.gearPosition >= .999 ? 'GEAR DOWN' : 'GEAR UP';
+  return { speed: Math.round(flight.speed * 3.6), altitude: Math.round(flight.y), heading: String((Math.round(flight.heading * 180 / Math.PI) % 360 + 360) % 360).padStart(3, '0'), vertical: flight.verticalSpeed.toFixed(1), throttle: Math.round(flight.throttle * 100), engine: Math.round(flight.engineOutput * flight.physics.thrust * 100), aoa: (flight.angleOfAttack * 180 / Math.PI).toFixed(1), load: flight.loadFactor.toFixed(1), flaps: flight.flaps, speedBrake: flight.speedBrake, reverse: flight.systems.reverse, speedHold: flight.systems.autothrottle.enabled, autoBrake: flight.systems.autoBrake.toUpperCase(), warning: flight.stalling ? 'STALL' : gear };
 }
 
 export function createAircraftCockpit(aircraft, texture = null, labelsTexture = null) {
@@ -128,7 +128,7 @@ export function updateCockpitControls(root, flight, input = {}) {
       case 'trim-reset': active = Math.abs(systems.trim.pitch) + Math.abs(systems.trim.roll) + Math.abs(systems.trim.yaw) > .001;break;
       case 'go-around': unavailable ||= !systems.engineOn;break;
     }
-    const armed = action === 'autobrake' && systems.autoBrake !== 'off' && !systems.autoBrakeActive || action === 'apu' && systems.apuOn && !power.apuReady || action === 'spoiler-arm' && systems.spoilerArmed && !flight.speedBrake || action === 'generator' && systems.generatorOn && !power.generatorOnline || action === 'yaw-damper' && systems.yawDamper && (!power.avionics || flight.onGround) || extra?.lighting && active && (!power.powered || action === 'taxi-lights' && !flight.gearDown);
+    const armed = action === 'autobrake' && systems.autoBrake !== 'off' && !systems.autoBrakeActive || action === 'gear' && flight.gearPosition > .001 && flight.gearPosition < .999 || action === 'apu' && systems.apuOn && !power.apuReady || action === 'spoiler-arm' && systems.spoilerArmed && !flight.speedBrake || action === 'generator' && systems.generatorOn && !power.generatorOnline || action === 'yaw-damper' && systems.yawDamper && (!power.avionics || flight.onGround) || extra?.lighting && active && (!power.powered || action === 'taxi-lights' && (!flight.gearDown || flight.gearPosition < .999));
     const color = unavailable ? 0x59646b : armed ? 0xd9ad63 : active ? 0x4fd6ac : 0x29434c;
     if (switchStates[index] !== color) { switchStates[index] = color;switches.setColorAt(index, switchColor.set(color));changed = true; }
   }
@@ -171,8 +171,8 @@ export function drawCockpitDisplay(ctx, flight) {
   text(data.speedHold ? `SPD ${Math.round(flight.systems.autothrottle.target * 3.6)}` : `TRIM ${Math.round(flight.systems.trim.pitch * 100)}`, third + tile * .48, 181, 17);
   if (airliner) {
     const fourth = gap * 4 + tile * 3;
-    text('NAV / ISLAND', fourth + 14, 47, 20); text(`HDG ${data.heading}`, fourth + 14, 102, 28);
-    text(`HOME`, fourth + 14, 153, 18, '#7da6b4'); text(`${(Math.hypot(flight.x, flight.z - RUNWAY.center) / 1000).toFixed(1)} KM`, fourth + 14, 190, 27);
+    text('NAV / AIRPORT', fourth + 14, 47, 20); text(`HDG ${data.heading}`, fourth + 14, 102, 28);
+    text(`HOME`, fourth + 14, 153, 18, '#7da6b4'); text(`${(Math.hypot(flight.x, flight.z - flight.airport.runway.center) / 1000).toFixed(1)} KM`, fourth + 14, 190, 27);
     const power = aircraftElectrical(flight);
     text(`ELEC ${power.generatorOnline ? 'GEN' : power.apuReady ? 'APU' : 'BAT'}`, fourth + 14, 225, 19);
     text(`APU ${power.apuReady ? 'READY' : `${Math.round(flight.systems.apuRpm * 100)}%`}`, fourth + 14, 252, 18, flight.systems.apuOn && !power.apuReady ? '#ffcf86' : '#96efb0');

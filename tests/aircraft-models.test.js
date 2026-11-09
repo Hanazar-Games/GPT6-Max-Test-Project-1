@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AIRCRAFT } from '../src/aircraft-flight.js';
-import { normalizeAircraftModel, disposeAircraftObject, loadAircraftModel } from '../src/aircraft-models.js';
+import { normalizeAircraftModel, disposeAircraftObject, loadAircraftModel, updateAircraftGearModel } from '../src/aircraft-models.js';
 
 async function asset(id) {
   const file = await readFile(new URL(`../assets/aircraft/${id}.glb`, import.meta.url));
@@ -33,6 +33,12 @@ test('every GLB normalizes to aircraft dimensions with independent gear and prop
     assert.ok(Math.abs(bounds.min.y + aircraft.gearHeight) < .001);
     assert.equal(model.userData.gear.length, 1);
     assert.equal(model.userData.propellers.length, aircraft.engineType === 'propeller' ? 1 : aircraft.engineType === 'turboprop' ? 2 : 0);
+    const gearBounds = new THREE.Box3().setFromObject(model.userData.gear[0]);
+    updateAircraftGearModel(model, .5);model.updateMatrixWorld(true);
+    const retracted = new THREE.Box3().setFromObject(model.userData.gear[0]);
+    assert.ok(retracted.min.y > gearBounds.min.y, `${aircraft.id}: wheels move toward the fuselage`);
+    assert.ok(Math.abs(retracted.max.y - gearBounds.max.y) < .001, `${aircraft.id}: upper attachment remains fixed`);
+    updateAircraftGearModel(model, 1);
     model.userData.gear[0].visible = false;
     let visibleMeshes = 0; model.traverseVisible(object => { if (object.isMesh) visibleMeshes++; });
     assert.ok(visibleMeshes > 0);
@@ -42,14 +48,33 @@ test('every GLB normalizes to aircraft dimensions with independent gear and prop
 
 test('original fleet assets are compact, attributed and have distinct geometry', async () => {
   const meshes = new Set();
-  for (const id of ['t6', 'b62', 'c24', 'd9', 'r220', 'w350', 'p72', 'f26']) {
+  for (const id of ['t6', 'b62', 'c24', 'd9', 'r220', 'w350', 'p72', 'f26', 'j90', 'l440']) {
     const { file, json } = await asset(id);
     assert.equal(json.nodes[0].extras.license, 'CC0-1.0');
     assert.ok(file.length < 250000);
     assert.ok(json.meshes.length < 18);
     meshes.add(file.toString('base64'));
   }
-  assert.equal(meshes.size, 8);
+  assert.equal(meshes.size, 10);
+});
+
+test('gear animation keeps its upper attachment fixed and restores the original model exactly', async () => {
+  for (const aircraft of AIRCRAFT) {
+    const { file, json } = await asset(aircraft.id);
+    if (json.images?.length) continue;
+    const { scene } = await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
+    const model = normalizeAircraftModel(scene, aircraft), gear = model.userData.gear[0];
+    const rest = gear.position.clone(), scale = gear.scale.clone();
+    const bounds = new THREE.Box3().setFromObject(gear);
+    updateAircraftGearModel(model, .5);model.updateMatrixWorld(true);
+    const halfway = new THREE.Box3().setFromObject(gear);
+    assert.ok(halfway.min.y > bounds.min.y, aircraft.id);
+    assert.ok(Math.abs(halfway.max.y - bounds.max.y) < .001, aircraft.id);
+    updateAircraftGearModel(model, 0);assert.equal(gear.visible, false);
+    updateAircraftGearModel(model, 1);assert.equal(gear.visible, true);
+    assert.deepEqual(gear.position, rest);assert.deepEqual(gear.scale, scale);
+    disposeAircraftObject(model);
+  }
 });
 
 test('A380 attribution survives and the fighter is an original self-contained asset', async () => {

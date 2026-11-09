@@ -23,10 +23,13 @@ test('light commands survive preflight transfer and remain selectable without po
 test('external lights follow supply, gear and view with one lamp batch and local beam targets', () => {
   for (const aircraft of AIRCRAFT) {
     const flight = createAircraftFlight(aircraft.id, true), lights = createAircraftLights(aircraft);
-    flight.gearDown = true;flight.systems.landingLights = true;flight.systems.taxiLights = true;
+    flight.gearDown = true;flight.gearPosition = 1;flight.systems.landingLights = true;flight.systems.taxiLights = true;
     updateAircraftLights(lights, flight, .01, false);
     const { lamps, landing, taxi } = lights.userData;
     assert.equal(landing.visible, true);assert.equal(taxi.visible, true);
+    flight.gearPosition = .5;updateAircraftLights(lights, flight, 0, false);
+    assert.equal(taxi.visible, false, 'selected down gear must lock before taxi lights illuminate');
+    flight.gearPosition = 1;updateAircraftLights(lights, flight, 0, false);assert.equal(taxi.visible, true);
     assert.equal(landing.target.parent, lights);assert.equal(taxi.target.parent, lights);
     let meshes = 0;lights.traverse(object => { if (object.isMesh) meshes++; });assert.equal(meshes, 1);
     const matrix = new THREE.Matrix4();
