@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 座舱性能与开关反馈优化</h2>
-      <p id="release-copy">减少无效界面更新，展开设置即刻同步，让实体开关更清楚地说明当前能做什么。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 航迹惯性、远景与座舱调节</h2>
+      <p id="release-copy">转弯保留惯性，远景按距离简化，按自己的习惯调整驾驶位置与仪表面板。</p>
+      <ul class="release-list">
+        <li><strong>转向更有惯性</strong>航迹逐渐跟随机头，侧滑增加阻力，着陆检查实际前进方向；新增横向航迹响应 25%–300%，仪表显示侧滑角与侧滑球。</li>
+        <li><strong>看得更远，远处更简洁</strong>默认视距提高至 100 km，可调 30–160 km；地面默认低模，分块地形与机场自动随距离降级，可选均衡与精细。修正高空海岸条纹和地形接缝。</li>
+        <li><strong>座椅与实体面板可调</strong>新增座椅高低、前后、视线俯仰、面板缩放、高低与前后六项调节，按钮点按随位置同步；可分别恢复座舱、镜头与地景设置。1.30.2 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>89 个版本</span></summary>
+      <article><h3>v1.30.2 · 座舱性能与开关反馈优化</h3>
+      <p>减少无效界面更新，展开设置即刻同步，让实体开关更清楚地说明当前能做什么。</p>
       <ul class="release-list">
         <li><strong>系统面板按需刷新</strong>关闭或收起的系统设置停止刷新，打开时立即显示最新目标、配平与参数，减少飞行界面的性能负担。</li>
         <li><strong>操作与编辑保持稳定</strong>未变化的按钮和数值不再反复更新，正在编辑的目标值保持原样；暂停恢复、系统重置和手动接管继续同步状态。</li>
         <li><strong>开关灯色更准确</strong>地面收轮、超速放襟翼、低速或关机接通 AP 等不可用操作显示灰色；已接通的自动化仍可关闭，放到底的襟翼仍可收起。1.30.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>88 个版本</span></summary>
+      </article>
       <article><h3>v1.30.1 · 飞行告警与小屏操作修复</h3>
       <p>看清自动化退出原因，稳定切换键盘焦点，让小屏驾驶舱留出操纵空间。</p>
       <ul class="release-list">

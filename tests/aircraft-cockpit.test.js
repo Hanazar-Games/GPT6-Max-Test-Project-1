@@ -72,6 +72,25 @@ test('instruments wrap headings and use the same units and warnings as the fligh
   assert.equal(data.aoa, '-17.2');assert.equal(data.load, '-2.3');
 });
 
+test('resized and repositioned panels keep switch picking aligned across all aircraft', () => {
+  for (const aircraft of AIRCRAFT) {
+    const cockpit = createAircraftCockpit(aircraft, null, new THREE.Texture());
+    const panel = cockpit.userData.panel, switches = cockpit.userData.controls.switches;
+    const camera = new THREE.PerspectiveCamera(68, 16 / 9, .06, 8);
+    const world = Object.assign(Object.create(AviationWorld.prototype), { cameraMode: 2, cockpit, cockpitCamera: camera, renderer: { domElement: { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) } } });
+    for (const [scale, height, distance, eyeHeight, eyeForward] of [[.8, -.2, .25, .3, -.2], [1.1, .1, -.2, -.15, .35]]) {
+      panel.scale.setScalar(scale);panel.position.set(0, height, distance);cockpit.updateMatrixWorld(true);camera.position.set(0, eyeHeight, eyeForward);
+      for (let index = 0; index < switches.count; index++) {
+        const matrix = new THREE.Matrix4();switches.getMatrixAt(index, matrix);
+        const point = new THREE.Vector3().setFromMatrixPosition(matrix).applyMatrix4(switches.matrixWorld);
+        camera.lookAt(point);camera.updateMatrixWorld();point.project(camera);
+        assert.equal(world.pickCockpitControl((point.x + 1) * 640, (1 - point.y) * 360), COCKPIT_SWITCHES[index].action, `${aircraft.id}: ${index}`);
+      }
+    }
+    disposeAircraftObject(cockpit);
+  }
+});
+
 test('new cockpit switches show armed autobrake, active speed hold and unavailable reverse distinctly', () => {
   const flight = createAircraftFlight('a380', true), cockpit = createAircraftCockpit(flight.aircraft);
   const { switches, switchStates } = cockpit.userData.controls;

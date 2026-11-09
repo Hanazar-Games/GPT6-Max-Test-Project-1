@@ -6,6 +6,56 @@ function advance(flight, seconds, input = {}, step = 1 / 60) {
   for (let time = 0; time < seconds - 1e-9; time += step) updateAircraftFlight(flight, input, Math.min(step, seconds - time));
 }
 
+test('yaw preserves horizontal momentum and lateral response controls gradual track alignment', () => {
+  for (const { id } of AIRCRAFT) {
+    const flights = [.25, 3].map(lateralResponse => {
+      const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0, lateralResponse } });
+      Object.assign(flight, { y: 4000, heading: .4, trackHeading: 0 });
+      const x = flight.x;
+      updateAircraftFlight(flight, {}, 1 / 120);
+      assert.ok(flight.trackHeading > 0 && flight.trackHeading < .4);
+      assert.ok(flight.x - x < flight.speed / 120 * Math.sin(.4) * .1, `${id}: heading cannot instantly redirect momentum`);
+      advance(flight, .5);
+      return flight;
+    });
+    assert.ok(flights[1].trackHeading > flights[0].trackHeading, `${id}: lateral response affects real motion`);
+    assert.ok(flights[1].x > flights[0].x);
+  }
+});
+
+test('track alignment wraps across north, follows ground steering and freezes on pause', () => {
+  const flight = createAircraftFlight('su30', true);
+  Object.assign(flight, { y: 4000, heading: -Math.PI + .02, trackHeading: Math.PI - .02 });
+  updateAircraftFlight(flight, {}, 1 / 120);
+  assert.ok(flight.sideslip > 0 && flight.sideslip < .04, 'align along the shortest angular path');
+  toggleAircraftPause(flight);const snapshot = structuredClone(flight);
+  advance(flight, 1);assert.deepEqual(flight, { ...snapshot, events: [] });
+  for (const runwayDirection of ['18', '36']) {
+    const ground = createAircraftFlight('su30', false, { runwayDirection });
+    ground.status = 'running';ground.speed = 15;
+    advance(ground, .2, { yaw: .5 });
+    assert.equal(ground.trackHeading, ground.heading);assert.equal(ground.sideslip, 0);
+    const air = createAircraftFlight('su30', true, { runwayDirection });
+    assert.equal(air.trackHeading, air.heading);
+  }
+});
+
+test('sideslip dissipates energy and inertial turns remain consistent across frame rates', () => {
+  for (const { id } of AIRCRAFT) {
+    const flights = [0, .4].map(heading => {
+      const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0, lateralResponse: .25 } });
+      Object.assign(flight, { y: 4000, heading, throttle: 0, engineOutput: 0 });
+      advance(flight, 1);return flight;
+    });
+    assert.ok(flights[1].speed < flights[0].speed - .01, `${id}: sideslip must not provide a free sideways turn`);
+    const samples = [1 / 30, 1 / 60, 1 / 120].map(step => {
+      const flight = createAircraftFlight(id, true);flight.y = 4000;
+      advance(flight, 3, { yaw: .4, roll: .3 }, step);return flight;
+    });
+    for (const flight of samples) for (const key of ['x', 'z', 'speed', 'trackHeading', 'sideslip']) assert.ok(Math.abs(flight[key] - samples[0][key]) < .001, `${id}: ${key}`);
+  }
+});
+
 test('engines spool progressively in both directions and response tuning changes delivered thrust', () => {
   const flights = [.25, 3].map(engineResponse => {
     const flight = createAircraftFlight('su30', false, { physics: { engineResponse } });

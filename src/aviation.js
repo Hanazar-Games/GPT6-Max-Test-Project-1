@@ -2,6 +2,7 @@ import './aviation.css';
 import { AIRCRAFT, AIR_GATES, AIRCRAFT_PHYSICS_DEFAULTS, AIRCRAFT_PHYSICS_LIMITS, AIRCRAFT_PRESETS, setAircraftPhysics, createAircraftFlight, updateAircraftFlight, toggleAircraftGear, toggleAircraftPause, aircraftEnvelope, setAircraftFlaps, toggleAircraftSpeedBrake } from './aircraft-flight.js';
 import { AviationWorld, AVIATION_CAMERAS, AVIATION_VIEW_DEFAULTS } from './aviation-world.js';
 import { AviationRenderClock } from './aviation-render-clock.js';
+import { AVIATION_ENVIRONMENT_DEFAULTS } from './aviation-terrain.js';
 import { AIRCRAFT_CONTROL_DEFAULTS, aircraftInput, aircraftKeyBinding, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut } from './aircraft-controls.js';
 import { RUNWAY } from './airport.js';
 import { setText as text, setAttribute, setHidden } from './hud.js';
@@ -19,8 +20,18 @@ const viewFields = [
   ['lookResponse', '舱内转头响应', 2, 20, 1, 1, '/秒'],
   ['speedFovAmount', '速度扩角幅度', 0, 30, 1, 1, '°'],
 ];
+const cockpitFields = [
+  ['seatHeight', '座椅高度', -15, 30, 1, 100, ' cm'],
+  ['seatForward', '座椅前后 · 负值向前', -20, 35, 1, 100, ' cm'],
+  ['lookPitch', '默认视线俯仰偏移', -15, 15, 1, 1, '°'],
+  ['panelScale', '仪表面板缩放', 80, 110, 1, 100, '%'],
+  ['panelHeight', '仪表面板高度', -20, 10, 1, 100, ' cm'],
+  ['panelDistance', '仪表面板前后 · 正值靠近', -20, 25, 1, 100, ' cm'],
+];
+const viewSliders = fields => fields.map(([key, label, min, max, step, scale, unit]) => `<label>${label}<output data-view-value="${key}">${AVIATION_VIEW_DEFAULTS[key] * scale}${unit}</output><input data-view="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AVIATION_VIEW_DEFAULTS[key] * scale}" aria-label="飞机${label}" aria-describedby="${fields === cockpitFields ? 'av-cockpit-note' : 'av-view-note'}"></label>`).join('');
+const environmentFields = [['viewDistance', '远景视距', 30, 160, 5], ['detailDistance', '地景细节距离', 1.5, 12, .5]];
 const flapNames = ['收起', '起飞', '着陆'];
-const maneuverFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['flightPath', '航迹跟随响应'], ['pitchLimit', '辅助俯仰幅度'], ['bankLimit', '辅助滚转幅度'], ['gravity', '重力强度']];
+const maneuverFields = [['pitchRate', '俯仰速率'], ['rollRate', '滚转速率'], ['yawRate', '方向舵速率'], ['response', '操纵响应'], ['stability', '松手回正辅助'], ['flightPath', '纵向航迹响应'], ['lateralResponse', '横向航迹响应'], ['pitchLimit', '辅助俯仰幅度'], ['bankLimit', '辅助滚转幅度'], ['gravity', '重力强度']];
 const powerFields = [['thrust', '发动机推力'], ['engineResponse', '发动机响应'], ['mass', '机体质量'], ['drag', '气动阻力'], ['lift', '升力系数'], ['maxSpeed', '速度上限'], ['airBrake', '空中减速强度'], ['wheelBrake', '轮刹强度'], ['stallAngle', '临界迎角倍率'], ['inducedDrag', '诱导与失速阻力'], ['loadLimit', '气动过载上限']];
 const physicsFields = [...maneuverFields, ...powerFields];
 const controlFields = [
@@ -91,7 +102,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <label>飞行模式<select data-setting="flight-mode"><option value="assisted">稳定飞行 · 姿态辅助</option><option value="maneuver">自由机动 · 滚转 / 筋斗</option></select></label>
       <p data-value="physics-help"></p>
       ${physicsControls(maneuverFields, 'av-physics-note')}
-      <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变加减旋转的快慢；回正辅助为 0% 时，松手逐步停止主动旋转并保留倾斜。航迹响应越高，附着气流时升降速度越快跟随机头，仍受载荷上限限制。大迎角会降低升力与操纵效率，松杆卸载后恢复。辅助幅度仅用于稳定模式，自由机动不限制整周旋转。</p></details>
+      <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变加减旋转的快慢；回正辅助为 0% 时，松手逐步停止主动旋转并保留倾斜。纵向航迹响应改变升降速度跟随机头的快慢，仍受载荷限制；横向响应 25%–300%，越低越保留原来的前进方向，越高转弯跟随越快。侧滑增加阻力，接地前需将航迹与跑道对齐。质量增大会让航迹响应更慢；大迎角会降低升力与操纵效率。辅助幅度仅用于稳定模式，自由机动不限制整周旋转。</p></details>
       <details class="av-help"><summary>操作与键位</summary><p data-value="keys"></p>
       <p><b>A / D</b> 或 <b>← / →</b> 滚转 · <b>Q / E</b> 方向舵<br><b>1 / 2 / 3</b> 油门怠速 / 65% / 全开（支持数字小键盘）<br><b>G</b> 起落架 · <b>F</b> 切换三档襟翼 · <b>B</b> 减速板<br><b>空格</b> 按住制动 · <b>C</b> 循环六种镜头<br><b>V</b> 驾驶舱 / 上次外部机位 · <b>Z / X</b> 按住左右观察<br><b>L</b> 锁定 / 释放外部方位 · <b>R</b> 镜头回正<br><b>Esc / P</b> 暂停并打开设置</p>
       <p><b>I</b> 实时座舱系统 · <b>K</b> 发动机 · <b>N</b> 驻车制动<br><b>J</b> 机翼调平 · <b>H</b> 航向 / 高度保持<br><b>U</b> 自动油门保速 · <b>Y</b> 复飞全推力<br><b>M</b> 接地反推 · <b>O</b> 自动刹车关闭 / 低 / 高<br><b>Backspace</b> 退出 AP 与 A/THR，手动接管<br><b>[ / ]</b> 按住低头 / 抬头配平 · <b>T</b> 三轴配平归零<br>完整系统参数位于「座舱系统、配平与自动驾驶」。</p>
@@ -100,8 +111,12 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <p id="av-controls-note">三轴灵敏度 20%–200%，同时作用于键盘和触屏，满输入以 100% 封顶；更高值让摇杆提早打满。死区过滤中心误触并平滑衔接到满杆；曲线 1× 为线性，越高越适合小幅修正，仅作用于触屏。油门变化为每秒 5%–100%，快捷油门只改变目标，实际推力仍逐步跟随。</p><button data-action="controls-reset">恢复默认操作设置</button>
       <p>手机用左下操纵杆升降与滚转，下方按住左右舵，可同时推杆与用舵；两侧同时按住会抵消。右侧调节油门、襟翼和减速板。起飞前可用起飞襟翼，达到提示速度后拉升，关闭减速板；降落前放轮、放着陆襟翼，降低下降率，接地后油门归零并按住制动。襟翼降低失速速度并增加阻力，超速会自动收起；减速板不代替地面刹车。操作设置对各机型共用，仅保留在本次飞机模式。</p><p data-value="flap-limit"></p></details>
       <details class="av-help av-view-settings"><summary>镜头与视野 · 机位与细调</summary><label>飞行机位<select data-setting="camera-mode">${cameraNames.map((name, mode) => `<option value="${mode}">${name}</option>`).join('')}</select></label>
-      ${viewFields.map(([key, label, min, max, step, scale]) => `<label>${label}<output data-view-value="${key}"></output><input data-view="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AVIATION_VIEW_DEFAULTS[key] * scale}" aria-label="飞机${label}" aria-describedby="av-view-note"></label>`).join('')}
+      ${viewSliders(viewFields)}
       <label>速度扩角<select data-setting="speed-fov"><option value="on">开启</option><option value="off">关闭</option></select></label><button data-action="view-reset">恢复默认镜头参数</button><p id="av-view-note">响应越高，跟随或转头越快。高度、距离和环绕角度作用于外部机位，始终保留机身与地面净空；驾驶舱视场角同步作用于舱内与远景。L 锁定外部观察方位与地平线，位置仍跟随飞机；切换机位、调整镜头参数、回正或重新起飞解除锁定。驾驶舱不使用外部方位锁。</p></details>
+      <details class="av-help av-cockpit-settings"><summary>座椅与实体仪表面板 · 6 项调节</summary>${viewSliders(cockpitFields)}<button data-action="cockpit-reset">恢复默认座椅与面板</button><p id="av-cockpit-note">座椅高低、前后与视线改变实际驾驶舱视点；面板缩放、位置同时作用于屏幕、按钮、标签和起落架手柄，点按位置随之同步。外部机位不受影响。调整后继续飞行并按 V 查看；视野被挡时可降低面板或升高座椅。设置对六机型共用，仅保留在本次飞机模式。</p></details>
+      <details class="av-help av-environment-settings"><summary>远景视距与地景 LOD</summary>
+      ${environmentFields.map(([key, label, min, max, step]) => `<label>${label}<output data-environment-value="${key}"></output><input data-environment="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AVIATION_ENVIRONMENT_DEFAULTS[key] / 1000}" aria-label="飞机${label}，千米"></label>`).join('')}
+      <label>地面模型精度<select data-setting="ground-detail"><option value="low">低模 · 默认省性能</option><option value="balanced">均衡 · 中等细节</option><option value="high">精细 · 近景高细节</option></select></label><button data-action="environment-reset">恢复默认地景</button><p>默认视距 100 km，可调 30–160 km；雾与海面范围同步。地形分块按相机距离自动降为三档细节，远处机场只保留建筑轮廓，接近后恢复。细节距离越小越早降级；低模不影响飞机、座舱和物理碰撞。增加视距不会扩大岛屿或新增地景。</p></details>
       <details class="av-help av-audio-settings"><summary>画面与声音</summary><label>渲染比例上限<select data-setting="quality"><option value="0.5">0.5× · 极省电</option><option value="0.75">0.75× · 省电</option><option value="1">1× · 原生</option><option value="1.25">1.25× · 标准</option><option value="1.75">1.75× · 精细</option><option value="2">2× · 高精细</option></select></label><label>画面帧率上限<select data-setting="frame-limit"><option value="30">30 FPS · 省电</option><option value="45">45 FPS</option><option value="60" selected>60 FPS · 标准</option><option value="90">90 FPS</option><option value="120">120 FPS</option><option value="0">跟随屏幕刷新率</option></select></label><label>舱内仪表刷新<select data-setting="display-hz"><option value="5">5 Hz · 省电</option><option value="10" selected>10 Hz · 标准</option><option value="20">20 Hz · 精细</option></select></label><p>渲染比例不超过设备像素比。降低画面帧率或舱内仪表刷新可减少绘制负担，飞行物理与输入继续独立更新。</p><label>背景音乐 <output data-volume-value="music"></output><input data-volume="music" type="range" min="0" max="100" aria-label="飞机背景音乐音量"></label><label>引擎与音效 <output data-volume-value="sfx"></output><input data-volume="sfx" type="range" min="0" max="100" aria-label="飞机引擎与音效音量"></label><p data-value="audio-status" role="status" aria-live="polite"></p><button data-action="audio-retry" hidden>重新启用声音</button><small>暂停与离开页面时停止声音；失速警报会暂时降低音乐音量。声音设置与基地共用，仅保留在当前页面；画面和飞行设置仅保留在本次飞机模式。机场尺寸与飞行参数为游戏设计，驾驶舱为原创简化内饰。</small></details>
       <details class="av-credits"><summary>模型署名</summary><p>Airbus A380：<a href="https://sketchfab.com/3d-models/singapore-airlines-a380-fd047ccf175c4db5b7e3e400c67c47a0" target="_blank" rel="noopener noreferrer">Singapore Airlines A380</a>，作者 zairiq-zairiq-123-pixar-cars-bfdi，用户提供，<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。游戏中调整了大小、朝向和起落架显示。</p><p>Su-30：本项目原创简化模型（CC0），依据双发、双垂尾与前翼轮廓制作。</p><p>星雀 T-6、云帆 B-62、山海 C-24、岚影 D-9：本项目原创架空机型与简化 GLB，采用 CC0。</p></details>
     </aside>
@@ -124,7 +139,8 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   const systemStatus = $('.av-system-status'), takeoverButton = systemStatus.querySelector('button');
   const systemFieldsUI = systemFields.map(([key, , scale, unit]) => ({ key, scale, unit, slider: $(`[data-system-setting="${key}"]`), output: $(`[data-system-setting-value="${key}"]`) }));
   const cameraPanel = $('.av-camera-panel'), renderClock = new AviationRenderClock();
-  const viewControls = viewFields.map(([key, , , , , scale, unit]) => ({ key, scale, unit, slider: $(`[data-view="${key}"]`), output: $(`[data-view-value="${key}"]`) }));
+  const viewControls = [...viewFields, ...cockpitFields].map(([key, , , , , scale, unit]) => ({ key, scale, unit, slider: $(`[data-view="${key}"]`), output: $(`[data-view-value="${key}"]`) }));
+  const environmentControls = environmentFields.map(([key]) => ({ key, slider: $(`[data-environment="${key}"]`), output: $(`[data-environment-value="${key}"]`) }));
   const listeners = new AbortController(), held = new Set();
   const controlSettings = { ...AIRCRAFT_CONTROL_DEFAULTS };
   const holdControls = Object.fromEntries([...root.querySelectorAll('[data-hold]')].map(button => [button.dataset.hold, { button, pointer: null, keys: new Set(), active: false }]));
@@ -385,6 +401,13 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     syncCameraUI();
   }
 
+  function syncEnvironmentSettings() {
+    for (const { key, slider, output } of environmentControls) {
+      slider.value = world.environmentSettings[key] / 1000;text(output, `${slider.value} km`);
+    }
+    $('[data-setting="ground-detail"]').value = world.environmentSettings.groundDetail;
+  }
+
   function showPanel() {
     const ready = flight.status === 'ready' && !graphicsLost, paused = flight.status === 'paused' && !graphicsLost;
     panel.hidden = flight.status === 'running';
@@ -478,7 +501,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text(values.heading, String(Math.round(heading) % 360).padStart(3, '0'));
     text(values.throttle, `${Math.round(flight.throttle * 100)}%`);
     text(values.engine, `${flight.systems.reverse ? 'REV ' : ''}${Math.round(flight.engineOutput * physicsSettings.thrust * 100)}%`);
-    text(values.aero, `迎角 ${(flight.angleOfAttack * 180 / Math.PI).toFixed(1)}° · 载荷 ${flight.loadFactor.toFixed(1)} G`);
+    text(values.aero, `迎角 ${(flight.angleOfAttack * 180 / Math.PI).toFixed(1)}° · 载荷 ${flight.loadFactor.toFixed(1)} G · 侧滑 ${(flight.sideslip * 180 / Math.PI).toFixed(1)}°`);
     const throttle = $('[data-control="throttle"]');
     setValue(throttle, Math.round(flight.throttle * 100));
     text(action('gear'), `轮：${flight.gearDown ? '放下' : '收起'}`); setAttribute(action('gear'), 'aria-pressed', flight.gearDown);
@@ -562,7 +585,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       case 'camera-close': setCameraPanel(false); break;
       case 'camera-lock': world.toggleCameraLock(); syncCameraUI(); dirty = true; break;
       case 'camera-center': centerCamera(); break;
-      case 'view-reset': Object.assign(world.viewSettings, AVIATION_VIEW_DEFAULTS); world.setCameraMode(world.cameraMode); syncViewSettings(); dirty = true; break;
+      case 'view-reset': for (const [key] of viewFields) world.viewSettings[key] = AVIATION_VIEW_DEFAULTS[key];world.viewSettings.speedFov = AVIATION_VIEW_DEFAULTS.speedFov;world.setCameraMode(world.cameraMode);syncViewSettings();dirty = true;break;
+      case 'cockpit-reset': for (const [key] of cockpitFields) world.viewSettings[key] = AVIATION_VIEW_DEFAULTS[key];world.setCameraMode(world.cameraMode);syncViewSettings();dirty = true;break;
+      case 'environment-reset': world.setEnvironment(AVIATION_ENVIRONMENT_DEFAULTS);syncEnvironmentSettings();dirty = true;break;
       case 'look-left': world.lookTarget = world.viewSettings.lookAngle * Math.PI / 180; dirty = true; break;
       case 'look-center': world.lookTarget = 0; dirty = true; break;
       case 'look-right': world.lookTarget = -world.viewSettings.lookAngle * Math.PI / 180; dirty = true; break;
@@ -620,6 +645,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen(quality, 'change', () => { world.quality = Number(quality.value); world.resize(); dirty = true; });
   listen($('[data-setting="frame-limit"]'), 'change', event => { frameLimit = Number(event.target.value); renderClock.reset(); dirty = true; });
   listen($('[data-setting="display-hz"]'), 'change', event => { world.displayHz = Number(event.target.value); world.displayTime = 1; dirty = true; });
+  for (const { key, slider, output } of environmentControls) listen(slider, 'input', () => {
+    world.setEnvironment({ [key]: Number(slider.value) * 1000 });text(output, `${slider.value} km`);dirty = true;
+  });
+  listen($('[data-setting="ground-detail"]'), 'change', event => { world.setEnvironment({ groundDetail: event.target.value });dirty = true; });
   listen($('[data-setting="runway"]'), 'change', event => {
     if (flight.status !== 'ready') return;
     const systems = flight.systems, throttle = flight.throttle;
@@ -759,6 +788,6 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     }
     raf = requestAnimationFrame(frame);
   }
-  syncControlHelp(); syncViewSettings(); selectAircraft('a380'); raf = requestAnimationFrame(frame);
+  syncControlHelp(); syncViewSettings(); syncEnvironmentSettings(); selectAircraft('a380'); raf = requestAnimationFrame(frame);
   return { dispose };
 }

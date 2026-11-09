@@ -21,7 +21,8 @@ export function cockpitInstruments(flight) {
 }
 
 export function createAircraftCockpit(aircraft, texture = null, labelsTexture = null) {
-  const root = new THREE.Group(), shell = new THREE.Group(); root.name = `${aircraft.id}-cockpit`; root.add(shell);
+  const root = new THREE.Group(), shell = new THREE.Group(), panel = new THREE.Group(), dashboard = new THREE.Group();
+  root.name = `${aircraft.id}-cockpit`; root.add(shell, panel);panel.add(dashboard);
   const airliner = aircraft.cockpit === 'airliner' || aircraft.cockpit === 'transport', yoke = aircraft.cockpit !== 'fighter';
   const width = cockpitWidth(aircraft);
   const materials = {
@@ -39,8 +40,8 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, delta.length(), 8), materials.dark);
     mesh.position.copy(a).addScaledVector(delta, .5); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()); shell.add(mesh);
   }
-  box(shell, 'shell', [0, -.78, -1.6], [width, .85, .36]);
-  box(shell, 'dark', [0, -.32, -1.56], [width + .08, .1, .55]);
+  box(dashboard, 'shell', [0, -.78, -1.6], [width, .85, .36]);
+  box(dashboard, 'dark', [0, -.32, -1.56], [width + .08, .1, .55]);
   box(shell, 'shell', [-width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'shell', [width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'dark', [0, -1.45, -.1], [width, .1, 3.3]);
@@ -60,11 +61,11 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
     box(shell, 'seat', [0, -.75, .55], [.6, 1.1, .16]);
   }
   for (const side of [-1, 1]) for (let i = 0; i < 9; i++) {
-    box(shell, i % 3 ? 'trim' : 'amber', [side * width * .38, -.292, -1.43 + i * .025], [.045, .025, .012]);
+    box(dashboard, i % 3 ? 'trim' : 'amber', [side * width * .38, -.292, -1.43 + i * .025], [.045, .025, .012]);
   }
-  batchMeshes(shell);
+  batchMeshes(shell);batchMeshes(dashboard);
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(airliner ? 3 : width * .92, .64), new THREE.MeshBasicMaterial({ map: texture, color: texture ? 0xffffff : 0x0d2730, toneMapped: false }));
-  screen.name = 'live-flight-displays'; screen.position.set(0, -.7, -1.411); root.add(screen);
+  screen.name = 'live-flight-displays'; screen.position.set(0, -.7, -1.411); panel.add(screen);
   const stick = new THREE.Group(); stick.position.set(0, -1.17, -1.05); root.add(stick);
   box(stick, 'dark', [0, .2, 0], [.055, .4, .055]);
   if (yoke) {
@@ -77,7 +78,7 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
     box(lever, 'trim', [0, .12, 0], [.025, .24, .025]);
     box(lever, 'dark', [0, .24, 0], [.075, .065, .1]); batchMeshes(lever); return lever;
   });
-  const gear = new THREE.Group(); gear.position.set(width * .4, -.91, -1.26); root.add(gear);
+  const gear = new THREE.Group(); gear.position.set(width * .4, -.91, -1.26); panel.add(gear);
   box(gear, 'trim', [0, .05, 0], [.02, .12, .02]); box(gear, 'amber', [0, .12, 0], [.08, .055, .04]); batchMeshes(gear);
   const switches = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 }), COCKPIT_SWITCHES.length);
   const button = new THREE.Object3D(), spacing = cockpitSwitchSpacing(aircraft);
@@ -91,9 +92,10 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
       const label = new THREE.Mesh(geometry, labelMaterial);label.position.copy(button.position);label.position.z += .021;labels.add(label);
     }
   });
-  switches.computeBoundingSphere();root.add(switches);batchMeshes(labels);root.add(labels);
+  switches.computeBoundingSphere();panel.add(switches);batchMeshes(labels);panel.add(labels);
   root.userData.controls = { stick, throttles, gear, switches, switchStates: [] };
   root.userData.display = screen;
+  root.userData.panel = panel;
   return root;
 }
 
@@ -142,6 +144,9 @@ export function drawCockpitDisplay(ctx, flight) {
   ctx.strokeStyle = '#f2eccc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-400, 0); ctx.lineTo(400, 0); ctx.stroke();
   for (let pitch = -30; pitch <= 30; pitch += 10) if (pitch) { ctx.beginPath(); ctx.moveTo(-26, -pitch * 2); ctx.lineTo(26, -pitch * 2); ctx.stroke(); }
   ctx.restore(); text('— ◇ —', x - 46, y + 7, 23, '#ffdb86'); text('ATTITUDE', gap + 14, 47, 20); text(`HDG ${data.heading}`, gap + 14, height - 38, 23);
+  const slipY = height - 66;
+  ctx.strokeStyle = '#c8eee4';ctx.beginPath();ctx.moveTo(x - 36, slipY);ctx.lineTo(x + 36, slipY);ctx.stroke();
+  ctx.fillStyle = '#ffdb86';ctx.beginPath();ctx.arc(x + Math.max(-1, Math.min(1, flight.sideslip / .3)) * 32, slipY, 5, 0, Math.PI * 2);ctx.fill();
   const second = gap * 2 + tile;
   text('FLIGHT DATA', second + 14, 47, 20); text(`${data.speed}`, second + 14, 104, 42); text('KM/H', second + 14, 133, 18, '#7da6b4');
   text(`${data.altitude} M`, second + 14, 190, 30); text(`V/S ${data.vertical}`, second + 14, 232, 21);

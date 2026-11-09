@@ -9,8 +9,8 @@ const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
 const pose = new Quaternion(), rotation = new Quaternion(), angles = new Euler(0, 0, 0, 'YXZ');
 const angular = new Vector3(), forward = new Vector3(), up = new Vector3(), right = new Vector3(), from = new Vector3();
 const worldUp = new Vector3(0, 1, 0);
-export const AIRCRAFT_PHYSICS_DEFAULTS = Object.freeze({ mode: 'assisted', pitchRate: 1, rollRate: 1, yawRate: 1, response: 1, stability: 1, gravity: 1, thrust: 1, engineResponse: 1, mass: 1, drag: 1, lift: 1, maxSpeed: 1, airBrake: 1, wheelBrake: 1, pitchLimit: 1, bankLimit: 1, flightPath: 1, stallAngle: 1, inducedDrag: 1, loadLimit: 1 });
-export const AIRCRAFT_PHYSICS_LIMITS = Object.freeze({ pitchRate: [.2, 3], rollRate: [.2, 3], yawRate: [.2, 3], response: [.25, 3], stability: [0, 1], gravity: [.5, 1.5], thrust: [0, 3], engineResponse: [.25, 3], mass: [.5, 2], drag: [.25, 2], lift: [.5, 1.75], maxSpeed: [.5, 2], airBrake: [.25, 2], wheelBrake: [.5, 2], pitchLimit: [.4, 1.5], bankLimit: [.4, 1.25], flightPath: [.4, 1.8], stallAngle: [.6, 1.6], inducedDrag: [.25, 3], loadLimit: [.5, 1.5] });
+export const AIRCRAFT_PHYSICS_DEFAULTS = Object.freeze({ mode: 'assisted', pitchRate: 1, rollRate: 1, yawRate: 1, response: 1, stability: 1, gravity: 1, thrust: 1, engineResponse: 1, mass: 1, drag: 1, lift: 1, maxSpeed: 1, airBrake: 1, wheelBrake: 1, pitchLimit: 1, bankLimit: 1, flightPath: 1, lateralResponse: 1, stallAngle: 1, inducedDrag: 1, loadLimit: 1 });
+export const AIRCRAFT_PHYSICS_LIMITS = Object.freeze({ pitchRate: [.2, 3], rollRate: [.2, 3], yawRate: [.2, 3], response: [.25, 3], stability: [0, 1], gravity: [.5, 1.5], thrust: [0, 3], engineResponse: [.25, 3], mass: [.5, 2], drag: [.25, 2], lift: [.5, 1.75], maxSpeed: [.5, 2], airBrake: [.25, 2], wheelBrake: [.5, 2], pitchLimit: [.4, 1.5], bankLimit: [.4, 1.25], flightPath: [.4, 1.8], lateralResponse: [.25, 3], stallAngle: [.6, 1.6], inducedDrag: [.25, 3], loadLimit: [.5, 1.5] });
 export const AIRCRAFT_PRESETS = Object.freeze([
   { id: 'standard', name: '恢复标准', physics: {} },
   { id: 'agile', name: '灵活机动', physics: { mode: 'maneuver', pitchRate: 1.65, rollRate: 1.8, yawRate: 1.3, response: 1.5, stability: .12, thrust: 1.1, mass: .85, flightPath: 1.25 } },
@@ -32,7 +32,8 @@ export function setAircraftPhysics(flight, settings = {}) {
     stall: aircraft.stall * liftScale, takeoff: aircraft.takeoff * liftScale, landingSpeed: aircraft.landingSpeed * liftScale,
     maxSpeed: aircraft.maxSpeed * physics.maxSpeed, response: aircraft.response * physics.response / physics.mass,
     pitchLimit: aircraft.pitchLimit * physics.pitchLimit, bankLimit: aircraft.bankLimit * physics.bankLimit,
-    flightPath: .8 * physics.flightPath / physics.mass, airBrake: 7 * physics.airBrake / physics.mass, wheelBrake: 18 * physics.wheelBrake / physics.mass,
+    flightPath: .8 * physics.flightPath / physics.mass, lateralResponse: aircraft.response * physics.lateralResponse / physics.mass,
+    airBrake: 7 * physics.airBrake / physics.mass, wheelBrake: 18 * physics.wheelBrake / physics.mass,
     stallAngle: (aircraft.cockpit === 'fighter' ? .42 : aircraft.cockpit === 'light' ? .3 : .26) * physics.stallAngle,
     loadLimit: (aircraft.cockpit === 'fighter' ? 9 : aircraft.cockpit === 'light' ? 6 : aircraft.cockpit === 'airliner' ? 2.5 : 3.5) * physics.loadLimit,
   };
@@ -69,7 +70,7 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
   const south = runwayDirection === '18';
   const flight = {
     aircraft, status: airborne ? 'running' : 'ready', x: 0, y: airborne ? 420 : aircraft.gearHeight, z: airborne ? RUNWAY.center : south ? RUNWAY.end + 180 : RUNWAY.start - 180,
-    heading: south ? Math.PI : 0, pitch: 0, roll: 0, speed: 0,
+    heading: south ? Math.PI : 0, trackHeading: south ? Math.PI : 0, sideslip: 0, pitch: 0, roll: 0, speed: 0,
     verticalSpeed: 0, throttle: airborne ? .65 : 0, engineOutput: airborne ? .65 : 0, gearDown: !airborne, onGround: !airborne,
     flaps: 0, speedBrake: false, runwayDirection: south ? '18' : '36',
     hasFlown: airborne, stalling: false, elapsed: 0, distance: 0, gates: 0, events: [], reason: '',
@@ -111,6 +112,7 @@ export function runwayContact(flight, aircraft) {
   const extentY = Math.abs(Math.sin(flight.roll) * Math.cos(flight.pitch)) * aircraft.span * .42 + Math.abs(Math.sin(flight.pitch)) * aircraft.length * .35 + Math.abs(Math.cos(flight.roll) * Math.cos(flight.pitch)) * aircraft.gearHeight * .45;
   return flight.gearDown && Math.abs(flight.x) < RUNWAY.width / 2 - aircraft.span * .12
     && flight.z > RUNWAY.end && flight.z < RUNWAY.start && alignment < .28
+    && Math.abs(Math.sin(flight.trackHeading)) < .28 && Math.cos(flight.trackHeading - flight.heading) > .98
     && Math.abs(flight.roll) < .2 && flight.pitch > -.12 && flight.pitch < .3
     && flight.speed <= flight.performance.landingSpeed && flight.verticalSpeed >= -aircraft.sinkLimit && extentY <= aircraft.gearHeight + .2;
 }
@@ -175,7 +177,7 @@ function stepFlight(flight, input, dt) {
   const aerodynamicLoad = Math.max(load, Math.abs(normal / gravity));
   const inducedDrag = flight.onGround ? 0 : aircraft.turnDrag * physics.inducedDrag * (
     .35 * (aerodynamicLoad ** 2 - 1) * Math.min(4, (baseStall / Math.max(flight.speed, 1)) ** 2)
-    + 3 * flow.separation * Math.min(4, (flight.speed / baseStall) ** 2));
+    + (3 * flow.separation + 1.5 * Math.sin(flight.sideslip) ** 2) * Math.min(4, (flight.speed / baseStall) ** 2));
   const drag = performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2 + inducedDrag;
   const braking = flight.onGround ? controls.wheelBrake * performance.wheelBrake : (controls.brake || flight.speedBrake ? performance.airBrake : 0);
   const verticalAcceleration = normal * Math.cos(flight.roll) * Math.cos(flight.pitch) - gravity;
@@ -195,9 +197,16 @@ function stepFlight(flight, input, dt) {
     }
   }
   flight.heading = Math.atan2(Math.sin(flight.heading), Math.cos(flight.heading));
+  if (flight.onGround) flight.trackHeading = flight.heading;
+  else {
+    const slip = Math.atan2(Math.sin(flight.heading - flight.trackHeading), Math.cos(flight.heading - flight.trackHeading));
+    flight.trackHeading += slip * (1 - Math.exp(-performance.lateralResponse * authority * dt));
+    flight.trackHeading = Math.atan2(Math.sin(flight.trackHeading), Math.cos(flight.trackHeading));
+  }
+  flight.sideslip = Math.atan2(Math.sin(flight.heading - flight.trackHeading), Math.cos(flight.heading - flight.trackHeading));
   const horizontalSpeed = Math.sqrt(Math.max(0, speed ** 2 - flight.verticalSpeed ** 2));
-  flight.x += Math.sin(flight.heading) * horizontalSpeed * dt;
-  flight.z -= Math.cos(flight.heading) * horizontalSpeed * dt;
+  flight.x += Math.sin(flight.trackHeading) * horizontalSpeed * dt;
+  flight.z -= Math.cos(flight.trackHeading) * horizontalSpeed * dt;
   if (!flight.onGround) {
     flight.y += flight.verticalSpeed * dt + .5 * verticalAcceleration * dt ** 2;
     flight.verticalSpeed = clamp(flight.verticalSpeed + verticalAcceleration * dt, -flight.speed, flight.speed);

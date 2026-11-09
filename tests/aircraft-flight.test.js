@@ -114,10 +114,11 @@ test('low airspeed loses lift, falls under gravity and cannot hover', () => {
 test('safe runway touchdown needs gear, alignment, moderate bank, speed and descent', () => {
   const sample = { ...createAircraftFlight('a380', true), x: 0, z: 0, heading: 0, roll: .03, pitch: .05, speed: 80, verticalSpeed: -2, gearDown: true };
   assert.equal(runwayContact(sample, AIRCRAFT[0]), true);
-  for (const change of [{ gearDown: false }, { x: 90 }, { z: -4000 }, { heading: .8 }, { roll: .5 }, { speed: 180 }, { verticalSpeed: -15 }, { pitch: -.3 }]) {
+  for (const change of [{ gearDown: false }, { x: 90 }, { z: -4000 }, { heading: .8 }, { trackHeading: .4 }, { roll: .5 }, { speed: 180 }, { verticalSpeed: -15 }, { pitch: -.3 }]) {
     assert.equal(runwayContact({ ...sample, ...change }, AIRCRAFT[0]), false);
   }
-  assert.equal(runwayContact({ ...sample, heading: Math.PI }, AIRCRAFT[0]), true);
+  assert.equal(runwayContact({ ...sample, heading: Math.PI, trackHeading: Math.PI }, AIRCRAFT[0]), true);
+  assert.equal(runwayContact({ ...sample, heading: Math.PI, trackHeading: 0 }, AIRCRAFT[0]), false, 'backwards motion is not a safe landing');
   assert.equal(runwayContact({ ...sample, pitch: .28 }, AIRCRAFT[0]), false, 'tail contact above gear height cannot count as a safe landing');
   assert.equal(runwayContact({ ...sample, roll: .18 }, AIRCRAFT[0]), false, 'a wingtip touching first cannot count as a safe landing');
 });

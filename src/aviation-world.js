@@ -3,6 +3,7 @@ import { AIR_GATES, islandHeight } from './aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from './airport.js';
 import { createAirport } from './airport-view.js';
 import { createRunway } from './runway-view.js';
+import { AVIATION_ENVIRONMENT_DEFAULTS, createAviationTerrain, setTerrainDetailDistance } from './aviation-terrain.js';
 import { cockpitSeat, cockpitSwitchSpacing, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
 
@@ -14,6 +15,7 @@ export const AVIATION_CAMERAS = ['追随机位', '近距跟随', '驾驶舱', '�
 export const AVIATION_VIEW_DEFAULTS = Object.freeze({
   cockpitFov: 68, exteriorFov: 55, chaseDistance: 1, chaseHeight: 1, orbitAngle: 0,
   followResponse: 5, lookResponse: 9, lookAngle: 55, speedFov: true, speedFovAmount: 18,
+  seatHeight: 0, seatForward: 0, lookPitch: 0, panelScale: 1, panelHeight: 0, panelDistance: 0,
 });
 const CAMERA_OFFSETS = [[.4, .52, 1.8], [.15, .24, 1.05], null, [.08, .35, -1.8], [-1.8, .35, .08], [0, 2.4, .3]];
 
@@ -29,7 +31,7 @@ export class AviationWorld {
     this.cockpitScene.add(new THREE.HemisphereLight(0xdbefff, 0x7b8070, 3));
     const cabinLight = new THREE.DirectionalLight(0xffe6c6, 2);
     cabinLight.position.set(-1, 2, 1); this.cockpitScene.add(cabinLight);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
     this.renderer.setClearColor('#b6dbe8');
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -47,6 +49,7 @@ export class AviationWorld {
     this.lookTarget = 0; this.lookAngle = 0;
     this.quality = matchMedia('(any-pointer: coarse)').matches ? .75 : 1.25;
     this.buildEnvironment();
+    this.setEnvironment();
     this.resize();
   }
 
@@ -68,20 +71,9 @@ export class AviationWorld {
 
   buildEnvironment() {
     this.water = this.mesh(new THREE.PlaneGeometry(120000, 120000).rotateX(-Math.PI / 2), 0x368fbb, [0, -12, 0], [1, 1, 1], { roughness: .3, metalness: .25 });
-    const terrain = new THREE.PlaneGeometry(24000, 28000, 140, 160).rotateX(-Math.PI / 2);
-    const positions = terrain.attributes.position, colors = [];
-    const sand = new THREE.Color('#bfbd8b'), grass = new THREE.Color('#598567'), rock = new THREE.Color('#6d8176');
-    for (let index = 0; index < positions.count; index++) {
-      const x = positions.getX(index), z = positions.getZ(index), height = islandHeight(x, z);
-      positions.setY(index, height);
-      const color = height < -.1 ? sand : height > 120 ? rock : grass;
-      const variation = .93 + .07 * Math.sin(x * .008 + z * .006);
-      colors.push(color.r * variation, color.g * variation, color.b * variation);
-    }
-    terrain.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); terrain.computeVertexNormals();
-    this.mesh(terrain, 0xffffff, [0, 0, 0], [1, 1, 1], { vertexColors: true });
     this.boxes(0x6d7a72, [[0, .1, RUNWAY.center, 450, .15, RUNWAY.length + 400]]);
-    this.scene.add(createRunway(), createAirport());
+    this.airport = new THREE.LOD();this.airport.addLevel(createAirport(), 0).addLevel(createAirport({ lowDetail: true }), 2000, .15);
+    this.scene.add(createRunway(), this.airport);
     const trees = [], trunks = [];
     for (let i = 0; i < 230; i++) {
       const angle = i * 2.39996, radius = 1600 + i * 83 % 6000;
@@ -113,6 +105,23 @@ export class AviationWorld {
     const beaconPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 160, 0)];
     this.beacon = new THREE.Line(new THREE.BufferGeometry().setFromPoints(beaconPoints), new THREE.LineBasicMaterial({ color: 0xa0f9ed, transparent: true, opacity: .65 }));
     this.beacon.position.z = RUNWAY.start - 180; this.scene.add(this.beacon);
+  }
+
+  setEnvironment(settings = {}) {
+    const next = { ...AVIATION_ENVIRONMENT_DEFAULTS, ...this.environmentSettings, ...settings };
+    for (const [key, low, high] of [['viewDistance', 30000, 160000], ['detailDistance', 1500, 12000]]) {
+      next[key] = Number.isFinite(next[key]) ? Math.max(low, Math.min(high, next[key])) : AVIATION_ENVIRONMENT_DEFAULTS[key];
+    }
+    if (!['low', 'balanced', 'high'].includes(next.groundDetail)) next.groundDetail = 'low';
+    if (this.camera.far !== next.viewDistance) { this.camera.far = next.viewDistance;this.camera.updateProjectionMatrix(); }
+    this.scene.fog.near = next.viewDistance * .24;this.scene.fog.far = next.viewDistance * .9;
+    this.water.scale.set(next.viewDistance / 50000, 1, next.viewDistance / 50000);
+    if (!this.terrain || next.groundDetail !== this.environmentSettings?.groundDetail) {
+      if (this.terrain) disposeAircraftObject(this.terrain);
+      this.terrain = createAviationTerrain(next.groundDetail, next.detailDistance);this.scene.add(this.terrain);
+    } else setTerrainDetailDistance(this.terrain, next.detailDistance);
+    if (this.airport) this.airport.levels[1].distance = next.detailDistance * ({ low: .45, balanced: .8, high: 1.3 }[next.groundDetail]);
+    this.environmentSettings = next;
   }
 
   async setAircraft(aircraft) {
@@ -216,9 +225,12 @@ export class AviationWorld {
     if (inside && this.cockpit) {
       offset.set(...cockpitSeat(flight.aircraft)).applyQuaternion(this.aircraftRoot.quaternion);
       this.cockpit.position.copy(this.aircraftRoot.position).add(offset); this.cockpit.quaternion.copy(this.aircraftRoot.quaternion);
-      this.camera.position.copy(this.cockpit.position);
+      offset.set(0, view.seatHeight, view.seatForward).applyQuaternion(this.aircraftRoot.quaternion);
+      this.camera.position.copy(this.cockpit.position).add(offset);
+      this.cockpit.userData.panel.scale.setScalar(view.panelScale);
+      this.cockpit.userData.panel.position.set(0, view.panelHeight, view.panelDistance);
       this.lookAngle += ((look ?? this.lookTarget) - this.lookAngle) * (this.resetCamera ? 1 : 1 - Math.exp(-dt * view.lookResponse));
-      cockpitLook.setFromEuler(lookRotation.set(-.08, this.lookAngle, 0));
+      cockpitLook.setFromEuler(lookRotation.set(-.08 + view.lookPitch * Math.PI / 180, this.lookAngle, 0));
       this.camera.quaternion.copy(this.aircraftRoot.quaternion).multiply(cockpitLook);
       updateCockpitControls(this.cockpit, flight, flight.systems.controls);
       this.displayTime += dt;

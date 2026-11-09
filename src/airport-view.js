@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { AIRPORT_BUILDINGS, TAXIWAYS } from './airport.js';
 import { batchMeshes } from './model-utils.js';
 
-export function createAirport() {
+export function createAirport({ lowDetail = false } = {}) {
   const root = new THREE.Group(); root.name = 'island-airport';
   const architecture = new THREE.Group(), pavement = new THREE.Group();
   architecture.name = 'airport-architecture'; pavement.name = 'airport-pavement'; root.add(architecture, pavement);
@@ -25,6 +25,16 @@ export function createAirport() {
   box(pavement, 'asphalt', 330, .23, 850, 370, .22, 900);
   box(pavement, 'asphalt', -610, .2, -100, 30, .2, 1150);
   box(pavement, 'asphalt', -790, .2, -100, 280, .2, 700);
+  if (lowDetail) {
+    for (const { x, z, width, depth } of TAXIWAYS) box(pavement, 'asphalt', x, .29, z, width, .22, depth);
+    for (const { kind, x, z, width, depth, base, height } of AIRPORT_BUILDINGS) {
+      if (kind === 'windsock' || kind === 'jetway') continue;
+      box(architecture, kind === 'city' ? 'concrete' : kind === 'fuel' ? 'white' : 'metal', x, (height + base) / 2, z, width, height - base, depth);
+      if (kind === 'tower') box(architecture, 'glass', x, 95, z, 42, 13, 42);
+    }
+    for (const group of [architecture, pavement]) batchMeshes(group);
+    return root;
+  }
   for (const taxiway of TAXIWAYS) {
     box(pavement, 'asphalt', taxiway.x, .29, taxiway.z, taxiway.width, .22, taxiway.depth);
     const horizontal = taxiway.width > taxiway.depth, length = horizontal ? taxiway.width : taxiway.depth;

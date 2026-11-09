@@ -102,6 +102,41 @@ test('distance, elevation, orbit and field of view affect real camera geometry',
   assert.ok(world.camera.position.y >= 4);
 });
 
+test('environment distance changes clipping, fog and ocean coverage without affecting cockpit clipping', () => {
+  const { world } = fixture();
+  world.scene = new THREE.Scene();world.scene.fog = new THREE.Fog(0xb6dbe8, 9000, 42000);
+  world.cockpitCamera = new THREE.PerspectiveCamera(68, 1, .06, 8);
+  for (const distance of [30000, 100000, 160000]) {
+    world.setEnvironment({ viewDistance: distance });
+    assert.equal(world.camera.far, distance);
+    assert.ok(world.scene.fog.far < world.camera.far && world.scene.fog.near > 9000 * distance / 65000);
+    assert.ok(world.water.scale.x * 120000 >= distance * 2.4 - 1e-6);
+    assert.equal(world.cockpitCamera.far, 8);
+  }
+  world.setEnvironment({ viewDistance: Infinity, detailDistance: NaN, groundDetail: 'unknown' });
+  assert.ok(Number.isFinite(world.camera.far));
+});
+
+test('seat adjustment changes the eye position while the cockpit remains attached to the aircraft', () => {
+  const { world, flight } = fixture('a380');
+  world.cockpit = createAircraftCockpit(flight.aircraft);
+  world.cockpitCamera = new THREE.PerspectiveCamera(68, 1, .06, 8);
+  world.renderer.clearDepth = () => {};
+  world.cockpitContext = new Proxy({ canvas: { width: 1536, height: 320 } }, { get: (object, key) => object[key] ?? (() => {}) });
+  world.cockpitTexture = {};world.displayHz = 10;world.displayTime = 0;
+  world.setCameraMode(2);world.render(flight, 0);
+  const base = world.cockpit.position.clone();
+  Object.assign(world.viewSettings, { seatHeight: .2, seatForward: -.15, lookPitch: 8, panelScale: .85, panelHeight: -.1, panelDistance: .1 });
+  Object.assign(flight, { pitch: .3, roll: .4, heading: 1 });world.render(flight, 0);
+  const expected = new THREE.Vector3(0, .2, -.15).applyQuaternion(world.aircraftRoot.quaternion);
+  assert.ok(world.camera.position.clone().sub(world.cockpit.position).distanceTo(expected) < 1e-8);
+  assert.ok(world.cockpit.position.distanceTo(base) > 1);
+  assert.equal(world.cockpit.userData.panel.scale.x, .85);
+  assert.equal(world.cockpit.userData.panel.position.y, -.1);
+  assert.equal(world.cockpit.userData.panel.position.z, .1);
+  disposeAircraftObject(world.cockpit);
+});
+
 test('render limiting keeps elapsed animation time and does not drift on mismatched refresh rates', () => {
   for (const refresh of [60, 120, 144]) for (const limit of [30, 45, 60, 90, 120, 0]) {
     const clock = new AviationRenderClock(); let frames = 0, elapsed = 0;
