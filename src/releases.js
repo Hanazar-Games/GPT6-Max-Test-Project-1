@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞机多机位与画面调校</h2>
-      <p id="release-copy">用六种机位观察飞行，锁定外部方位，按设备细调镜头与画面。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞机镜头、声音与异常恢复修复</h2>
+      <p id="release-copy">修正新机位、暂停仪表与配乐切换，完善声音提示和异常恢复。</p>
+      <ul class="release-list">
+        <li><strong>镜头与仪表同步</strong>切换机位后立即锁定采用新机位，暂停调参后驾驶舱仪表随重绘更新；运行时保留所选仪表刷新频率。</li>
+        <li><strong>声音切换更准确</strong>修复共用音高的配乐切换残留旧节奏或音色，保留事件音效；声音状态显示两路实际音量，双路为零时提供提示。</li>
+        <li><strong>渲染与异常保护</strong>减少尺寸和实际像素比未变时的缓冲区更新，调整渲染比例保留镜头阻尼。图形中断后停止飞行与声音，屏蔽键盘恢复和迟到加载回调；可返回基地重新进入。1.27.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>82 个版本</span></summary>
+      <article><h3>v1.27.0 · 飞机多机位与画面调校</h3>
+      <p>用六种机位观察飞行，锁定外部方位，按设备细调镜头与画面。</p>
       <ul class="release-list">
         <li><strong>六机位与方位锁</strong>追随、近距、驾驶舱、机首、左翼、俯视可直接选择；C 循环，V 返回上次外部机位。L 固定外部观察方位与地平线，位置仍跟随飞机；R 回正并解除锁定。</li>
         <li><strong>镜头参数更完整</strong>增加外部视场角、高度、环绕角度、跟随响应、舱内转头幅度与响应、速度扩角幅度；距离扩展至 50%–300%，支持恢复默认。保持六机型的机身和地面净空。</li>
         <li><strong>画面负担可调</strong>30 / 45 / 60 / 90 / 120 FPS 或跟随屏幕，舱内仪表 5 / 10 / 20 Hz，渲染比例上限 0.5×–2×。飞行物理独立更新，修复仪表计时边界重复上传；手机镜头面板可滚动，1.26.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>81 个版本</span></summary>
+      </article>
       <article><h3>v1.26.0 · 飞机操纵细调与快捷操作</h3>
       <p>分别调整三轴手感，用独立方向舵和快捷油门完成每次起降。</p>
       <ul class="release-list">

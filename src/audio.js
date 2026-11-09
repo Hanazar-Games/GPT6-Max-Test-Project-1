@@ -213,9 +213,10 @@ export class AudioEngine {
   update(game) {
     this.setState(game.status);
     const theme = game.mission?.music ?? { root: 45, bpm: 124 };
-    if (this.themeRoot !== theme.root) {
+    const mode = theme.mode ?? 'minor', voice = theme.voice ?? 'sine';
+    if (this.theme?.root !== theme.root || this.theme.bpm !== theme.bpm || this.theme.mode !== mode || this.theme.voice !== voice) {
       this.stopVoices('music');
-      this.themeRoot = theme.root;
+      this.theme = { root: theme.root, bpm: theme.bpm, mode, voice };
       this.beat = 0;
     }
     if (!this.engine || this.context.state !== 'running' || this.background) return;

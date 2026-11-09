@@ -311,14 +311,30 @@ test('switching planets cancels old music while retaining event sounds', async (
   audio.update({ ...running, mission: { music: { root: 39, bpm: 142 } } });
   assert.ok(music.every(voice => !audio.voices.has(voice)));
   assert.ok(effects.every(voice => audio.voices.has(voice)));
-  assert.equal(audio.themeRoot, 39);
+  assert.equal(audio.theme.root, 39);
   assert.ok([...audio.voices].some(voice => voice.bus === 'music'));
+});
+
+test('music changes tempo, mode or voice even when the new theme shares its root', async () => {
+  for (const change of [{ bpm: 136 }, { mode: 'major' }, { voice: 'triangle' }]) {
+    const audio = await setup(), music = { root: 45, bpm: 124, mode: 'minor', voice: 'sine' };
+    audio.update({ ...running, mission: { music } }); audio.event('pickup');
+    const oldMusic = [...audio.voices].filter(voice => voice.bus === 'music');
+    const effects = [...audio.voices].filter(voice => voice.bus === 'sfx');
+    audio.update({ ...running, mission: { music: { ...music, ...change } } });
+    assert.ok(oldMusic.every(voice => !audio.voices.has(voice)), JSON.stringify(change));
+    assert.ok(effects.every(voice => audio.voices.has(voice)));
+    assert.ok([...audio.voices].some(voice => voice.bus === 'music'));
+    const current = [...audio.voices];
+    audio.update({ ...running, mission: { music: { ...music, ...change } } });
+    assert.ok(current.every(voice => audio.voices.has(voice)), 'equal theme values must not restart music each frame');
+  }
 });
 
 test('high-speed percussion is stopped by pause and music mute without silencing SFX', async () => {
   const audio = await setup();
   audio.beat = 15;
-  audio.themeRoot = 45;
+  audio.theme = { root: 45, bpm: 124, mode: 'minor', voice: 'sine' };
   audio.update({ ...running, speed: 420 });
   assert.ok([...audio.voices].some(voice => voice.oscillator.buffer));
   audio.setVolume('music', 0);

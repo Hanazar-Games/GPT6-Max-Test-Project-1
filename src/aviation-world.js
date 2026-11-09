@@ -139,7 +139,7 @@ export class AviationWorld {
   toggleCameraLock() {
     if (this.cameraMode === 2) return false;
     this.cameraLocked = !this.cameraLocked;
-    this.lockedOffset = this.cameraLocked ? this.camera.position.clone().sub(this.aircraftRoot.position) : null;
+    this.lockedOffset = this.cameraLocked && !this.resetCamera ? this.camera.position.clone().sub(this.aircraftRoot.position) : null;
     this.resetCamera = true;
     return this.cameraLocked;
   }
@@ -147,11 +147,16 @@ export class AviationWorld {
   resize() {
     const width = this.container.clientWidth, height = this.container.clientHeight;
     if (!width || !height) return;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, this.quality));
-    this.renderer.setSize(width, height, false);
-    this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
-    this.cockpitCamera.aspect = width / height; this.cockpitCamera.updateProjectionMatrix();
-    this.resetCamera = true;
+    const pixelRatio = Math.min(devicePixelRatio || 1, this.quality);
+    const resized = width !== this.width || height !== this.height;
+    if (!resized && pixelRatio === this.pixelRatio) return;
+    this.renderer.setDrawingBufferSize(width, height, pixelRatio);
+    this.width = width; this.height = height; this.pixelRatio = pixelRatio;
+    if (resized) {
+      this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
+      this.cockpitCamera.aspect = width / height; this.cockpitCamera.updateProjectionMatrix();
+      this.resetCamera = true;
+    }
   }
 
   render(flight, dt, input = {}, look = null) {
@@ -202,12 +207,15 @@ export class AviationWorld {
       updateCockpitControls(this.cockpit, flight, input);
       this.displayTime += dt;
       const interval = 1 / this.displayHz;
-      if (this.displayTime + 1e-9 >= interval || this.resetCamera) {
+      if (this.displayTime + 1e-9 >= interval || this.resetCamera || flight.status !== 'running') {
         drawCockpitDisplay(this.cockpitContext, flight); this.cockpitTexture.needsUpdate = true;
         this.displayTime = this.resetCamera ? 0 : Math.max(0, this.displayTime - Math.floor((this.displayTime + 1e-9) / interval) * interval);
       }
     } else {
-      if (this.cameraLocked && flight.status !== 'ready') { offset.copy(this.lockedOffset); target.copy(this.aircraftRoot.position); }
+      if (this.cameraLocked && flight.status !== 'ready') {
+        this.lockedOffset ??= offset.clone();
+        offset.copy(this.lockedOffset); target.copy(this.aircraftRoot.position);
+      }
       const desired = offset.add(this.aircraftRoot.position);
       desired.y = Math.max(desired.y, Math.max(-12, islandHeight(desired.x, desired.z)) + 4);
       this.camera.position.lerp(desired, this.resetCamera || this.cameraLocked ? 1 : 1 - Math.exp(-dt * view.followResponse));

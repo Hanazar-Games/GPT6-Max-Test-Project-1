@@ -96,20 +96,22 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   let world;
   try { world = new AviationWorld($('.av-viewport')); }
   catch (error) { root.remove(); throw error; }
-  let flight = createAircraftFlight(), loaded = false, disposed = false, returning = false, loadVersion = 0, raf = 0;
+  let flight = createAircraftFlight(), loaded = false, disposed = false, graphicsLost = false, returning = false, loadVersion = 0, raf = 0;
   let previousTime = performance.now(), accumulator = 0, uiTime = 0, dirty = true, stickPointer = null, stickPitch = 0, stickRoll = 0, noticeTimer;
   let frameLimit = 60, lastExterior = 0;
   const listen = (target, event, callback, options = {}) => target.addEventListener(event, callback, { ...options, signal: listeners.signal });
   const text = (element, value) => { if (element.textContent !== String(value)) element.textContent = value; };
-  let lastAudioState;
+  let lastAudioStatus;
 
   function syncAudioStatus() {
     const state = audio.enabled ? audio.context?.state ?? 'locked' : 'muted';
-    if (state === lastAudioState) return;
-    lastAudioState = state;
+    const music = Math.round(audio.volumes.music * 100), sfx = Math.round(audio.volumes.sfx * 100);
+    const status = `${state}/${music}/${sfx}`;
+    if (status === lastAudioStatus) return;
+    lastAudioStatus = status;
     const retry = action('audio-retry'), focused = document.activeElement === retry;
     retry.hidden = state === 'running' || state === 'muted';
-    text(values['audio-status'], state === 'muted' ? '全部声音已静音，点击顶部“已静音”恢复。' : state === 'running' ? '声音已启用，音乐与引擎 / 音效可分别调节。' : '浏览器尚未启用声音，请点击“重新启用声音”重试。');
+    text(values['audio-status'], state === 'muted' ? '全部声音已静音，点击顶部“已静音”恢复。' : state === 'running' ? `音乐 ${music}% · 引擎 / 音效 ${sfx}%。${music || sfx ? '暂停与离开页面时停止播放。' : '当前音量均为 0%，请调高滑杆。'}` : '浏览器尚未启用声音，请点击“重新启用声音”重试。');
     if (focused && retry.hidden) action('sound').focus({ preventScroll: true });
   }
 
@@ -233,29 +235,30 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
 
   function showPanel() {
-    const ready = flight.status === 'ready', paused = flight.status === 'paused';
+    const ready = flight.status === 'ready' && !graphicsLost, paused = flight.status === 'paused' && !graphicsLost;
     panel.hidden = flight.status === 'running';
     if (!panel.hidden) syncPerformance();
     if (!panel.hidden) { clearTimeout(noticeTimer); $('.av-notice').classList.remove('visible'); }
     $('.av-aircraft-list').hidden = !ready; $('.av-runway-choice').hidden = !ready; values.specs.hidden = !ready; loadStatus.hidden = !ready;
     action('resume').hidden = !paused;
     action('runway').hidden = !ready; action('airborne').hidden = !ready;
-    action('hangar').hidden = ready;
+    action('hangar').hidden = ready || graphicsLost;
     action('retry').hidden = loaded || !ready || loadStatus.dataset.state !== 'error';
-    text($('#av-panel-title'), ready ? '这次，真的飞起来。' : paused ? '云端，稍作停留。' : flight.status === 'completed' ? '平稳返航，欢迎回来。' : '飞行结束，再试一次。');
-    text($('#av-panel-copy'), ready ? '从海岸跑道起飞，掠过云层、群山与城市。自由探索，或依次穿过六座导航环，再返回跑道。' : paused ? '飞行已暂停，声音已停止。准备好后继续，或返回机库更换飞机。' : flight.status === 'completed' ? `已飞行 ${(flight.distance / 1000).toFixed(1)} 公里，通过 ${flight.gates} / 6 座训练环。` : flight.reason);
+    text($('#av-panel-title'), graphicsLost ? '图形连接已中断。' : ready ? '这次，真的飞起来。' : paused ? '云端，稍作停留。' : flight.status === 'completed' ? '平稳返航，欢迎回来。' : '飞行结束，再试一次。');
+    text($('#av-panel-copy'), graphicsLost ? '飞行与声音已停止。请点击右上角“返回基地”，再重新进入飞机模式以恢复画面。' : ready ? '从海岸跑道起飞，掠过云层、群山与城市。自由探索，或依次穿过六座导航环，再返回跑道。' : paused ? '飞行已暂停，声音已停止。准备好后继续，或返回机库更换飞机。' : flight.status === 'completed' ? `已飞行 ${(flight.distance / 1000).toFixed(1)} 公里，通过 ${flight.gates} / 6 座训练环。` : flight.reason);
     text(action('pause'), paused ? '继续' : '设置');
     setCameraPanel(false); syncCameraUI(); renderClock.reset();
     action('camera').disabled = flight.status !== 'running';
-    action('pause').disabled = !['running', 'paused'].includes(flight.status);
+    action('pause').disabled = graphicsLost || !['running', 'paused'].includes(flight.status);
     root.classList.toggle('av-flying', flight.status === 'running');
     for (const element of [$('.av-instruments'), $('.av-navigation'), $('.av-flight-tools'), $('.av-joystick'), $('.av-brake')]) element.inert = !panel.hidden;
     clearInput(); dirty = true;
-    if (!panel.hidden) (paused ? action('resume') : $('#av-panel-title')).focus({ preventScroll: true });
+    if (!panel.hidden) (graphicsLost ? action('exit') : paused ? action('resume') : $('#av-panel-title')).focus({ preventScroll: true });
     else root.focus({ preventScroll: true });
   }
 
   async function selectAircraft(id) {
+    if (graphicsLost) return;
     const version = ++loadVersion;
     physicsSettings = aircraftSettings[id];
     flight = createAircraftFlight(id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); loaded = false; returning = false;
@@ -269,11 +272,11 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     showPanel();
     try {
       const installed = await world.setAircraft(flight.aircraft);
-      if (disposed || version !== loadVersion || !installed) return;
+      if (disposed || graphicsLost || version !== loadVersion || !installed) return;
       loaded = true; text(loadStatus, '飞机就绪 · 选择跑道起飞或直接空中试飞'); loadStatus.dataset.state = 'ready';
       action('runway').disabled = false; action('airborne').disabled = false; action('retry').hidden = true; dirty = true;
     } catch (error) {
-      if (disposed || version !== loadVersion || error.name === 'AbortError') return;
+      if (disposed || graphicsLost || version !== loadVersion || error.name === 'AbortError') return;
       console.error('Unable to load aircraft:', error);
       text(loadStatus, '模型载入失败，请重试或选择另一架飞机。'); loadStatus.dataset.state = 'error';
       action('retry').hidden = false; dirty = true;
@@ -281,7 +284,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
 
   function start(airborne) {
-    if (!loaded) return;
+    if (!loaded || graphicsLost) return;
     flight = createAircraftFlight(flight.aircraft.id, airborne, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); flight.status = 'running'; returning = false;
     accumulator = 0; previousTime = performance.now(); world.setCameraMode(world.cameraMode);
     unlockAudio(); showPanel();
@@ -290,6 +293,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
 
   function pause(onlyPause = false) {
+    if (graphicsLost) return;
     if (onlyPause && flight.status !== 'running') return;
     toggleAircraftPause(flight); accumulator = 0;
     audio.setState(flight.status === 'running' ? 'running' : 'paused'); showPanel();
@@ -518,7 +522,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen(window, 'resize', () => { world.resize(); dirty = true; clearInput(); });
   listen(window, 'orientationchange', () => pause(true));
   listen(world.renderer.domElement, 'webglcontextlost', event => {
-    event.preventDefault(); pause(true); loaded = false; notify('图形连接中断，请返回基地后重新进入飞机模式。');
+    event.preventDefault(); graphicsLost = true; loaded = false; world.loadController?.abort();
+    if (flight.status === 'running') toggleAircraftPause(flight);
+    accumulator = 0; audio.setState('paused'); showPanel();
     action('resume').disabled = true; action('runway').disabled = true; action('airborne').disabled = true;
   });
 
@@ -545,13 +551,13 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       } else accumulator = 0;
       uiTime += dt;
       if (dirty || (flight.status === 'running' && uiTime > .08)) { updateUI(); uiTime = 0; }
-      audioFrame.status = audioStates[flight.status]; audioFrame.speed = flight.speed; audioFrame.mission = flightMusic[flight.aircraft.id];
+      audioFrame.status = graphicsLost ? 'paused' : audioStates[flight.status]; audioFrame.speed = flight.speed; audioFrame.mission = flightMusic[flight.aircraft.id];
       audioFrame.aircraft = flight.aircraft; audioFrame.maxSpeed = flight.performance.maxSpeed;
       audioFrame.engineOutput = flight.engineOutput * physicsSettings.thrust; audioFrame.stalling = flight.stalling;
       audio.update(audioFrame);
       syncAudioStatus();
       const look = held.has('KeyZ') || held.has('KeyX') ? (Number(held.has('KeyZ')) - Number(held.has('KeyX'))) * world.viewSettings.lookAngle * Math.PI / 180 : null;
-      if (dirty || flight.status === 'running') {
+      if (!graphicsLost && (dirty || flight.status === 'running')) {
         const renderDt = renderClock.tick(dt, frameLimit, dirty);
         if (renderDt !== null) world.render(flight, renderDt, input, look);
       }

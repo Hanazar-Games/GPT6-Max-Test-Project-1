@@ -56,6 +56,36 @@ test('locked direction follows translation while preserving its world bearing an
   world.setCameraMode(2); assert.equal(world.toggleCameraLock(), false, 'cockpit uses aircraft attitude');
 });
 
+test('locking immediately after a camera switch captures the newly selected preset', () => {
+  for (const mode of [0, 3, 4, 5]) {
+    const { world, flight } = fixture(), reference = fixture();
+    world.setCameraMode(1); world.render(flight, 1 / 60);
+    world.setCameraMode(mode); world.toggleCameraLock(); world.render(flight, 1 / 60);
+    reference.world.setCameraMode(mode); reference.world.render(reference.flight, 1 / 60);
+    assert.ok(world.camera.position.distanceTo(reference.world.camera.position) < 1e-8, `mode ${mode} must not lock the previous camera`);
+  }
+});
+
+test('aviation resize only reallocates changed buffers and resolution alone preserves camera damping', t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'devicePixelRatio');
+  t.after(() => previous ? Object.defineProperty(globalThis, 'devicePixelRatio', previous) : delete globalThis.devicePixelRatio);
+  globalThis.devicePixelRatio = 2;
+  let writes = 0, projections = 0;
+  const camera = () => ({ updateProjectionMatrix() { projections++; } });
+  const world = Object.assign(Object.create(AviationWorld.prototype), {
+    container: { clientWidth: 1280, clientHeight: 720 }, quality: 1.25, camera: camera(), cockpitCamera: camera(),
+    renderer: { setDrawingBufferSize() { writes++; }, setPixelRatio() { writes++; }, setSize() { writes++; } },
+  });
+  world.resize(); assert.equal(writes, 1); assert.equal(projections, 2);
+  world.resetCamera = false; world.resize(); assert.equal(writes, 1);
+  world.quality = .5; world.resize(); assert.equal(writes, 2); assert.equal(projections, 2);
+  assert.equal(world.resetCamera, false);
+  globalThis.devicePixelRatio = 1; world.quality = 1.75; world.resize();
+  world.quality = 2; world.resize(); assert.equal(writes, 3, 'equivalent effective pixel ratios need no buffer writes');
+  world.container.clientWidth = 900; world.resize(); assert.equal(writes, 4);
+  assert.equal(world.camera.aspect, 900 / 720); assert.equal(world.resetCamera, true);
+});
+
 test('distance, elevation, orbit and field of view affect real camera geometry', () => {
   const { world, flight } = fixture();
   Object.assign(world.viewSettings, { speedFov: false, exteriorFov: 80, chaseDistance: 3, chaseHeight: 2, orbitAngle: 90 });
@@ -100,6 +130,9 @@ test('cockpit display refreshes at the selected cadence and stays idle outside t
     world.setCameraMode(2); world.render(flight, 0); uploads = 0;
     for (let i = 0; i < 600; i++) world.render(flight, 1 / 60);
     assert.equal(uploads, hz * 10, `${hz} Hz must not double-upload near floating point boundaries`);
+    flight.status = 'paused'; flight.throttle = .3;
+    const pausedUploads = uploads; world.render(flight, 0);
+    assert.equal(uploads, pausedUploads + 1, 'a requested paused redraw must refresh changed instruments without waiting for animation time');
     world.setCameraMode(0); const before = uploads;
     for (let i = 0; i < 60; i++) world.render(flight, 1 / 60);
     assert.equal(uploads, before);
