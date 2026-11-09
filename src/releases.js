@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞行告警与小屏操作修复</h2>
-      <p id="release-copy">看清自动化退出原因，稳定切换键盘焦点，让小屏驾驶舱留出操纵空间。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 座舱性能与开关反馈优化</h2>
+      <p id="release-copy">减少无效界面更新，展开设置即刻同步，让实体开关更清楚地说明当前能做什么。</p>
+      <ul class="release-list">
+        <li><strong>系统面板按需刷新</strong>关闭或收起的系统设置停止刷新，打开时立即显示最新目标、配平与参数，减少飞行界面的性能负担。</li>
+        <li><strong>操作与编辑保持稳定</strong>未变化的按钮和数值不再反复更新，正在编辑的目标值保持原样；暂停恢复、系统重置和手动接管继续同步状态。</li>
+        <li><strong>开关灯色更准确</strong>地面收轮、超速放襟翼、低速或关机接通 AP 等不可用操作显示灰色；已接通的自动化仍可关闭，放到底的襟翼仍可收起。1.30.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>88 个版本</span></summary>
+      <article><h3>v1.30.1 · 飞行告警与小屏操作修复</h3>
+      <p>看清自动化退出原因，稳定切换键盘焦点，让小屏驾驶舱留出操纵空间。</p>
       <ul class="release-list">
         <li><strong>告警只响一次</strong>自动驾驶与自动油门同时退出时，合并提示音并保留两项原因。退出警音使用预留声部，期间短暂降低配乐，随后恢复所选音量；暂停和静音仍生效。</li>
         <li><strong>键盘焦点更稳定</strong>飞行中 Tab 和 Shift+Tab 在飞机界面循环，修复跳出页面后意外暂停的问题；隐藏设置不参与循环，输入框仍可正常编辑与删除。</li>
         <li><strong>小屏操纵区更清楚</strong>修正小竖屏和短横屏驾驶舱导航遮挡，系统面板保留滚动关闭入口、目标编辑和手动接管。1.30.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>87 个版本</span></summary>
+      </article>
       <article><h3>v1.30.0 · 保速、反推与复飞操作</h3>
       <p>用两排驾驶舱按钮控制速度、准备落地制动，必要时一键恢复复飞推力。</p>
       <ul class="release-list">

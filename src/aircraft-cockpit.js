@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { batchMeshes } from './model-utils.js';
 import { RUNWAY } from './airport.js';
-import { autothrottleAvailability, reverseThrustAvailability } from './aircraft-systems.js';
+import { autopilotAvailability, autothrottleAvailability, reverseThrustAvailability } from './aircraft-systems.js';
 
 export const COCKPIT_SWITCH_COLUMNS = 6;
 export const COCKPIT_SWITCHES = Object.freeze([
@@ -103,25 +103,26 @@ export function updateCockpitControls(root, flight, input = {}) {
   for (const lever of throttles) lever.rotation.x = .35 - flight.throttle * .8;
   gear.rotation.x = flight.gearDown ? .5 : -.5;
   const systems = flight.systems;
+  const editable = ['ready', 'running', 'paused'].includes(flight.status), apUnavailable = !!autopilotAvailability(flight).reason;
   let changed = false;
   for (let index = 0; index < COCKPIT_SWITCHES.length; index++) {
     const action = COCKPIT_SWITCHES[index].action;
-    let active = false;
+    let active = false, unavailable = !editable;
     switch (action) {
       case 'engine': active = systems.engineOn;break;
-      case 'parking': active = systems.parkingBrake;break;
-      case 'reverse': active = systems.reverse;break;
+      case 'parking': active = systems.parkingBrake;unavailable ||= !flight.onGround || (!active && flight.speed >= 1);break;
+      case 'reverse': active = systems.reverse;unavailable ||= !active && !!reverseThrustAvailability(flight);break;
       case 'autobrake': active = systems.autoBrakeActive;break;
-      case 'autothrottle': active = systems.autothrottle.enabled;break;
-      case 'ap-level': active = systems.autopilot.mode === 'level';break;
-      case 'ap-hold': active = systems.autopilot.mode === 'hold';break;
-      case 'gear': active = flight.gearDown;break;
-      case 'flaps': active = flight.flaps > 0;break;
-      case 'speed-brake': active = flight.speedBrake;break;
+      case 'autothrottle': active = systems.autothrottle.enabled;unavailable ||= !active && !!autothrottleAvailability(flight).reason;break;
+      case 'ap-level': active = systems.autopilot.mode === 'level';unavailable ||= !active && apUnavailable;break;
+      case 'ap-hold': active = systems.autopilot.mode === 'hold';unavailable ||= !active && apUnavailable;break;
+      case 'gear': active = flight.gearDown;unavailable ||= flight.onGround;break;
+      case 'flaps': active = flight.flaps > 0;unavailable ||= flight.flaps !== 2 && flight.speed > flight.aircraft.flapLimit;break;
+      case 'speed-brake': active = flight.speedBrake;unavailable ||= flight.status === 'ready';break;
       case 'trim-reset': active = Math.abs(systems.trim.pitch) + Math.abs(systems.trim.roll) + Math.abs(systems.trim.yaw) > .001;break;
+      case 'go-around': unavailable ||= !systems.engineOn;break;
     }
-    const unavailable = action === 'reverse' ? reverseThrustAvailability(flight) : action === 'autothrottle' ? autothrottleAvailability(flight).reason : action === 'go-around' && !systems.engineOn;
-    const color = active ? 0x4fd6ac : action === 'autobrake' && systems.autoBrake !== 'off' ? 0xd9ad63 : unavailable ? 0x59646b : 0x29434c;
+    const color = unavailable ? 0x59646b : active ? 0x4fd6ac : action === 'autobrake' && systems.autoBrake !== 'off' ? 0xd9ad63 : 0x29434c;
     if (switchStates[index] !== color) { switchStates[index] = color;switches.setColorAt(index, switchColor.set(color));changed = true; }
   }
   if (changed) switches.instanceColor.needsUpdate = true;

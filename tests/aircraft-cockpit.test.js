@@ -93,6 +93,38 @@ test('new cockpit switches show armed autobrake, active speed hold and unavailab
   disposeAircraftObject(cockpit);
 });
 
+test('cockpit lamps mark blocked operations and keep active automation available for disengagement', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id), cockpit = createAircraftCockpit(aircraft);
+    const color = action => cockpit.userData.controls.switchStates[COCKPIT_SWITCHES.findIndex(control => control.action === action)];
+    updateCockpitControls(cockpit, flight);
+    for (const action of ['ap-level', 'ap-hold', 'autothrottle', 'gear']) assert.equal(color(action), 0x59646b, `${aircraft.id}: ${action} on the ground`);
+    assert.equal(color('parking'), 0x29434c);
+    flight.speed = 2;updateCockpitControls(cockpit, flight);
+    assert.equal(color('parking'), 0x59646b);
+    flight.systems.parkingBrake = true;updateCockpitControls(cockpit, flight);
+    assert.equal(color('parking'), 0x4fd6ac, 'engaged parking remains available for release');
+    Object.assign(flight, { status: 'running', onGround: false, speed: aircraft.cruiseSpeed, y: 2000, gearDown: false });
+    updateCockpitControls(cockpit, flight);
+    for (const action of ['ap-level', 'ap-hold', 'autothrottle', 'gear']) assert.equal(color(action), 0x29434c, `${aircraft.id}: ${action} in stable flight`);
+    flight.systems.engineOn = false;updateCockpitControls(cockpit, flight);
+    for (const action of ['ap-level', 'ap-hold', 'autothrottle', 'go-around']) assert.equal(color(action), 0x59646b);
+    flight.systems.autopilot.mode = 'hold';flight.systems.autothrottle.enabled = true;
+    updateCockpitControls(cockpit, flight);
+    assert.equal(color('ap-hold'), 0x4fd6ac);assert.equal(color('autothrottle'), 0x4fd6ac);
+    flight.systems.autopilot.mode = 'off';flight.systems.autothrottle.enabled = false;flight.systems.engineOn = true;
+    flight.physics.mode = 'maneuver';updateCockpitControls(cockpit, flight);
+    assert.equal(color('ap-level'), 0x59646b);assert.equal(color('ap-hold'), 0x59646b);
+    flight.physics.mode = 'assisted';flight.speed = aircraft.stall * .5;updateCockpitControls(cockpit, flight);
+    assert.equal(color('ap-level'), 0x59646b);assert.equal(color('ap-hold'), 0x59646b);
+    flight.speed = aircraft.flapLimit + 1;updateCockpitControls(cockpit, flight);
+    assert.equal(color('flaps'), 0x59646b);
+    flight.flaps = 2;updateCockpitControls(cockpit, flight);
+    assert.equal(color('flaps'), 0x4fd6ac, 'flaps can always retract at the last setting');
+    disposeAircraftObject(cockpit);
+  }
+});
+
 test('cockpit camera follows the aircraft attitude and side looking preserves its bank', () => {
   const flight = createAircraftFlight('su30', true);
   Object.assign(flight, { x: 800, y: 900, z: -1200, heading: 1.2, pitch: .2, roll: .6 });
