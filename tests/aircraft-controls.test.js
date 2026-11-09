@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { aircraftKeyBinding, aircraftInput, aircraftControlHelp, aircraftThrottleShortcut } from '../src/aircraft-controls.js';
+import { aircraftKeyBinding, aircraftInput, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut } from '../src/aircraft-controls.js';
 import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 
 test('flight keys retain defaults and alternate keys do not amplify an axis', () => {
@@ -85,4 +85,14 @@ test('throttle shortcuts expose idle, cruise and full power without colliding wi
     assert.equal(aircraftKeyBinding(`Digit${digit}`), undefined);
   }
   assert.equal(aircraftThrottleShortcut('KeyW'), undefined);
+});
+
+test('cockpit operation shortcuts remain distinct from both control presets and throttle presets', () => {
+  const shortcuts = { KeyH: 'ap-hold', KeyJ: 'ap-level', KeyK: 'engine', KeyN: 'parking', KeyT: 'trim-reset', KeyU: 'autothrottle', KeyM: 'reverse', KeyO: 'autobrake', KeyY: 'go-around', Backspace: 'ap-off' };
+  for (const [code, action] of Object.entries(shortcuts)) {
+    assert.equal(aircraftSystemShortcut(code), action);
+    for (const preset of ['flight', 'wasd']) assert.equal(aircraftKeyBinding(code, preset), undefined);
+    assert.equal(aircraftThrottleShortcut(code), undefined);
+  }
+  for (const code of ['KeyW', 'KeyS', 'KeyZ', 'KeyX', 'BracketLeft', 'BracketRight', 'KeyI', 'KeyV', 'Digit1']) assert.equal(aircraftSystemShortcut(code), undefined);
 });

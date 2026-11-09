@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 迎角失速与飞行载荷</h2>
-      <p id="release-copy">看迎角、控载荷，在拉升与转弯中管理速度，卸载后恢复飞行。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 保速、反推与复飞操作</h2>
+      <p id="release-copy">用两排驾驶舱按钮控制速度、准备落地制动，必要时一键恢复复飞推力。</p>
+      <ul class="release-list">
+        <li><strong>自动油门与复飞</strong>U 接通 A/THR，捕获当前空速并可修改目标，独立于姿态 AP；手动油门或制动接管。Y 设置全前向推力、收减速板并退出自动化，起落架、襟翼和驻车需手动确认。</li>
+        <li><strong>反推与自动刹车</strong>A380、公务机与运输机接地后可按 M 展开反推，油门控制大小。O 切换自动刹车关闭 / 低 / 高，空中待命、接地后收油或反推时制动；手动轮刹取消待命。</li>
+        <li><strong>十二按钮与十项系统调校</strong>实体按钮分为两排，灯色区分接通、待命和不可用，仪表同步 A/T、REV 与 A/BRK。增加保速响应、反推和自动刹车强度，完善手机系统面板与接管入口；所有系统为游戏简化设计。1.29.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>86 个版本</span></summary>
+      <article><h3>v1.29.0 · 迎角失速与飞行载荷</h3>
+      <p>看迎角、控载荷，在拉升与转弯中管理速度，卸载后恢复飞行。</p>
       <ul class="release-list">
         <li><strong>迎角与能量反馈</strong>高空速也可能大迎角失速，升力与操纵逐渐衰减，卸载后恢复。拉升增加诱导阻力，按实际航迹计算重力加减速，修复垂直下降时减速板效果被抵消。</li>
         <li><strong>20 项本机调校</strong>增加临界迎角、诱导与失速阻力、气动过载上限。不同机型有不同默认范围，性能卡显示实际角度与载荷；所有参数仍为游戏调校。</li>
         <li><strong>仪表与安全反馈</strong>HUD 与驾驶舱显示迎角和 G 载荷，失速提示区分低速与迎角过大；大迎角时自动驾驶拒绝接通或退出。覆盖六机型起降、连续机动与跨帧率回归；1.28.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>85 个版本</span></summary>
+      </article>
       <article><h3>v1.28.1 · 自动驾驶接管与状态优化</h3>
       <p>看清自动驾驶状态，随时一键接管，按当前襟翼与坡度判断接通条件。</p>
       <ul class="release-list">

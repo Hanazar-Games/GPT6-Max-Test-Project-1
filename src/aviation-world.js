@@ -3,7 +3,7 @@ import { AIR_GATES, islandHeight } from './aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from './airport.js';
 import { createAirport } from './airport-view.js';
 import { createRunway } from './runway-view.js';
-import { cockpitSeat, cockpitWidth, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
+import { cockpitSeat, cockpitSwitchSpacing, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -126,7 +126,7 @@ export class AviationWorld {
     this.cockpitCanvas = document.createElement('canvas'); this.cockpitCanvas.width = ['airliner', 'transport'].includes(aircraft.cockpit) ? 1536 : 960; this.cockpitCanvas.height = 320;
     this.cockpitContext = this.cockpitCanvas.getContext('2d');
     this.cockpitTexture = new THREE.CanvasTexture(this.cockpitCanvas); this.cockpitTexture.colorSpace = THREE.SRGBColorSpace;
-    const labels = document.createElement('canvas');labels.width = 1024;labels.height = Math.round(128 * .045 / (cockpitWidth(aircraft) * .62 / COCKPIT_SWITCHES.length * .68));
+    const labels = document.createElement('canvas');labels.width = 128 * COCKPIT_SWITCHES.length;labels.height = Math.round(128 * .045 / (cockpitSwitchSpacing(aircraft) * .68));
     const context = labels.getContext('2d');context.fillStyle = '#14242c';context.fillRect(0, 0, labels.width, labels.height);
     context.fillStyle = '#e0f5ee';context.font = `bold ${Math.round(labels.height * .48)}px monospace`;context.textAlign = 'center';context.textBaseline = 'middle';
     COCKPIT_SWITCHES.forEach((control, index) => context.fillText(control.label, (index + .5) * labels.width / COCKPIT_SWITCHES.length, labels.height / 2));

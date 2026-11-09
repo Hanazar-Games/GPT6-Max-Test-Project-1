@@ -72,6 +72,27 @@ test('instruments wrap headings and use the same units and warnings as the fligh
   assert.equal(data.aoa, '-17.2');assert.equal(data.load, '-2.3');
 });
 
+test('new cockpit switches show armed autobrake, active speed hold and unavailable reverse distinctly', () => {
+  const flight = createAircraftFlight('a380', true), cockpit = createAircraftCockpit(flight.aircraft);
+  const { switches, switchStates } = cockpit.userData.controls;
+  const index = action => COCKPIT_SWITCHES.findIndex(control => control.action === action);
+  assert.equal(COCKPIT_SWITCHES.length, 12);
+  updateCockpitControls(cockpit, flight);
+  const inactive = switchStates[index('autobrake')], unavailable = switchStates[index('reverse')];
+  flight.systems.autoBrake = 'low';flight.systems.autothrottle.enabled = true;
+  const version = switches.instanceColor.version;
+  updateCockpitControls(cockpit, flight);
+  assert.equal(switches.instanceColor.version, version + 1, 'batch all changed lamps in one upload');
+  const armed = switchStates[index('autobrake')];assert.notEqual(armed, inactive);
+  flight.systems.autoBrakeActive = true;flight.systems.reverse = true;
+  updateCockpitControls(cockpit, flight);
+  assert.notEqual(switchStates[index('autobrake')], armed);
+  assert.notEqual(switchStates[index('reverse')], unavailable);
+  const data = cockpitInstruments(flight);
+  assert.equal(data.reverse, true);assert.equal(data.speedHold, true);assert.equal(data.autoBrake, 'LOW');
+  disposeAircraftObject(cockpit);
+});
+
 test('cockpit camera follows the aircraft attitude and side looking preserves its bank', () => {
   const flight = createAircraftFlight('su30', true);
   Object.assign(flight, { x: 800, y: 900, z: -1200, heading: 1.2, pitch: .2, roll: .6 });

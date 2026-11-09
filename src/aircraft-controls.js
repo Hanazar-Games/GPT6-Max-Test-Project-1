@@ -8,10 +8,15 @@ const axisBits = { pitch: 1, roll: 2, yaw: 4, throttle: 8 };
 export const AIRCRAFT_CONTROL_DEFAULTS = Object.freeze({ preset: 'flight', invertPitch: false, pitchSensitivity: 1, rollSensitivity: 1, yawSensitivity: 1, deadzone: .07, curve: 1, throttleRate: .3 });
 const controlLimits = { pitchSensitivity: [.2, 2], rollSensitivity: [.2, 2], yawSensitivity: [.2, 2], deadzone: [0, .25], curve: [1, 3], throttleRate: [.05, 1] };
 const throttleShortcuts = { Digit1: 0, Numpad1: 0, Digit2: .65, Numpad2: .65, Digit3: 1, Numpad3: 1 };
+const systemShortcuts = { KeyH: 'ap-hold', KeyJ: 'ap-level', KeyK: 'engine', KeyN: 'parking', KeyT: 'trim-reset', KeyU: 'autothrottle', KeyM: 'reverse', KeyO: 'autobrake', KeyY: 'go-around', Backspace: 'ap-off' };
 const settingValue = (settings, key) => Number.isFinite(settings[key]) ? Math.max(controlLimits[key][0], Math.min(controlLimits[key][1], settings[key])) : AIRCRAFT_CONTROL_DEFAULTS[key];
 
 export function aircraftThrottleShortcut(code) {
   return throttleShortcuts[code];
+}
+
+export function aircraftSystemShortcut(code) {
+  return systemShortcuts[code];
 }
 
 export function aircraftKeyBinding(code, preset = 'flight') {

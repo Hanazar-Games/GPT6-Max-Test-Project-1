@@ -40,11 +40,11 @@ export function setAircraftPhysics(flight, settings = {}) {
 }
 
 export const AIRCRAFT = Object.freeze([
-  Object.freeze({ id: 'a380', engineType: 'jet', name: 'Airbus A380', subtitle: '新加坡航空 · 四发远程客机', role: '稳定巡航', configuration: '四发客机', cockpit: 'airliner', engines: 4, engineResponse: .65, turnDrag: 1.4, cruiseSpeed: 135, length: 72.7, span: 79.8, gearHeight: 8.2, takeoff: 78, stall: 65, flapLimit: 135, maxSpeed: 285, landingSpeed: 105, acceleration: 4.8, drag: .000045, pitchLimit: .38, bankLimit: .8, pitchRate: .22, rollRate: .48, response: 1.7, yawRate: .06, sinkLimit: 7 }),
+  Object.freeze({ id: 'a380', engineType: 'jet', name: 'Airbus A380', subtitle: '新加坡航空 · 四发远程客机', role: '稳定巡航', configuration: '四发客机', cockpit: 'airliner', engines: 4, engineResponse: .65, reverseThrust: .35, turnDrag: 1.4, cruiseSpeed: 135, length: 72.7, span: 79.8, gearHeight: 8.2, takeoff: 78, stall: 65, flapLimit: 135, maxSpeed: 285, landingSpeed: 105, acceleration: 4.8, drag: .000045, pitchLimit: .38, bankLimit: .8, pitchRate: .22, rollRate: .48, response: 1.7, yawRate: .06, sinkLimit: 7 }),
   Object.freeze({ id: 'su30', engineType: 'fighter', name: 'Su-30', subtitle: '双发双座 · 原创低多边形模型', role: '高速机动', configuration: '双发战斗机', cockpit: 'fighter', engines: 2, engineResponse: 1.4, turnDrag: 1.8, cruiseSpeed: 220, length: 21.9, span: 14.7, gearHeight: 2.7, takeoff: 65, stall: 53, flapLimit: 165, maxSpeed: 650, landingSpeed: 135, acceleration: 16, drag: .000036, pitchLimit: .65, bankLimit: 1.18, pitchRate: .85, rollRate: 1.8, response: 2.9, yawRate: .16, sinkLimit: 10 }),
   Object.freeze({ id: 't6', engineType: 'propeller', name: '星雀 T-6', subtitle: '原创低翼教练机 · 轻巧慢飞', role: '入门练习', configuration: '单发螺旋桨', cockpit: 'light', engines: 1, engineResponse: 2.7, turnDrag: 1.1, cruiseSpeed: 52, length: 9.2, span: 11.8, gearHeight: 1.65, takeoff: 33, stall: 25, flapLimit: 55, maxSpeed: 105, landingSpeed: 48, acceleration: 3.9, drag: .0002, pitchLimit: .45, bankLimit: .9, pitchRate: .55, rollRate: 1.2, response: 2.8, yawRate: .2, sinkLimit: 5 }),
-  Object.freeze({ id: 'b62', engineType: 'jet', name: '云帆 B-62', subtitle: '原创公务机 · 后置双发与翼梢小翼', role: '高速巡航', configuration: '双发公务机', cockpit: 'transport', engines: 2, engineResponse: 1.1, turnDrag: 1.5, cruiseSpeed: 140, length: 20.4, span: 21.1, gearHeight: 2.35, takeoff: 55, stall: 44, flapLimit: 110, maxSpeed: 285, landingSpeed: 82, acceleration: 8.5, drag: .00007, pitchLimit: .45, bankLimit: .95, pitchRate: .4, rollRate: .85, response: 2.2, yawRate: .1, sinkLimit: 6 }),
-  Object.freeze({ id: 'c24', engineType: 'turboprop', name: '山海 C-24', subtitle: '原创运输机 · 高翼双涡桨与后货舱', role: '低空运输', configuration: '双发涡桨', cockpit: 'transport', engines: 2, engineResponse: 1.7, turnDrag: 1.6, cruiseSpeed: 90, length: 25.6, span: 29.2, gearHeight: 3.4, takeoff: 44, stall: 36, flapLimit: 85, maxSpeed: 175, landingSpeed: 70, acceleration: 6.2, drag: .0001, pitchLimit: .4, bankLimit: .8, pitchRate: .3, rollRate: .65, response: 1.9, yawRate: .09, sinkLimit: 6 }),
+  Object.freeze({ id: 'b62', engineType: 'jet', name: '云帆 B-62', subtitle: '原创公务机 · 后置双发与翼梢小翼', role: '高速巡航', configuration: '双发公务机', cockpit: 'transport', engines: 2, engineResponse: 1.1, reverseThrust: .3, turnDrag: 1.5, cruiseSpeed: 140, length: 20.4, span: 21.1, gearHeight: 2.35, takeoff: 55, stall: 44, flapLimit: 110, maxSpeed: 285, landingSpeed: 82, acceleration: 8.5, drag: .00007, pitchLimit: .45, bankLimit: .95, pitchRate: .4, rollRate: .85, response: 2.2, yawRate: .1, sinkLimit: 6 }),
+  Object.freeze({ id: 'c24', engineType: 'turboprop', name: '山海 C-24', subtitle: '原创运输机 · 高翼双涡桨与后货舱', role: '低空运输', configuration: '双发涡桨', cockpit: 'transport', engines: 2, engineResponse: 1.7, reverseThrust: .4, turnDrag: 1.6, cruiseSpeed: 90, length: 25.6, span: 29.2, gearHeight: 3.4, takeoff: 44, stall: 36, flapLimit: 85, maxSpeed: 175, landingSpeed: 70, acceleration: 6.2, drag: .0001, pitchLimit: .4, bankLimit: .8, pitchRate: .3, rollRate: .65, response: 1.9, yawRate: .09, sinkLimit: 6 }),
   Object.freeze({ id: 'd9', engineType: 'fighter', name: '岚影 D-9', subtitle: '原创三角翼战机 · 单发与前翼', role: '敏捷截击', configuration: '单发战斗机', cockpit: 'fighter', engines: 1, engineResponse: 1.8, turnDrag: 2.1, cruiseSpeed: 240, length: 15.6, span: 9.6, gearHeight: 2.2, takeoff: 62, stall: 50, flapLimit: 150, maxSpeed: 720, landingSpeed: 120, acceleration: 20, drag: .000035, pitchLimit: .7, bankLimit: 1.2, pitchRate: 1.05, rollRate: 2.1, response: 3.2, yawRate: .19, sinkLimit: 9 }),
 ]);
 
@@ -79,6 +79,7 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
   setAircraftPhysics(flight, physics);
   setSystemSettings(flight);
   if (airborne) flight.speed = Math.min(flight.performance.maxSpeed * .85, Math.max(aircraft.cruiseSpeed, flight.performance.stall * 1.4));
+  flight.systems.autothrottle.target = Math.min(flight.performance.maxSpeed, Math.max(aircraft.cruiseSpeed, flight.performance.stall * 1.3));
   return flight;
 }
 
@@ -176,17 +177,18 @@ function stepFlight(flight, input, dt) {
     .35 * (aerodynamicLoad ** 2 - 1) * Math.min(4, (baseStall / Math.max(flight.speed, 1)) ** 2)
     + 3 * flow.separation * Math.min(4, (flight.speed / baseStall) ** 2));
   const drag = performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2 + inducedDrag;
-  const braking = flight.onGround ? (controls.brake ? performance.wheelBrake : 0) : (controls.brake || flight.speedBrake ? performance.airBrake : 0);
+  const braking = flight.onGround ? controls.wheelBrake * performance.wheelBrake : (controls.brake || flight.speedBrake ? performance.airBrake : 0);
   const verticalAcceleration = normal * Math.cos(flight.roll) * Math.cos(flight.pitch) - gravity;
   const pathSine = clamp((flight.verticalSpeed + verticalAcceleration * dt * .5) / Math.max(flight.speed, .01), -1, 1);
-  const acceleration = performance.acceleration * flight.engineOutput - drag - (flight.onGround ? .45 : gravity * pathSine) - braking;
+  const thrust = performance.acceleration * flight.engineOutput * (flight.systems.reverse ? -aircraft.reverseThrust * flight.systems.settings.reversePower : 1);
+  const acceleration = thrust - drag - (flight.onGround ? .45 : gravity * pathSine) - braking;
   const ceiling = Math.max(performance.maxSpeed, flight.speed - Math.min(60, Math.max(0, flight.speed - performance.maxSpeed) * 2) * dt);
   const nextSpeed = flight.onGround && flight.systems.parkingBrake ? 0 : clamp(flight.speed + acceleration * dt, 0, ceiling);
   const speed = (flight.speed + nextSpeed) * .5;
   flight.speed = nextSpeed;
   if (flight.onGround) {
     flight.heading += (yawInput + rollInput * .75) * .2 * clamp(speed / 25, 0, 1) * dt;
-    if (speed >= takeoff && flight.pitch > .045 && !controls.brake && !flight.speedBrake) {
+    if (speed >= takeoff && flight.pitch > .045 && !controls.brake && !flight.speedBrake && !flight.systems.reverse) {
       flight.onGround = false;
       flight.verticalSpeed = Math.max(1, speed * Math.sin(flight.pitch) * .4);
       flight.events.push('takeoff');
@@ -259,5 +261,8 @@ export function updateAircraftFlight(flight, input = {}, dt) {
   }
   if (flight.status !== 'running' && flight.systems.autopilot.mode !== 'off') {
     flight.systems.autopilot.mode = 'off';flight.systems.autopilot.reason = 'status';
+  }
+  if (flight.status !== 'running') {
+    flight.systems.autothrottle.enabled = false;flight.systems.autothrottle.reason = 'status';flight.systems.autoBrakeActive = false;
   }
 }

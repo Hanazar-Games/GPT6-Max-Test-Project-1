@@ -4,11 +4,84 @@ const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
 const editable = flight => ['ready', 'running', 'paused'].includes(flight.status);
 const radians = Math.PI / 180;
-export const SYSTEM_DEFAULTS = Object.freeze({ trimAuthority: .2, trimRate: .08, apResponse: 1, bankLimit: 22, climbRate: 5, overrideThreshold: .2, displayBrightness: 1 });
-export const SYSTEM_LIMITS = Object.freeze({ trimAuthority: [.05, .4], trimRate: [.01, .3], apResponse: [.25, 2], bankLimit: [5, 35], climbRate: [1, 15], overrideThreshold: [.05, .6], displayBrightness: [.2, 1.2] });
+export const SYSTEM_DEFAULTS = Object.freeze({ trimAuthority: .2, trimRate: .08, apResponse: 1, bankLimit: 22, climbRate: 5, overrideThreshold: .2, displayBrightness: 1, speedResponse: 1, reversePower: 1, autoBrakeStrength: 1 });
+export const SYSTEM_LIMITS = Object.freeze({ trimAuthority: [.05, .4], trimRate: [.01, .3], apResponse: [.25, 2], bankLimit: [5, 35], climbRate: [1, 15], overrideThreshold: [.05, .6], displayBrightness: [.2, 1.2], speedResponse: [.25, 2], reversePower: [.25, 1.5], autoBrakeStrength: [.25, 1.5] });
+export const AUTOBRAKE_MODES = Object.freeze(['off', 'low', 'high']);
 
 export function createAircraftSystems(settings) {
-  return { engineOn: true, parkingBrake: false, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false } };
+  return { engineOn: true, parkingBrake: false, reverse: false, autoBrake: 'off', autoBrakeActive: false, autothrottle: { enabled: false, target: 0, integral: 0, reason: '' }, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false, wheelBrake: 0 } };
+}
+
+export function reverseThrustAvailability(flight) {
+  return !editable(flight) ? 'status' : !flight.aircraft.reverseThrust ? 'aircraft' : !flight.onGround ? 'ground' : !flight.systems.engineOn ? 'engine' : '';
+}
+
+export function toggleReverseThrust(flight) {
+  if (!editable(flight) || (!flight.systems.reverse && reverseThrustAvailability(flight))) return false;
+  flight.systems.reverse = !flight.systems.reverse;return true;
+}
+
+export function setAutobrake(flight, mode) {
+  if (!editable(flight) || !AUTOBRAKE_MODES.includes(mode)) return false;
+  flight.systems.autoBrake = mode;flight.systems.autoBrakeActive = false;return true;
+}
+
+export function autothrottleAvailability(flight) {
+  const envelope = aircraftEnvelope(flight), minimum = envelope.stall * 1.3, maximum = envelope.maxSpeed;
+  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : !flight.systems.engineOn ? 'engine' : flight.performance.acceleration <= .01 ? 'power' : minimum > maximum ? 'envelope' : flight.speedBrake ? 'brake' : flight.speed < envelope.stall * 1.1 ? 'stall' : aircraftAirflow(flight).highAngle ? 'aoa' : '';
+  return { reason, minimum, maximum };
+}
+
+export function setAutothrottle(flight, enabled) {
+  if (!editable(flight) || typeof enabled !== 'boolean' || (enabled && autothrottleAvailability(flight).reason)) return false;
+  const control = flight.systems.autothrottle;
+  if (enabled) {
+    const { minimum, maximum } = autothrottleAvailability(flight);
+    control.target = clamp(flight.speed, minimum, maximum);control.integral = 0;
+  }
+  control.enabled = enabled;control.reason = '';return true;
+}
+
+export function setAutothrottleTarget(flight, value) {
+  if (!editable(flight) || !Number.isFinite(value)) return false;
+  const { minimum, maximum } = autothrottleAvailability(flight);
+  if (minimum > maximum) return false;
+  flight.systems.autothrottle.target = clamp(value, minimum, maximum);return true;
+}
+
+function disconnectAutothrottle(flight, reason) {
+  if (!flight.systems.autothrottle.enabled) return;
+  flight.systems.autothrottle.enabled = false;flight.systems.autothrottle.reason = reason;flight.events.push('at-disconnect');
+}
+
+export function setAircraftThrottle(flight, value) {
+  if (flight.status !== 'running' || !Number.isFinite(value)) return false;
+  disconnectAutothrottle(flight, 'manual');flight.throttle = clamp(value, 0, 1);return true;
+}
+
+export function commandGoAround(flight) {
+  if (!editable(flight) || !flight.systems.engineOn) return false;
+  setAutopilot(flight, 'off');setAutothrottle(flight, false);setAutobrake(flight, 'off');
+  flight.systems.reverse = false;flight.speedBrake = false;flight.throttle = 1;return true;
+}
+
+function updatePowerSystems(flight, input, dt) {
+  const systems = flight.systems, control = systems.autothrottle;
+  if (!flight.onGround) systems.reverse = false;
+  if (input.brake) systems.autoBrake = 'off';
+  systems.autoBrakeActive = systems.autoBrake !== 'off' && flight.onGround && flight.hasFlown && flight.speed > 1 && (systems.reverse || (flight.throttle < .15 && axis(input.throttle) <= 0)) && !systems.parkingBrake;
+  systems.controls.wheelBrake = systems.controls.brake ? 1 : systems.autoBrakeActive ? Math.min(1, (systems.autoBrake === 'high' ? .8 : .35) * systems.settings.autoBrakeStrength) : 0;
+  if (!control.enabled) return;
+  const availability = autothrottleAvailability(flight);
+  const reason = axis(input.throttle) ? 'manual' : input.brake ? 'brake' : availability.reason;
+  if (reason) { disconnectAutothrottle(flight, reason);return; }
+  control.target = clamp(control.target, availability.minimum, availability.maximum);
+  const error = control.target - flight.speed, response = systems.settings.speedResponse;
+  const gravity = 9.81 * flight.physics.gravity * clamp(flight.verticalSpeed / Math.max(1, flight.speed), -1, 1);
+  const drag = flight.performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35) * flight.speed ** 2;
+  const demand = (drag + gravity) / flight.performance.acceleration + error * .025 * response + control.integral;
+  if ((demand > 0 && demand < 1) || (demand >= 1 && error < 0) || (demand <= 0 && error > 0)) control.integral = clamp(control.integral + error * .002 * response * dt, -.3, .3);
+  flight.throttle += clamp(clamp(demand, 0, 1) - flight.throttle, -.4 * dt, .4 * dt);
 }
 
 export function setSystemSettings(flight, settings = {}) {
@@ -61,6 +134,7 @@ export function updateAircraftSystems(flight, input, dt, stall) {
   trim.pitch = axis(trim.pitch + axis(input.trimPitch) * settings.trimRate * dt);
   for (const key in trim) controls[key] = axis(axis(input[key]) + trim[key] * settings.trimAuthority);
   controls.brake = !!input.brake || flight.systems.parkingBrake;
+  updatePowerSystems(flight, input, dt);
   if (autopilot.mode === 'off') return controls;
   const override = Number.isFinite(input.pilotOverride) ? Math.abs(axis(input.pilotOverride)) : Math.max(Math.abs(axis(input.pitch)), Math.abs(axis(input.roll)), Math.abs(axis(input.yaw)));
   const reason = flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < stall * 1.1 ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .55 ? 'attitude' : aircraftAirflow(flight).highAngle ? 'aoa' : override >= settings.overrideThreshold ? 'manual' : '';
