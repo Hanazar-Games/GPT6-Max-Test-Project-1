@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { AIRCRAFT, createAircraftFlight } from '../src/aircraft-flight.js';
-import { createAircraftCockpit, updateCockpitControls, cockpitInstruments, cockpitSeat } from '../src/aircraft-cockpit.js';
+import { createAircraftCockpit, updateCockpitControls, cockpitInstruments, cockpitSeat, COCKPIT_SWITCHES } from '../src/aircraft-cockpit.js';
 import { disposeAircraftObject } from '../src/aircraft-models.js';
 import { AviationWorld, AVIATION_VIEW_DEFAULTS } from '../src/aviation-world.js';
 
@@ -40,6 +40,28 @@ test('cockpit controls reflect the aircraft and release independently from throt
   disposeAircraftObject(cockpit);
 });
 
+test('cockpit switches are clickable instances, show actual state and avoid unchanged color uploads', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id, true), cockpit = createAircraftCockpit(aircraft, null, new THREE.Texture());
+    const switches = cockpit.userData.controls.switches;
+    assert.equal(switches.count, COCKPIT_SWITCHES.length);
+    updateCockpitControls(cockpit, flight);
+    const version = switches.instanceColor.version;
+    updateCockpitControls(cockpit, flight);assert.equal(switches.instanceColor.version, version);
+    flight.systems.engineOn = false;updateCockpitControls(cockpit, flight);assert.equal(switches.instanceColor.version, version + 1);
+    const camera = new THREE.PerspectiveCamera(68, 16 / 9, .06, 8);camera.rotation.x = -.08;camera.updateMatrixWorld();cockpit.updateMatrixWorld(true);
+    const world = Object.assign(Object.create(AviationWorld.prototype), { cameraMode: 2, cockpit, cockpitCamera: camera, renderer: { domElement: { getBoundingClientRect: () => ({ left: 40, top: 20, width: 1280, height: 720 }) } } });
+    for (let index = 0; index < switches.count; index++) {
+      const matrix = new THREE.Matrix4();switches.getMatrixAt(index, matrix);
+      const point = new THREE.Vector3().setFromMatrixPosition(matrix).applyMatrix4(switches.matrixWorld);
+      camera.lookAt(point);camera.updateMatrixWorld();point.project(camera);
+      assert.equal(world.pickCockpitControl(40 + (point.x + 1) * 640, 20 + (1 - point.y) * 360), COCKPIT_SWITCHES[index].action);
+    }
+    world.cameraMode = 0;assert.equal(world.pickCockpitControl(640, 360), null);
+    disposeAircraftObject(cockpit);
+  }
+});
+
 test('instruments wrap headings and use the same units and warnings as the flight HUD', () => {
   const flight = createAircraftFlight('su30', true);
   Object.assign(flight, { heading: -Math.PI / 2, speed: 200, y: 750, verticalSpeed: -4, stalling: true, gearDown: true, throttle: .7 });
@@ -72,6 +94,8 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
   assert.equal(model.visible, false); assert.equal(cockpit.visible, true);
   assert.deepEqual(passes.map(pass => [pass.near, pass.far]), [[8, 65000], [.06, 8]], 'interior and distant terrain need separate depth ranges');
   assert.equal(world.renderer.autoClear, true);
+  flight.systems.controls.roll = .45;world.render(flight, 0, { roll: -1 });
+  assert.ok(cockpit.userData.controls.stick.rotation.z < 0, 'cockpit follows actual trim and autopilot commands');
   world.viewSettings.cockpitFov = 90; world.render(flight, 1 / 60);
   assert.equal(world.camera.fov, 90); assert.equal(world.cockpitCamera.fov, 90);
   assert.equal(world.camera.projectionMatrix.elements[5], world.cockpitCamera.projectionMatrix.elements[5]);
@@ -114,8 +138,8 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
 });
 
 test('cockpit unload releases its shared materials, geometry and display texture once', () => {
-  const texture = new THREE.Texture(), cockpit = createAircraftCockpit(AIRCRAFT[0], texture), counts = new Map();
-  const resources = new Set([texture]);
+  const texture = new THREE.Texture(), labels = new THREE.Texture(), cockpit = createAircraftCockpit(AIRCRAFT[0], texture, labels), counts = new Map();
+  const resources = new Set([texture, labels, cockpit.userData.controls.switches]);
   cockpit.traverse(object => { if (object.isMesh) { resources.add(object.geometry); resources.add(object.material); } });
   for (const resource of resources) resource.addEventListener('dispose', () => counts.set(resource, (counts.get(resource) ?? 0) + 1));
   disposeAircraftObject(cockpit);

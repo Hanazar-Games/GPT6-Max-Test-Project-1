@@ -3,12 +3,13 @@ import { AIR_GATES, islandHeight } from './aircraft-flight.js';
 import { AIRPORT_BUILDINGS, RUNWAY } from './airport.js';
 import { createAirport } from './airport-view.js';
 import { createRunway } from './runway-view.js';
-import { cockpitSeat, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay } from './aircraft-cockpit.js';
+import { cockpitSeat, cockpitWidth, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel } from './aircraft-models.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const forward = new THREE.Vector3(), offset = new THREE.Vector3(), target = new THREE.Vector3();
 const cockpitLook = new THREE.Quaternion(), lookRotation = new THREE.Euler(0, 0, 0, 'YXZ');
+const cockpitRay = new THREE.Raycaster(), pointer = new THREE.Vector2();
 export const AVIATION_CAMERAS = ['追随机位', '近距跟随', '驾驶舱', '机首观察', '左翼观察', '俯视机位'];
 export const AVIATION_VIEW_DEFAULTS = Object.freeze({
   cockpitFov: 68, exteriorFov: 55, chaseDistance: 1, chaseHeight: 1, orbitAngle: 0,
@@ -125,7 +126,12 @@ export class AviationWorld {
     this.cockpitCanvas = document.createElement('canvas'); this.cockpitCanvas.width = ['airliner', 'transport'].includes(aircraft.cockpit) ? 1536 : 960; this.cockpitCanvas.height = 320;
     this.cockpitContext = this.cockpitCanvas.getContext('2d');
     this.cockpitTexture = new THREE.CanvasTexture(this.cockpitCanvas); this.cockpitTexture.colorSpace = THREE.SRGBColorSpace;
-    this.cockpit = createAircraftCockpit(aircraft, this.cockpitTexture); this.cockpit.visible = false; this.cockpitScene.add(this.cockpit);
+    const labels = document.createElement('canvas');labels.width = 1024;labels.height = Math.round(128 * .045 / (cockpitWidth(aircraft) * .62 / COCKPIT_SWITCHES.length * .68));
+    const context = labels.getContext('2d');context.fillStyle = '#14242c';context.fillRect(0, 0, labels.width, labels.height);
+    context.fillStyle = '#e0f5ee';context.font = `bold ${Math.round(labels.height * .48)}px monospace`;context.textAlign = 'center';context.textBaseline = 'middle';
+    COCKPIT_SWITCHES.forEach((control, index) => context.fillText(control.label, (index + .5) * labels.width / COCKPIT_SWITCHES.length, labels.height / 2));
+    const labelsTexture = new THREE.CanvasTexture(labels);labelsTexture.colorSpace = THREE.SRGBColorSpace;
+    this.cockpit = createAircraftCockpit(aircraft, this.cockpitTexture, labelsTexture); this.cockpit.visible = false; this.cockpitScene.add(this.cockpit);
     this.displayTime = 1; this.lookAngle = 0; this.lookTarget = 0;
     return true;
   }
@@ -142,6 +148,16 @@ export class AviationWorld {
     this.lockedOffset = this.cameraLocked && !this.resetCamera ? this.camera.position.clone().sub(this.aircraftRoot.position) : null;
     this.resetCamera = true;
     return this.cameraLocked;
+  }
+
+  pickCockpitControl(x, y) {
+    if (this.cameraMode !== 2 || !this.cockpit?.visible) return null;
+    const bounds = this.renderer.domElement.getBoundingClientRect();
+    if (!bounds.width || !bounds.height || x < bounds.left || y < bounds.top || x > bounds.left + bounds.width || y > bounds.top + bounds.height) return null;
+    pointer.set((x - bounds.left) / bounds.width * 2 - 1, 1 - (y - bounds.top) / bounds.height * 2);
+    this.cockpit.updateMatrixWorld(true);this.cockpitCamera.updateMatrixWorld(true);cockpitRay.setFromCamera(pointer, this.cockpitCamera);
+    const hit = cockpitRay.intersectObject(this.cockpit.userData.controls.switches, false)[0];
+    return hit ? COCKPIT_SWITCHES[hit.instanceId].action : null;
   }
 
   resize() {
@@ -204,7 +220,7 @@ export class AviationWorld {
       this.lookAngle += ((look ?? this.lookTarget) - this.lookAngle) * (this.resetCamera ? 1 : 1 - Math.exp(-dt * view.lookResponse));
       cockpitLook.setFromEuler(lookRotation.set(-.08, this.lookAngle, 0));
       this.camera.quaternion.copy(this.aircraftRoot.quaternion).multiply(cockpitLook);
-      updateCockpitControls(this.cockpit, flight, input);
+      updateCockpitControls(this.cockpit, flight, flight.systems.controls);
       this.displayTime += dt;
       const interval = 1 / this.displayHz;
       if (this.displayTime + 1e-9 >= interval || this.resetCamera || flight.status !== 'running') {

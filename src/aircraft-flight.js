@@ -1,5 +1,6 @@
 import { AIRPORT_BUILDINGS, AIRPORT_BOUNDS, RUNWAY } from './airport.js';
 import { Euler, Quaternion, Vector3 } from 'three';
+import { createAircraftSystems, setSystemSettings, updateAircraftSystems } from './aircraft-systems.js';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
@@ -59,7 +60,7 @@ export function islandHeight(x, z) {
   return coast + Math.max(0, island) * hills * north * (700 + 450 * Math.sin(x * .0011) * Math.cos(z * .0008));
 }
 
-export function createAircraftFlight(id = 'a380', airborne = false, { runwayDirection = '36', physics } = {}) {
+export function createAircraftFlight(id = 'a380', airborne = false, { runwayDirection = '36', physics, systems } = {}) {
   const aircraft = AIRCRAFT.find(item => item.id === id) ?? AIRCRAFT[0];
   const south = runwayDirection === '18';
   const flight = {
@@ -69,8 +70,10 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
     flaps: 0, speedBrake: false, runwayDirection: south ? '18' : '36',
     hasFlown: airborne, stalling: false, elapsed: 0, distance: 0, gates: 0, events: [], reason: '',
     pitchRate: 0, rollRate: 0, yawRate: 0,
+    systems: createAircraftSystems(systems),
   };
   setAircraftPhysics(flight, physics);
+  setSystemSettings(flight);
   if (airborne) flight.speed = Math.min(flight.performance.maxSpeed * .85, Math.max(aircraft.cruiseSpeed, flight.performance.stall * 1.4));
   return flight;
 }
@@ -136,11 +139,12 @@ function stepFlight(flight, input, dt) {
   if (flight.flaps && flight.speed > aircraft.flapLimit + 5) { flight.flaps = 0; flight.events.push('flaps-limit'); }
   const baseStall = performance.stall * (1 - flight.flaps * .1), takeoff = performance.takeoff * (1 - flight.flaps * .07);
   let stall = baseStall * Math.sqrt(bankLoad(flight));
+  const controls = updateAircraftSystems(flight, input, dt, stall);
   const throttleRate = Number.isFinite(input.throttleRate) ? clamp(input.throttleRate, .05, 1) : .3;
   flight.throttle = clamp(flight.throttle + axis(input.throttle) * dt * throttleRate, 0, 1);
-  flight.engineOutput += (flight.throttle - flight.engineOutput) * (1 - Math.exp(-performance.engineResponse * dt));
+  flight.engineOutput += ((flight.systems.engineOn ? flight.throttle : 0) - flight.engineOutput) * (1 - Math.exp(-performance.engineResponse * dt));
   const authority = clamp((flight.speed / stall) ** 2, .03, 1);
-  const pitchInput = axis(input.pitch), rollInput = axis(input.roll), yawInput = axis(input.yaw);
+  const pitchInput = controls.pitch, rollInput = controls.roll, yawInput = controls.yaw;
   if (flight.onGround) {
     flight.pitch += (pitchInput * performance.pitchLimit - flight.pitch) * (1 - Math.exp(-performance.response * dt));
     flight.pitch = clamp(flight.pitch, -.02, .13); flight.roll = 0;
@@ -149,8 +153,8 @@ function stepFlight(flight, input, dt) {
     const maneuver = physics.mode === 'maneuver';
     const pitchLimit = aircraft.pitchRate * physics.pitchRate * authority;
     const rollLimit = aircraft.rollRate * physics.rollRate * authority;
-    const pitchTarget = maneuver ? pitchInput * pitchLimit - (1 - Math.abs(pitchInput)) * flight.pitch * physics.stability : (pitchInput * performance.pitchLimit + .018 - flight.pitch) * aircraft.response * (pitchInput ? 1 : physics.stability);
-    const rollTarget = maneuver ? rollInput * rollLimit - (1 - Math.abs(rollInput)) * flight.roll * physics.stability : (rollInput * performance.bankLimit - flight.roll) * aircraft.response * 1.5 * (rollInput ? 1 : physics.stability);
+    const pitchTarget = maneuver ? pitchInput * pitchLimit - (1 - Math.abs(pitchInput)) * flight.pitch * physics.stability : (pitchInput * performance.pitchLimit + .018 - flight.pitch) * aircraft.response * (pitchInput || flight.systems.autopilot.mode === 'hold' ? 1 : physics.stability);
+    const rollTarget = maneuver ? rollInput * rollLimit - (1 - Math.abs(rollInput)) * flight.roll * physics.stability : (rollInput * performance.bankLimit - flight.roll) * aircraft.response * 1.5 * (rollInput || flight.systems.autopilot.mode !== 'off' ? 1 : physics.stability);
     const response = 1 - Math.exp(-performance.response * 3 * dt);
     flight.pitchRate += (clamp(pitchTarget, -pitchLimit, pitchLimit) - flight.pitchRate) * response;
     flight.rollRate += (clamp(rollTarget, -rollLimit, rollLimit) - flight.rollRate) * response;
@@ -168,15 +172,15 @@ function stepFlight(flight, input, dt) {
   stall = baseStall * Math.sqrt(load);
   const inducedDrag = flight.onGround ? 0 : aircraft.turnDrag * (load - 1) * Math.min(4, (baseStall / Math.max(flight.speed, 1)) ** 2);
   const drag = performance.drag * (flight.gearDown ? 1.55 : 1) * (1 + flight.flaps * .35 + (flight.speedBrake ? .8 * physics.airBrake : 0)) * flight.speed ** 2 + inducedDrag;
-  const braking = flight.onGround ? (input.brake ? performance.wheelBrake : 0) : (input.brake || flight.speedBrake ? performance.airBrake : 0);
+  const braking = flight.onGround ? (controls.brake ? performance.wheelBrake : 0) : (controls.brake || flight.speedBrake ? performance.airBrake : 0);
   const acceleration = performance.acceleration * flight.engineOutput - drag - (flight.onGround ? .45 : gravity * Math.sin(flight.pitch)) - braking;
   const ceiling = Math.max(performance.maxSpeed, flight.speed - Math.min(60, Math.max(0, flight.speed - performance.maxSpeed) * 2) * dt);
-  const nextSpeed = clamp(flight.speed + acceleration * dt, 0, ceiling);
+  const nextSpeed = flight.onGround && flight.systems.parkingBrake ? 0 : clamp(flight.speed + acceleration * dt, 0, ceiling);
   const speed = (flight.speed + nextSpeed) * .5;
   flight.speed = nextSpeed;
   if (flight.onGround) {
-    flight.heading += (axis(input.yaw) + axis(input.roll) * .75) * .2 * clamp(speed / 25, 0, 1) * dt;
-    if (speed >= takeoff && flight.pitch > .045 && !input.brake && !flight.speedBrake) {
+    flight.heading += (yawInput + rollInput * .75) * .2 * clamp(speed / 25, 0, 1) * dt;
+    if (speed >= takeoff && flight.pitch > .045 && !controls.brake && !flight.speedBrake) {
       flight.onGround = false;
       flight.verticalSpeed = Math.max(1, speed * Math.sin(flight.pitch) * .4);
       flight.events.push('takeoff');

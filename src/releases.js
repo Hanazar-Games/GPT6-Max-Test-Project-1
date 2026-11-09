@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 飞机镜头、声音与异常恢复修复</h2>
-      <p id="release-copy">修正新机位、暂停仪表与配乐切换，完善声音提示和异常恢复。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 互动驾驶舱与飞行系统</h2>
+      <p id="release-copy">点按驾驶舱开关，管理发动机与配平，用辅助自动驾驶保持航向和高度。</p>
+      <ul class="release-list">
+        <li><strong>八个座舱开关</strong>六机型可点按 ENG / PARK / AP LVL / AP HOLD / GEAR / FLAP / BRK / TRIM 0，状态灯与仪表同步；操纵杆显示实际系统指令，开关实例化并合批文字。</li>
+        <li><strong>飞行系统参与物理</strong>K 开关发动机并渐进收推或恢复，N 在地面低速锁定驻车，[ / ] 调俯仰配平、T 三轴归零。J 机翼调平，H 捕获航向与高度；可改目标，手动接管与不安全状态会退出，油门仍手动。</li>
+        <li><strong>实时面板与七项调校</strong>I 打开系统面板，飞行继续；暂停设置可调配平、自动驾驶响应、坡度、目标升降率、接管阈值和仪表亮度。完善手机布局、开关与脱开提示音，释放实例缓冲；1.27.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>83 个版本</span></summary>
+      <article><h3>v1.27.1 · 飞机镜头、声音与异常恢复修复</h3>
+      <p>修正新机位、暂停仪表与配乐切换，完善声音提示和异常恢复。</p>
       <ul class="release-list">
         <li><strong>镜头与仪表同步</strong>切换机位后立即锁定采用新机位，暂停调参后驾驶舱仪表随重绘更新；运行时保留所选仪表刷新频率。</li>
         <li><strong>声音切换更准确</strong>修复共用音高的配乐切换残留旧节奏或音色，保留事件音效；声音状态显示两路实际音量，双路为零时提供提示。</li>
         <li><strong>渲染与异常保护</strong>减少尺寸和实际像素比未变时的缓冲区更新，调整渲染比例保留镜头阻尼。图形中断后停止飞行与声音，屏蔽键盘恢复和迟到加载回调；可返回基地重新进入。1.27.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>82 个版本</span></summary>
+      </article>
       <article><h3>v1.27.0 · 飞机多机位与画面调校</h3>
       <p>用六种机位观察飞行，锁定外部方位，按设备细调镜头与画面。</p>
       <ul class="release-list">

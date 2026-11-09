@@ -4,6 +4,7 @@ import { AviationWorld, AVIATION_CAMERAS, AVIATION_VIEW_DEFAULTS } from './aviat
 import { AviationRenderClock } from './aviation-render-clock.js';
 import { AIRCRAFT_CONTROL_DEFAULTS, aircraftInput, aircraftKeyBinding, aircraftControlHelp, aircraftThrottleShortcut } from './aircraft-controls.js';
 import { RUNWAY } from './airport.js';
+import { SYSTEM_DEFAULTS, SYSTEM_LIMITS, setSystemSettings, setAircraftTrim, setAutopilot, setAutopilotTarget, toggleEngine, toggleParkingBrake } from './aircraft-systems.js';
 
 const cameraNames = AVIATION_CAMERAS;
 const viewFields = [
@@ -35,6 +36,17 @@ const physicsControls = (fields, note) => fields.map(([key, label]) => {
 }).join('');
 const flightMusic = { a380: { music: { root: 50, bpm: 100 } }, su30: { music: { root: 45, bpm: 136 } }, t6: { music: { root: 55, bpm: 96 } }, b62: { music: { root: 52, bpm: 112 } }, c24: { music: { root: 48, bpm: 104 } }, d9: { music: { root: 43, bpm: 144 } } };
 const audioStates = { running: 'running', ready: 'menu', paused: 'paused', crashed: 'lost', completed: 'won' };
+const systemFields = [
+  ['trimAuthority', '配平最大作用量', 100, '%'], ['trimRate', '键盘配平速度', 100, '%/秒'], ['apResponse', '自动驾驶响应', 100, '%'],
+  ['bankLimit', '自动驾驶最大坡度', 1, '°'], ['climbRate', '目标升降率上限', 1, 'm/s'], ['overrideThreshold', '手动接管阈值', 100, '%'], ['displayBrightness', '驾驶舱仪表亮度', 100, '%'],
+];
+const systemControls = () => `<p class="av-system-summary" data-system-value="summary"></p><div class="av-system-buttons" role="group" aria-label="飞机系统开关">
+  <button data-system-action="engine" aria-pressed="true">发动机 · K</button><button data-system-action="parking" aria-pressed="false">驻车制动 · N</button>
+  <button data-system-action="ap-level" aria-pressed="false">机翼调平 · J</button><button data-system-action="ap-hold" aria-pressed="false">航向 / 高度保持 · H</button>
+  <button data-system-action="ap-off">断开自动驾驶</button><button data-system-action="trim-reset">配平归零 · T</button></div>
+  <div class="av-ap-targets"><label>目标航向 °<input data-ap-target="heading" type="number" min="0" max="359" step="1" inputmode="numeric" aria-label="自动驾驶目标航向"></label><label>目标高度 m<input data-ap-target="altitude" type="number" min="0" step="1" inputmode="numeric" aria-label="自动驾驶目标高度"></label></div>
+  ${[['pitch', '俯仰 · 低头 / 抬头'], ['roll', '滚转 · 左 / 右'], ['yaw', '方向舵 · 左 / 右']].map(([key, label]) => `<label>${label}<output data-trim-value="${key}">0%</output><input data-trim="${key}" type="range" min="-100" max="100" step="1" value="0" aria-label="${label}配平"></label>`).join('')}
+  <p>自动驾驶需在稳定模式、足够空速与正常姿态下接通，并捕获当前航向 / 高度；接通后可改目标。油门仍手动控制，达到接管阈值即退出；不会自动避开地形。[ / ] 持续低头 / 抬头配平，T 归零。驻车制动仅在地面低于 3.6 km/h 接通。</p>`;
 
 export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   const root = document.createElement('main');
@@ -42,7 +54,8 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', '海岛飞行计划');
   root.innerHTML = `
     <div class="av-viewport"></div><div class="av-vignette" aria-hidden="true"></div>
-    <header class="av-header"><div class="av-brand"><span>✈</span><div>海岛飞行计划<small>ISLAND FLIGHT / 01</small></div></div><nav aria-label="飞机操作"><button data-action="sound" aria-pressed="false">声音</button><button data-action="camera" aria-expanded="false" aria-controls="av-camera-panel">追随机位 ▾</button><button data-action="pause">暂停</button><button data-action="exit">返回基地 ↗</button></nav></header>
+    <header class="av-header"><div class="av-brand"><span>✈</span><div>海岛飞行计划<small>ISLAND FLIGHT / 01</small></div></div><nav aria-label="飞机操作"><button data-action="sound" aria-pressed="false">声音</button><button data-action="systems" aria-expanded="false" aria-controls="av-systems-panel" aria-label="座舱系统面板，快捷键 I">系统 · I</button><button data-action="camera" aria-expanded="false" aria-controls="av-camera-panel">追随机位 ▾</button><button data-action="pause">暂停</button><button data-action="exit">返回基地 ↗</button></nav></header>
+    <section id="av-systems-panel" class="av-systems-panel av-help" aria-label="实时座舱系统" hidden><div class="av-camera-heading"><strong tabindex="-1">座舱系统 · 飞行继续运行</strong><button data-action="systems-close" aria-label="关闭座舱系统">×</button></div>${systemControls()}</section>
     <section id="av-camera-panel" class="av-camera-panel" aria-label="飞行镜头" hidden><div class="av-camera-heading"><strong>选择飞行镜头</strong><button data-action="camera-close" aria-label="关闭镜头面板">×</button></div><div class="av-camera-presets" role="group" aria-label="镜头机位">${cameraNames.map((name, mode) => `<button data-camera="${mode}" aria-pressed="${mode === 0}">${name}</button>`).join('')}</div><div class="av-camera-actions"><button data-action="camera-lock" aria-pressed="false">锁定方位 · L</button><button data-action="camera-center">镜头回正 · R</button></div><p data-value="camera-note">固定观察方位，位置仍跟随飞机。C 循环镜头，V 进出驾驶舱。</p></section>
     <div class="av-instruments" aria-label="飞行仪表"><div><small>空速 <span>KM/H</span></small><strong data-value="speed">0</strong></div><div><small>高度 <span>M</span></small><strong data-value="altitude">0</strong></div><div><small>升降率 <span>M/S</span></small><strong data-value="vertical">0</strong></div><div><small>航向 <span>DEG</span></small><strong data-value="heading">000</strong></div></div>
     <div class="av-navigation"><small data-value="phase">飞机机库</small><strong data-value="guide">准备前往天空</strong><span data-value="target">海岸跑道 · 自由飞行与六环训练</span><div class="av-attitude" aria-label="姿态仪"><div class="av-horizon"><i></i></div><b aria-hidden="true">— ⌄ —</b></div><span data-value="bank">机翼水平 · 机头水平</span></div>
@@ -55,6 +68,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <p class="av-specs" data-value="specs"></p><p class="av-load-status" role="status" aria-live="polite">正在载入飞机模型…</p>
       <label class="av-runway-choice">起飞方向 <select data-setting="runway"><option value="36">跑道 36 · 向北</option><option value="18">跑道 18 · 向南</option></select><small>${RUNWAY.length.toLocaleString('en-US')} × ${RUNWAY.width} m · 两侧各 ${RUNWAY.shoulder} m 道肩</small></label>
       <div class="av-panel-actions"><button data-action="resume" hidden>继续飞行</button><button data-action="runway" disabled>跑道起飞 <span>↗</span></button><button data-action="airborne" disabled>直接空中试飞</button><button data-action="retry" hidden>重试模型加载</button><button data-action="hangar" hidden>返回飞机机库</button></div>
+      <details class="av-help av-system-settings"><summary>座舱系统、配平与自动驾驶</summary>${systemControls()}
+      ${systemFields.map(([key, label, scale, unit]) => { const [min, max] = SYSTEM_LIMITS[key].map(value => Math.round(value * scale));return `<label>${label}<output data-system-setting-value="${key}"></output><input data-system-setting="${key}" type="range" min="${min}" max="${max}" step="1" value="${SYSTEM_DEFAULTS[key] * scale}" aria-label="${label}"></label>`; }).join('')}
+      <button data-action="systems-reset">恢复系统参数</button><p>跑道起飞沿用预飞的发动机、驻车与配平状态；返回机库重置，直接空中试飞使用已启动状态。系统参数对六机型共用，仅保留在本次飞机模式。驾驶舱可点按 ENG / PARK / AP LVL / AP HOLD / GEAR / FLAP / BRK / TRIM 0。关闭发动机后逐渐失去推力，重新开启仍按发动机响应恢复。</p></details>
       <section class="av-tuning" aria-label="本机调校"><p data-value="tuning-name"></p><div class="av-tuning-presets" role="group" aria-label="应用整套飞机调校">${AIRCRAFT_PRESETS.map(preset => `<button data-flight-preset="${preset.id}" aria-pressed="false">${preset.name}</button>`).join('')}</div><small>预设替换本机整套物理参数；手动调整后显示为自定义。每架飞机分别记录，仅保留在本次飞机模式。</small>
       <dl class="av-performance" aria-label="当前飞机性能参考"><div><dt>速度上限</dt><dd data-value="tune-speed"></dd></div><div><dt>满油门加速参考</dt><dd data-value="tune-acceleration"></dd></div><div><dt>起飞参考</dt><dd data-value="tune-takeoff"></dd></div><div><dt>失速参考</dt><dd data-value="tune-stall"></dd></div><div><dt>着陆速度上限</dt><dd data-value="tune-landing"></dd></div><div><dt>辅助俯仰 / 滚转</dt><dd data-value="tune-limits"></dd></div></dl><p data-value="performance-note"></p></section>
       <details class="av-help av-physics" open><summary>动力与气动自定义 · ${powerFields.length} 项</summary>
@@ -67,6 +83,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       <p id="av-physics-note">速率改变各轴最大旋转速度，响应改变加减旋转的快慢；回正辅助为 0% 时，松手逐步停止主动旋转并保留倾斜。航迹响应越高，升降速度越快跟随机头。辅助幅度仅用于稳定模式，自由机动不限制整周旋转。</p></details>
       <details class="av-help"><summary>操作与键位</summary><p data-value="keys"></p>
       <p><b>A / D</b> 或 <b>← / →</b> 滚转 · <b>Q / E</b> 方向舵<br><b>1 / 2 / 3</b> 油门怠速 / 65% / 全开（支持数字小键盘）<br><b>G</b> 起落架 · <b>F</b> 切换三档襟翼 · <b>B</b> 减速板<br><b>空格</b> 按住制动 · <b>C</b> 循环六种镜头<br><b>V</b> 驾驶舱 / 上次外部机位 · <b>Z / X</b> 按住左右观察<br><b>L</b> 锁定 / 释放外部方位 · <b>R</b> 镜头回正<br><b>Esc / P</b> 暂停并打开设置</p>
+      <p><b>I</b> 实时座舱系统 · <b>K</b> 发动机 · <b>N</b> 驻车制动<br><b>J</b> 机翼调平 · <b>H</b> 航向 / 高度保持<br><b>[ / ]</b> 按住低头 / 抬头配平 · <b>T</b> 三轴配平归零<br>完整系统参数位于「座舱系统、配平与自动驾驶」。</p>
       <label>键位预设<select data-setting="keys"><option value="flight">经典飞行</option><option value="wasd">WASD 升降</option></select></label><label>升降方向<select data-setting="pitch"><option value="normal">标准</option><option value="inverted">反向</option></select></label>
       ${controlFields.map(([key, label, min, max, step, scale]) => `<label>${label}<output data-value="${key}"></output><input data-control-setting="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${AIRCRAFT_CONTROL_DEFAULTS[key] * scale}" aria-label="飞机${label}" aria-describedby="av-controls-note"></label>`).join('')}
       <p id="av-controls-note">三轴灵敏度 20%–200%，同时作用于键盘和触屏，满输入以 100% 封顶；更高值让摇杆提早打满。死区过滤中心误触并平滑衔接到满杆；曲线 1× 为线性，越高越适合小幅修正，仅作用于触屏。油门变化为每秒 5%–100%，快捷油门只改变目标，实际推力仍逐步跟随。</p><button data-action="controls-reset">恢复默认操作设置</button>
@@ -83,7 +100,12 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   const actions = Object.fromEntries([...root.querySelectorAll('[data-action]')].map(element => [element.dataset.action, element]));
   const action = name => actions[name];
   const values = Object.fromEntries([...root.querySelectorAll('[data-value]')].map(element => [element.dataset.value, element]));
-  const panel = $('.av-panel'), loadStatus = $('.av-load-status'), stick = $('.av-stick-pad'), knob = $('.av-stick-knob');
+  const panel = $('.av-panel'), loadStatus = $('.av-load-status'), stick = $('.av-stick-pad'), knob = $('.av-stick-knob'), systemPanel = $('.av-systems-panel');
+  const systemSettings = { ...SYSTEM_DEFAULTS };
+  const systemButtons = [...root.querySelectorAll('[data-system-action]')], trimControls = [...root.querySelectorAll('[data-trim]')], apTargets = [...root.querySelectorAll('[data-ap-target]')];
+  const systemSummaries = [...root.querySelectorAll('[data-system-value="summary"]')];
+  const trimOutputs = [...root.querySelectorAll('[data-trim-value]')];
+  const systemFieldsUI = systemFields.map(([key, , scale, unit]) => ({ key, scale, unit, slider: $(`[data-system-setting="${key}"]`), output: $(`[data-system-setting-value="${key}"]`) }));
   const cameraPanel = $('.av-camera-panel'), renderClock = new AviationRenderClock();
   const viewControls = viewFields.map(([key, , , , , scale, unit]) => ({ key, scale, unit, slider: $(`[data-view="${key}"]`), output: $(`[data-view-value="${key}"]`) }));
   const listeners = new AbortController(), held = new Set();
@@ -139,6 +161,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     for (const control of Object.values(holdControls)) releaseHold(control);
     touchInput.pitch = 0; touchInput.roll = 0; touchInput.yaw = 0; touchInput.brake = false;
     aircraftInput(held, touchInput, controlSettings, input);
+    input.trimPitch = 0;
     world.lookTarget = 0;
   }
 
@@ -156,6 +179,56 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text($('.av-joystick>span'), controlSettings.invertPitch ? '前推升 · 后拉降' : '前推降 · 后拉升');
   }
 
+  function syncSystems() {
+    const { engineOn, parkingBrake, trim, autopilot } = flight.systems;
+    const editable = !graphicsLost && ['ready', 'running', 'paused'].includes(flight.status);
+    for (const button of systemButtons) {
+      const name = button.dataset.systemAction;
+      const selected = name === 'engine' ? engineOn : name === 'parking' ? parkingBrake : name === 'ap-level' ? autopilot.mode === 'level' : name === 'ap-hold' ? autopilot.mode === 'hold' : false;
+      if (['engine', 'parking', 'ap-level', 'ap-hold'].includes(name)) button.setAttribute('aria-pressed', String(selected));
+      button.disabled = !editable || (name === 'parking' && (!flight.onGround || (!parkingBrake && flight.speed >= 1))) || (name.startsWith('ap-') && name !== 'ap-off' && (flight.onGround || physicsSettings.mode !== 'assisted' || !engineOn)) || (name === 'ap-off' && autopilot.mode === 'off');
+    }
+    const mode = autopilot.mode === 'hold' ? '航向 / 高度保持' : autopilot.mode === 'level' ? '机翼调平' : '手动飞行';
+    for (const element of systemSummaries) text(element, `${engineOn ? '发动机开启' : '发动机关闭'} · ${parkingBrake ? '驻车锁定' : '驻车释放'} · ${mode}`);
+    for (const slider of trimControls) {
+      slider.disabled = !editable;
+      if (document.activeElement !== slider) slider.value = Math.round(trim[slider.dataset.trim] * 100);
+    }
+    for (const output of trimOutputs) text(output, `${Math.round(trim[output.dataset.trimValue] * 100)}%`);
+    for (const field of apTargets) {
+      field.disabled = !editable;
+      if (document.activeElement !== field) field.value = field.dataset.apTarget === 'heading' ? (Math.round(autopilot.heading * 180 / Math.PI) % 360 + 360) % 360 : Math.round(autopilot.altitude);
+    }
+    for (const { key, scale, unit, slider, output } of systemFieldsUI) {
+      const value = Math.round(systemSettings[key] * scale);if (slider.value !== String(value)) slider.value = value;
+      text(output, `${value}${unit}`);
+    }
+  }
+
+  function setSystemPanel(open) {
+    if (open && (graphicsLost || flight.status !== 'running')) return;
+    const focused = systemPanel.contains(document.activeElement);systemPanel.hidden = !open;
+    action('systems').setAttribute('aria-expanded', String(open));
+    if (open) { setCameraPanel(false);clearInput();syncSystems();$('.av-systems-panel strong').focus({ preventScroll: true }); }
+    else if (focused) action('systems').focus({ preventScroll: true });
+  }
+
+  function systemAction(name) {
+    if (graphicsLost) return;
+    let changed = false;
+    if (name === 'gear') { gear();return; }
+    if (name === 'flaps') { flaps();return; }
+    if (name === 'speed-brake') { speedBrake();return; }
+    if (name === 'engine') changed = toggleEngine(flight);
+    if (name === 'parking') changed = toggleParkingBrake(flight);
+    if (name === 'trim-reset') for (const axis of ['pitch', 'roll', 'yaw']) changed = setAircraftTrim(flight, axis, 0) || changed;
+    if (name.startsWith('ap-')) {
+      const mode = name.slice(3);changed = setAutopilot(flight, flight.systems.autopilot.mode === mode ? 'off' : mode);
+      if (!changed) notify('自动驾驶暂不可用：请保持稳定模式、发动机开启、足够空速与平稳姿态。');
+    }
+    if (changed) { audio.event('cockpit-switch');syncSystems();dirty = true; }
+  }
+
   function syncPerformance() {
     const envelope = aircraftEnvelope(flight), performance = flight.performance, aircraft = flight.aircraft;
     const speedText = value => `${Math.round(value * 3.6)} km/h`;
@@ -169,6 +242,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
 
   function syncPhysics(forceNumbers = false) {
     Object.assign(physicsSettings, setAircraftPhysics(flight, physicsSettings));
+    if (physicsSettings.mode === 'maneuver' && flight.systems.autopilot.mode !== 'off') setAutopilot(flight, 'off');
     $('[data-setting="flight-mode"]').value = physicsSettings.mode;
     for (const [key] of physicsFields) {
       const slider = $(`[data-physics="${key}"]`), number = $(`[data-physics-number="${key}"]`), percent = Math.round(physicsSettings[key] * 100);
@@ -195,6 +269,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
 
   function setCameraPanel(open) {
+    if (open) setSystemPanel(false);
     const focused = cameraPanel.contains(document.activeElement);
     cameraPanel.hidden = !open;
     action('camera').setAttribute('aria-expanded', String(open));
@@ -247,8 +322,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     text($('#av-panel-title'), graphicsLost ? '图形连接已中断。' : ready ? '这次，真的飞起来。' : paused ? '云端，稍作停留。' : flight.status === 'completed' ? '平稳返航，欢迎回来。' : '飞行结束，再试一次。');
     text($('#av-panel-copy'), graphicsLost ? '飞行与声音已停止。请点击右上角“返回基地”，再重新进入飞机模式以恢复画面。' : ready ? '从海岸跑道起飞，掠过云层、群山与城市。自由探索，或依次穿过六座导航环，再返回跑道。' : paused ? '飞行已暂停，声音已停止。准备好后继续，或返回机库更换飞机。' : flight.status === 'completed' ? `已飞行 ${(flight.distance / 1000).toFixed(1)} 公里，通过 ${flight.gates} / 6 座训练环。` : flight.reason);
     text(action('pause'), paused ? '继续' : '设置');
-    setCameraPanel(false); syncCameraUI(); renderClock.reset();
+    setCameraPanel(false);setSystemPanel(false);syncCameraUI();syncSystems();renderClock.reset();
     action('camera').disabled = flight.status !== 'running';
+    action('systems').disabled = graphicsLost || flight.status !== 'running';
     action('pause').disabled = graphicsLost || !['running', 'paused'].includes(flight.status);
     root.classList.toggle('av-flying', flight.status === 'running');
     for (const element of [$('.av-instruments'), $('.av-navigation'), $('.av-flight-tools'), $('.av-joystick'), $('.av-brake')]) element.inert = !panel.hidden;
@@ -261,7 +337,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     if (graphicsLost) return;
     const version = ++loadVersion;
     physicsSettings = aircraftSettings[id];
-    flight = createAircraftFlight(id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); loaded = false; returning = false;
+    flight = createAircraftFlight(id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings, systems: systemSettings }); loaded = false; returning = false;
     syncPhysics();
     text(loadStatus, '正在载入飞机模型…'); loadStatus.dataset.state = 'loading';
     action('runway').disabled = true; action('airborne').disabled = true;
@@ -285,7 +361,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
 
   function start(airborne) {
     if (!loaded || graphicsLost) return;
-    flight = createAircraftFlight(flight.aircraft.id, airborne, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); flight.status = 'running'; returning = false;
+    const preflight = flight.systems;
+    flight = createAircraftFlight(flight.aircraft.id, airborne, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings, systems: systemSettings }); flight.status = 'running'; returning = false;
+    if (!airborne) { flight.systems.engineOn = preflight.engineOn;flight.systems.parkingBrake = preflight.parkingBrake;Object.assign(flight.systems.trim, preflight.trim); }
     accumulator = 0; previousTime = performance.now(); world.setCameraMode(world.cameraMode);
     unlockAudio(); showPanel();
     const help = aircraftControlHelp(controlSettings);
@@ -301,20 +379,21 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
 
   function gear() {
     if (!toggleAircraftGear(flight)) { notify('地面上保持起落架放下，起飞后再收轮。'); return; }
-    notify(flight.gearDown ? '起落架已放下 · 减速、对正跑道后降落' : '起落架已收起 · 空气阻力降低'); dirty = true;
+    audio.event('cockpit-switch');notify(flight.gearDown ? '起落架已放下 · 减速、对正跑道后降落' : '起落架已收起 · 空气阻力降低'); dirty = true;
   }
 
   function flaps() {
     if (!setAircraftFlaps(flight, (flight.flaps + 1) % 3)) { notify(`速度过高，请减至 ${Math.round(flight.aircraft.flapLimit * 3.6)} km/h 以下再放襟翼。`); return; }
-    notify(`襟翼：${flapNames[flight.flaps]} · 当前起飞参考 ${Math.round(aircraftEnvelope(flight).takeoff * 3.6)} km/h`); dirty = true;
+    audio.event('cockpit-switch');notify(`襟翼：${flapNames[flight.flaps]} · 当前起飞参考 ${Math.round(aircraftEnvelope(flight).takeoff * 3.6)} km/h`); dirty = true;
   }
 
   function speedBrake() {
     if (!toggleAircraftSpeedBrake(flight)) return;
-    notify(flight.speedBrake ? '减速板展开 · 起飞前请收起，地面停车仍需按住制动' : '减速板收起'); dirty = true;
+    audio.event('cockpit-switch');notify(flight.speedBrake ? '减速板展开 · 起飞前请收起，地面停车仍需按住制动' : '减速板收起'); dirty = true;
   }
 
   function updateUI() {
+    syncSystems();
     root.classList.toggle('av-cockpit', world.cameraMode === 2);
     $('.av-look').hidden = world.cameraMode !== 2;
     const aircraft = flight.aircraft, envelope = aircraftEnvelope(flight), heading = (flight.heading * 180 / Math.PI + 360) % 360;
@@ -339,7 +418,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     $('.av-navigation').classList.toggle('av-warning', flight.stalling);
     const gate = home ? null : AIR_GATES[flight.gates];
     if (flight.onGround) {
-      text(values.guide, flight.hasFlown ? '油门归零，按住制动停车' : flight.speedBrake ? '按 B 收起减速板后再起飞' : flight.speed < envelope.takeoff ? '推满油门，沿中线加速' : '拉升机头，离开跑道');
+      text(values.guide, flight.systems.parkingBrake ? '驻车制动锁定 · 按 N 释放' : !flight.systems.engineOn ? '发动机关闭 · 按 K 启动' : flight.hasFlown ? '油门归零，按住制动停车' : flight.speedBrake ? '按 B 收起减速板后再起飞' : flight.speed < envelope.takeoff ? '推满油门，沿中线加速' : '拉升机头，离开跑道');
       const remaining = Math.max(0, Math.cos(flight.heading) >= 0 ? flight.z - RUNWAY.end : RUNWAY.start - flight.z);
       text(values.target, flight.hasFlown ? `跑道剩余 ${Math.round(remaining)} m · 关闭油门，按住空格制动` : `起飞 ≥ ${Math.round(envelope.takeoff * 3.6)} km/h · 剩余 ${Math.round(remaining)} m · ${aircraftControlHelp(controlSettings).pitch.split(' / ')[0]} 拉升`);
     } else if (flight.stalling) {
@@ -372,7 +451,11 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   }
 
   listen(root, 'click', event => {
+    if (event.target === world.renderer.domElement && flight.status === 'running' && !graphicsLost) {
+      const control = world.pickCockpitControl(event.clientX, event.clientY);if (control) systemAction(control);return;
+    }
     const button = event.target.closest('button'); if (!button || button.disabled) return;
+    if (button.dataset.systemAction) { systemAction(button.dataset.systemAction);return; }
     if (button.dataset.throttle !== undefined) { setThrottle(Number(button.dataset.throttle)); return; }
     if (button.dataset.camera !== undefined) { chooseCamera(Number(button.dataset.camera)); setCameraPanel(false); root.focus({ preventScroll: true }); return; }
     if (button.dataset.aircraft) { if (button.dataset.aircraft !== flight.aircraft.id) selectAircraft(button.dataset.aircraft); return; }
@@ -390,7 +473,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
       case 'speed-brake': speedBrake(); break;
       case 'navigation': returning = !returning; updateUI(); break;
       case 'retry': selectAircraft(flight.aircraft.id); break;
-      case 'hangar': flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings }); audio.setState('menu'); world.setCameraMode(0); lastExterior = 0; showPanel(); break;
+      case 'hangar': flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: $('[data-setting="runway"]').value, physics: physicsSettings, systems: systemSettings }); audio.setState('menu'); world.setCameraMode(0); lastExterior = 0; showPanel(); break;
+      case 'systems': setSystemPanel(systemPanel.hidden);break;
+      case 'systems-close': setSystemPanel(false);break;
+      case 'systems-reset': Object.assign(systemSettings, SYSTEM_DEFAULTS);setSystemSettings(flight, systemSettings);syncSystems();dirty = true;break;
       case 'camera': setCameraPanel(cameraPanel.hidden); break;
       case 'camera-close': setCameraPanel(false); break;
       case 'camera-lock': world.toggleCameraLock(); syncCameraUI(); dirty = true; break;
@@ -406,6 +492,15 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   });
   listen(root, 'pointerdown', event => {
     if (!cameraPanel.hidden && !cameraPanel.contains(event.target) && !event.target.closest('[data-action="camera"]')) setCameraPanel(false);
+    if (!systemPanel.hidden && !systemPanel.contains(event.target) && !event.target.closest('[data-action="systems"]')) setSystemPanel(false);
+  });
+  for (const slider of trimControls) listen(slider, 'input', () => { if (!graphicsLost) setAircraftTrim(flight, slider.dataset.trim, Number(slider.value) / 100);syncSystems();dirty = true; });
+  for (const field of apTargets) listen(field, 'change', () => {
+    if (!graphicsLost) setAutopilotTarget(flight, field.dataset.apTarget, field.valueAsNumber);
+    const key = field.dataset.apTarget;field.value = key === 'heading' ? (Math.round(flight.systems.autopilot.heading * 180 / Math.PI) % 360 + 360) % 360 : Math.round(flight.systems.autopilot.altitude);dirty = true;
+  });
+  for (const { key, scale, slider } of systemFieldsUI) listen(slider, 'input', () => {
+    systemSettings[key] = Number(slider.value) / scale;setSystemSettings(flight, systemSettings);syncSystems();dirty = true;
   });
   listen($('[data-control="throttle"]'), 'input', event => {
     setThrottle(Number(event.target.value) / 100);
@@ -441,7 +536,9 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   listen($('[data-setting="display-hz"]'), 'change', event => { world.displayHz = Number(event.target.value); world.displayTime = 1; dirty = true; });
   listen($('[data-setting="runway"]'), 'change', event => {
     if (flight.status !== 'ready') return;
-    flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: event.target.value, physics: physicsSettings }); world.resetCamera = true; dirty = true;
+    const systems = flight.systems;
+    flight = createAircraftFlight(flight.aircraft.id, false, { runwayDirection: event.target.value, physics: physicsSettings, systems: systemSettings });
+    flight.systems.engineOn = systems.engineOn;flight.systems.parkingBrake = systems.parkingBrake;Object.assign(flight.systems.trim, systems.trim);world.resetCamera = true;dirty = true;
   });
   for (const { key, scale, unit, slider, output } of viewControls) listen(slider, 'input', () => {
     world.viewSettings[key] = Number(slider.value) / scale; text(output, `${slider.value}${unit}`);
@@ -463,6 +560,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
   });
   listen(window, 'keydown', event => {
     if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.code === 'Escape' && !systemPanel.hidden && !event.repeat) { event.preventDefault();setSystemPanel(false);return; }
     if (event.code === 'Escape' && !cameraPanel.hidden && !event.repeat) { event.preventDefault(); setCameraPanel(false); return; }
     if (event.code === 'Tab' && !panel.hidden) {
       const focusable = [...root.querySelectorAll('button, input, select, summary, a[href]')].filter(element => !element.disabled && !element.closest('[inert]') && element.checkVisibility());
@@ -476,7 +574,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     if (event.target.closest('button') && ['Space', 'Enter'].includes(event.code) && !event.target.closest('[data-hold]')) return;
     if (flight.status !== 'running') return;
     const throttle = aircraftThrottleShortcut(event.code);
-    if (aircraftKeyBinding(event.code, controlSettings.preset) || ['KeyZ', 'KeyX'].includes(event.code)) { event.preventDefault(); held.add(event.code); }
+    if (aircraftKeyBinding(event.code, controlSettings.preset) || ['KeyZ', 'KeyX', 'BracketLeft', 'BracketRight'].includes(event.code)) { event.preventDefault(); held.add(event.code); }
     else if (!event.repeat && throttle !== undefined) { event.preventDefault(); setThrottle(throttle); }
     else if (!event.repeat && event.code === 'KeyG') { event.preventDefault(); gear(); }
     else if (!event.repeat && event.code === 'KeyF') { event.preventDefault(); flaps(); }
@@ -485,6 +583,10 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
     else if (!event.repeat && event.code === 'KeyV') { event.preventDefault(); chooseCamera(world.cameraMode === 2 ? lastExterior : 2); }
     else if (!event.repeat && event.code === 'KeyL') { event.preventDefault(); world.toggleCameraLock(); syncCameraUI(); dirty = true; }
     else if (!event.repeat && event.code === 'KeyR') { event.preventDefault(); centerCamera(); }
+    else if (!event.repeat && event.code === 'KeyI') { event.preventDefault();setSystemPanel(systemPanel.hidden); }
+    else if (!event.repeat && ['KeyH', 'KeyJ', 'KeyK', 'KeyN', 'KeyT'].includes(event.code)) {
+      event.preventDefault();systemAction({ KeyH: 'ap-hold', KeyJ: 'ap-level', KeyK: 'engine', KeyN: 'parking', KeyT: 'trim-reset' }[event.code]);
+    }
   });
   listen(window, 'keyup', event => {
     held.delete(event.code);
@@ -537,6 +639,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
         touchInput.yaw = Number(holdControls['yaw-right'].active) - Number(holdControls['yaw-left'].active);
         touchInput.brake = holdControls.brake.active;
         aircraftInput(held, touchInput, controlSettings, input);
+        input.trimPitch = Number(held.has('BracketRight')) - Number(held.has('BracketLeft'));
         accumulator += dt;
         while (accumulator >= 1 / 60 && flight.status === 'running') {
           updateAircraftFlight(flight, input, 1 / 60); accumulator -= 1 / 60;
@@ -545,6 +648,7 @@ export function mountAviation({ audio, unlockAudio, onToggleAudio, onExit }) {
             if (event === 'takeoff') { audio.event('glide'); notify('已离地 · 按 G 收起起落架'); }
             if (event === 'flaps-limit') notify('襟翼超过安全速度，已自动收起。');
             if (event === 'touchdown') { audio.event('land'); notify('成功接地 · 油门归零，按住制动'); }
+            if (event === 'ap-disconnect') { audio.event('ap-disconnect');notify(`自动驾驶已退出 · ${{ manual: '已手动接管', stall: '空速不足', ground: '已接地', mode: '切换自由机动', engine: '发动机关闭', attitude: '姿态超出范围' }[flight.systems.autopilot.reason]}`); }
             if (event === 'crash' || event === 'completed') { audio.setState(event === 'crash' ? 'lost' : 'won'); audio.event(event === 'crash' ? 'lost' : 'won'); showPanel(); }
           }
         }

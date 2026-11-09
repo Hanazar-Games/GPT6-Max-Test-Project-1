@@ -448,6 +448,15 @@ test('cruise controls have distinct short confirmation cues', async () => {
   assert.notDeepEqual(on.map(note => note.frequency.value), off.map(note => note.frequency.value));
 });
 
+test('cockpit switch and autopilot disconnect cues stay on the effects bus and obey pause and mute', async () => {
+  for (const [event, count] of [['cockpit-switch', 1], ['ap-disconnect', 2]]) {
+    const audio = await setup();audio.setState('running');audio.event(event);
+    assert.equal(audio.voices.size, count);assert.ok([...audio.voices].every(voice => voice.bus === 'sfx'));
+    audio.setState('paused');audio.event(event);assert.equal(audio.voices.size, 0);
+    audio.setState('running');audio.setVolume('sfx', 0);audio.event(event);assert.equal(audio.voices.size, 0);
+  }
+});
+
 test('traffic impacts sound distinct while retaining alert headroom, music ducking and mute behavior', async () => {
   const audio = await setup();
   audio.update(running);

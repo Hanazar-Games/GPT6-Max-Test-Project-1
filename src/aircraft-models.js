@@ -13,6 +13,7 @@ export const AIRCRAFT_MODEL_URLS = {
 export function disposeAircraftObject(root) {
   const geometries = new Set(), materials = new Set(), textures = new Set(), images = new Set();
   root.traverse(object => {
+    if (object.isInstancedMesh) object.dispose();
     if (object.geometry) geometries.add(object.geometry);
     for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
       if (!material) continue;
