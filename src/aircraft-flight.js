@@ -1,6 +1,6 @@
 import { AIRPORT_BUILDINGS, AIRPORT_BOUNDS, RUNWAY } from './airport.js';
 import { Euler, Quaternion, Vector3 } from 'three';
-import { createAircraftSystems, setSystemSettings, updateAircraftSystems } from './aircraft-systems.js';
+import { createAircraftSystems, setSystemSettings, updateAircraftSystems, aircraftElectrical, deployArmedSpoilers } from './aircraft-systems.js';
 import { bankLoad, aircraftAirflow } from './aircraft-envelope.js';
 export { aircraftEnvelope } from './aircraft-envelope.js';
 
@@ -47,6 +47,8 @@ export const AIRCRAFT = Object.freeze([
   Object.freeze({ id: 'b62', engineType: 'jet', name: '云帆 B-62', subtitle: '原创公务机 · 后置双发与翼梢小翼', role: '高速巡航', configuration: '双发公务机', cockpit: 'transport', engines: 2, engineResponse: 1.1, reverseThrust: .3, turnDrag: 1.5, cruiseSpeed: 140, length: 20.4, span: 21.1, gearHeight: 2.35, takeoff: 55, stall: 44, flapLimit: 110, maxSpeed: 285, landingSpeed: 82, acceleration: 8.5, drag: .00007, pitchLimit: .45, bankLimit: .95, pitchRate: .4, rollRate: .85, response: 2.2, yawRate: .1, sinkLimit: 6 }),
   Object.freeze({ id: 'c24', engineType: 'turboprop', name: '山海 C-24', subtitle: '原创运输机 · 高翼双涡桨与后货舱', role: '低空运输', configuration: '双发涡桨', cockpit: 'transport', engines: 2, engineResponse: 1.7, reverseThrust: .4, turnDrag: 1.6, cruiseSpeed: 90, length: 25.6, span: 29.2, gearHeight: 3.4, takeoff: 44, stall: 36, flapLimit: 85, maxSpeed: 175, landingSpeed: 70, acceleration: 6.2, drag: .0001, pitchLimit: .4, bankLimit: .8, pitchRate: .3, rollRate: .65, response: 1.9, yawRate: .09, sinkLimit: 6 }),
   Object.freeze({ id: 'd9', engineType: 'fighter', name: '岚影 D-9', subtitle: '原创三角翼战机 · 单发与前翼', role: '敏捷截击', configuration: '单发战斗机', cockpit: 'fighter', engines: 1, engineResponse: 1.8, turnDrag: 2.1, cruiseSpeed: 240, length: 15.6, span: 9.6, gearHeight: 2.2, takeoff: 62, stall: 50, flapLimit: 150, maxSpeed: 720, landingSpeed: 120, acceleration: 20, drag: .000035, pitchLimit: .7, bankLimit: 1.2, pitchRate: 1.05, rollRate: 2.1, response: 3.2, yawRate: .19, sinkLimit: 9 }),
+  Object.freeze({ id: 'r220', engineType: 'jet', name: '云雀 R-220', subtitle: '原创窄体客机 · 双发短途与上扬翼梢', role: '短途客运', configuration: '双发窄体客机', cockpit: 'airliner', engines: 2, engineResponse: .95, reverseThrust: .32, turnDrag: 1.35, cruiseSpeed: 125, length: 38.7, span: 35.1, gearHeight: 4.1, takeoff: 60, stall: 47, flapLimit: 118, maxSpeed: 265, landingSpeed: 88, acceleration: 6.8, drag: .000055, pitchLimit: .4, bankLimit: .85, pitchRate: .3, rollRate: .65, response: 2.05, yawRate: .08, sinkLimit: 6 }),
+  Object.freeze({ id: 'w350', engineType: 'jet', name: '远星 W-350', subtitle: '原创宽体客机 · 长航程与柔弯翼梢', role: '远程客运', configuration: '双发宽体客机', cockpit: 'airliner', engines: 2, engineResponse: .72, reverseThrust: .36, turnDrag: 1.45, cruiseSpeed: 145, length: 64.8, span: 60.1, gearHeight: 6.3, takeoff: 73, stall: 59, flapLimit: 130, maxSpeed: 295, landingSpeed: 98, acceleration: 5.5, drag: .000043, pitchLimit: .38, bankLimit: .8, pitchRate: .24, rollRate: .52, response: 1.8, yawRate: .065, sinkLimit: 7 }),
 ]);
 
 const gatePositions = [[0, 180, -2000], [0, 420, -4600], [2600, 650, -6600], [5600, 650, -3400], [3200, 420, 3600], [0, 180, 3000]];
@@ -140,6 +142,7 @@ function stepFlight(flight, input, dt) {
   const baseStall = performance.stall * (1 - flight.flaps * .1), takeoff = performance.takeoff * (1 - flight.flaps * .07);
   let stall = baseStall * Math.sqrt(bankLoad(flight));
   const controls = updateAircraftSystems(flight, input, dt, stall);
+  if (!flight.onGround && flight.systems.yawDamper && aircraftElectrical(flight).avionics) controls.yaw = axis(controls.yaw - clamp(flight.sideslip * 3, -.7, .7) * (1 - Math.abs(axis(input.yaw))));
   const throttleRate = Number.isFinite(input.throttleRate) ? clamp(input.throttleRate, .05, 1) : .3;
   flight.throttle = clamp(flight.throttle + axis(input.throttle) * dt * throttleRate, 0, 1);
   flight.engineOutput += ((flight.systems.engineOn ? flight.throttle : 0) - flight.engineOutput) * (1 - Math.exp(-performance.engineResponse * dt));
@@ -204,12 +207,14 @@ function stepFlight(flight, input, dt) {
     flight.trackHeading = Math.atan2(Math.sin(flight.trackHeading), Math.cos(flight.trackHeading));
   }
   flight.sideslip = Math.atan2(Math.sin(flight.heading - flight.trackHeading), Math.cos(flight.heading - flight.trackHeading));
-  const horizontalSpeed = Math.sqrt(Math.max(0, speed ** 2 - flight.verticalSpeed ** 2));
+  const nextVertical = flight.onGround ? 0 : clamp(flight.verticalSpeed + verticalAcceleration * dt, -flight.speed, flight.speed);
+  const verticalSpeed = flight.onGround ? 0 : (flight.verticalSpeed + nextVertical) * .5;
+  const horizontalSpeed = Math.sqrt(Math.max(0, speed ** 2 - verticalSpeed ** 2));
   flight.x += Math.sin(flight.trackHeading) * horizontalSpeed * dt;
   flight.z -= Math.cos(flight.trackHeading) * horizontalSpeed * dt;
   if (!flight.onGround) {
-    flight.y += flight.verticalSpeed * dt + .5 * verticalAcceleration * dt ** 2;
-    flight.verticalSpeed = clamp(flight.verticalSpeed + verticalAcceleration * dt, -flight.speed, flight.speed);
+    flight.y += verticalSpeed * dt;
+    flight.verticalSpeed = nextVertical;
   }
   flight.angleOfAttack = aircraftAirflow(flight).angle;
   flight.loadFactor = flight.onGround ? 0 : normal / gravity;
@@ -240,6 +245,7 @@ function stepFlight(flight, input, dt) {
       }
       flight.events.push('touchdown');
       flight.onGround = true;
+      deployArmedSpoilers(flight);
       flight.verticalSpeed = 0;
       flight.loadFactor = 0;flight.stalling = false;
     }

@@ -40,16 +40,16 @@ test('every GLB normalizes to aircraft dimensions with independent gear and prop
   }
 });
 
-test('the four original fleet assets are compact, attributed and have distinct geometry', async () => {
+test('the six original fleet assets are compact, attributed and have distinct geometry', async () => {
   const meshes = new Set();
-  for (const id of ['t6', 'b62', 'c24', 'd9']) {
+  for (const id of ['t6', 'b62', 'c24', 'd9', 'r220', 'w350']) {
     const { file, json } = await asset(id);
     assert.equal(json.nodes[0].extras.license, 'CC0-1.0');
-    assert.ok(file.length < 100000);
+    assert.ok(file.length < 250000);
     assert.ok(json.meshes.length < 18);
     meshes.add(file.toString('base64'));
   }
-  assert.equal(meshes.size, 4);
+  assert.equal(meshes.size, 6);
 });
 
 test('A380 attribution survives and the fighter is an original self-contained asset', async () => {

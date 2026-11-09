@@ -87,7 +87,7 @@ test('bank increases stall reference, consumes speed and recovers after levellin
 });
 
 test('spooling and turning remain consistent across frame rates and pause cannot advance the engine', () => {
-  for (const id of ['a380', 't6', 'b62', 'c24', 'd9']) {
+  for (const { id } of AIRCRAFT) {
     const flights = [1 / 30, 1 / 60, 1 / 120].map(step => {
       const flight = createAircraftFlight(id, true);
       flight.y = 3000; flight.throttle = 1;
@@ -102,9 +102,10 @@ test('spooling and turning remain consistent across frame rates and pause cannot
   }
 });
 
-test('the six aircraft have distinct propulsion, safe airborne starts and working custom settings', () => {
-  assert.equal(AIRCRAFT.length, 6);
-  assert.equal(new Set(AIRCRAFT.map(aircraft => aircraft.id)).size, 6);
+test('the fleet includes three distinct airliners with safe starts and working custom settings', () => {
+  assert.equal(AIRCRAFT.length, 8);
+  assert.equal(new Set(AIRCRAFT.map(aircraft => aircraft.id)).size, 8);
+  assert.equal(AIRCRAFT.filter(aircraft => aircraft.cockpit === 'airliner').length, 3);
   for (const aircraft of AIRCRAFT) {
     assert.ok(aircraft.engines >= 1 && aircraft.engineResponse > 0 && aircraft.turnDrag > 0);
     for (const physics of [{}, { mass: 2, lift: .5 }, { maxSpeed: .5 }, { thrust: 0 }]) {
@@ -119,8 +120,20 @@ test('the six aircraft have distinct propulsion, safe airborne starts and workin
   }
 });
 
+test('steep braking cannot move farther than the integrated airspeed permits', () => {
+  for (const vertical of [-1, 1]) {
+    const flight = createAircraftFlight('su30', true, { physics: { mode: 'maneuver', stability: 0, thrust: 0, airBrake: 2 } });
+    Object.assign(flight, { y: 10000, speed: 150, verticalSpeed: 150 * vertical, pitch: vertical * Math.PI / 2, throttle: 0, engineOutput: 0, speedBrake: true });
+    const before = { x: flight.x, y: flight.y, z: flight.z, speed: flight.speed }, dt = 1 / 120;
+    updateAircraftFlight(flight, {}, dt);
+    const distance = Math.hypot(flight.x - before.x, flight.y - before.y, flight.z - before.z);
+    assert.ok(distance <= (before.speed + flight.speed) * .5 * dt + 1e-8, `${vertical}: displacement ${distance}`);
+    assert.ok(Math.abs(flight.verticalSpeed) <= flight.speed);
+  }
+});
+
 test('a high-angle pull stalls above the level-flight stall speed and unloading recovers', () => {
-  for (const id of ['a380', 'su30', 't6', 'b62', 'c24', 'd9']) {
+  for (const { id } of AIRCRAFT) {
     const flight = createAircraftFlight(id, true, { physics: { mode: 'maneuver', stability: 0 } });
     Object.assign(flight, { y: 3000, speed: flight.performance.stall * 2, pitch: .75 });
     updateAircraftFlight(flight, {}, 1 / 120);

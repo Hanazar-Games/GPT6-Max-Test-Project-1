@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 航迹惯性、远景与座舱调节</h2>
-      <p id="release-copy">转弯保留惯性，远景按距离简化，按自己的习惯调整驾驶位置与仪表面板。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 双发客机与座舱电源系统</h2>
+      <p id="release-copy">驾驶新的窄体与宽体客机，管理电源和 APU，准备自动扰流板，并在侧滑中保持更稳的方向。</p>
+      <ul class="release-list">
+        <li><strong>两款原创客机</strong>云雀 R-220 窄体客机与远星 W-350 宽体客机加入，八款飞机全部开放；配备翼下双发、客舱舷窗、分片风挡、弯曲翼梢和独立起落架，使用不同起降与响应参数。</li>
+        <li><strong>十八个实体按钮</strong>新增 BAT / GEN / APU / AVIONICS / Y/DAMP / SPLR ARM，仪表与面板同步。客机地面重启需 APU READY，断电或关航电会熄屏并退出自动化；默认已启动，可直接起飞。均为游戏简化系统。</li>
+        <li><strong>物理与着陆联动</strong>偏航阻尼抑制侧滑并保留手动方向舵；扰流板可预位，在接地收油后自动展开，复飞解除预位。修复陡降制动时位移与空速不一致；1.31.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>90 个版本</span></summary>
+      <article><h3>v1.31.0 · 航迹惯性、远景与座舱调节</h3>
+      <p>转弯保留惯性，远景按距离简化，按自己的习惯调整驾驶位置与仪表面板。</p>
       <ul class="release-list">
         <li><strong>转向更有惯性</strong>航迹逐渐跟随机头，侧滑增加阻力，着陆检查实际前进方向；新增横向航迹响应 25%–300%，仪表显示侧滑角与侧滑球。</li>
         <li><strong>看得更远，远处更简洁</strong>默认视距提高至 100 km，可调 30–160 km；地面默认低模，分块地形与机场自动随距离降级，可选均衡与精细。修正高空海岸条纹和地形接缝。</li>
         <li><strong>座椅与实体面板可调</strong>新增座椅高低、前后、视线俯仰、面板缩放、高低与前后六项调节，按钮点按随位置同步；可分别恢复座舱、镜头与地景设置。1.30.2 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>89 个版本</span></summary>
+      </article>
       <article><h3>v1.30.2 · 座舱性能与开关反馈优化</h3>
       <p>减少无效界面更新，展开设置即刻同步，让实体开关更清楚地说明当前能做什么。</p>
       <ul class="release-list">

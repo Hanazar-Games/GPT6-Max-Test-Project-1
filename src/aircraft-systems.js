@@ -7,9 +7,60 @@ const radians = Math.PI / 180;
 export const SYSTEM_DEFAULTS = Object.freeze({ trimAuthority: .2, trimRate: .08, apResponse: 1, bankLimit: 22, climbRate: 5, overrideThreshold: .2, displayBrightness: 1, speedResponse: 1, reversePower: 1, autoBrakeStrength: 1 });
 export const SYSTEM_LIMITS = Object.freeze({ trimAuthority: [.05, .4], trimRate: [.01, .3], apResponse: [.25, 2], bankLimit: [5, 35], climbRate: [1, 15], overrideThreshold: [.05, .6], displayBrightness: [.2, 1.2], speedResponse: [.25, 2], reversePower: [.25, 1.5], autoBrakeStrength: [.25, 1.5] });
 export const AUTOBRAKE_MODES = Object.freeze(['off', 'low', 'high']);
+export const AIRCRAFT_SYSTEM_SWITCHES = Object.freeze({
+  battery: { key: 'batteryOn', label: 'BAT', name: '电池母线' },
+  generator: { key: 'generatorOn', label: 'GEN', name: '发动机发电机' },
+  apu: { key: 'apuOn', label: 'APU', name: '辅助动力' },
+  avionics: { key: 'avionicsOn', label: 'AVIONICS', name: '航电主开关' },
+  'yaw-damper': { key: 'yawDamper', label: 'Y/DAMP', name: '偏航阻尼' },
+  'spoiler-arm': { key: 'spoilerArmed', label: 'SPLR ARM', name: '扰流板预位' },
+});
 
 export function createAircraftSystems(settings) {
-  return { engineOn: true, parkingBrake: false, reverse: false, autoBrake: 'off', autoBrakeActive: false, autothrottle: { enabled: false, target: 0, integral: 0, reason: '' }, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false, wheelBrake: 0 } };
+  return { engineOn: true, batteryOn: true, generatorOn: true, apuOn: false, apuRpm: 0, avionicsOn: true, yawDamper: false, spoilerArmed: false, parkingBrake: false, reverse: false, autoBrake: 'off', autoBrakeActive: false, autothrottle: { enabled: false, target: 0, integral: 0, reason: '' }, trim: { pitch: 0, roll: 0, yaw: 0 }, settings: { ...SYSTEM_DEFAULTS, ...settings }, autopilot: { mode: 'off', heading: 0, altitude: 1000, reason: '' }, controls: { pitch: 0, roll: 0, yaw: 0, brake: false, wheelBrake: 0 } };
+}
+
+export function aircraftElectrical(flight) {
+  const systems = flight.systems;
+  const apuReady = systems.apuOn && systems.apuRpm >= .95;
+  const generatorOnline = systems.engineOn && systems.generatorOn;
+  const powered = systems.batteryOn || generatorOnline || apuReady;
+  return { powered, avionics: powered && systems.avionicsOn, apuReady, generatorOnline };
+}
+
+export function aircraftSystemAvailability(flight, action) {
+  if (!editable(flight) || !Object.hasOwn(AIRCRAFT_SYSTEM_SWITCHES, action)) return 'status';
+  const control = AIRCRAFT_SYSTEM_SWITCHES[action];
+  if (flight.systems[control.key]) return '';
+  if (action === 'apu' && flight.aircraft.cockpit !== 'airliner' && flight.aircraft.id !== 'b62') return 'aircraft';
+  const power = aircraftElectrical(flight);
+  return action === 'apu' || action === 'spoiler-arm' ? power.powered ? '' : 'power' : action === 'yaw-damper' && !power.avionics ? 'avionics' : '';
+}
+
+export function toggleAircraftSystem(flight, action) {
+  if (aircraftSystemAvailability(flight, action)) return false;
+  const key = AIRCRAFT_SYSTEM_SWITCHES[action].key;
+  flight.systems[key] = !flight.systems[key];return true;
+}
+
+export function updateAircraftElectrical(flight, dt) {
+  if (!['ready', 'running'].includes(flight.status) || !Number.isFinite(dt) || dt <= 0) return;
+  const systems = flight.systems;
+  if (systems.apuOn && !aircraftElectrical(flight).powered) systems.apuOn = false;
+  const target = Number(systems.apuOn);
+  systems.apuRpm += (target - systems.apuRpm) * (1 - Math.exp(-.6 * Math.min(dt, .25)));
+  if (Math.abs(target - systems.apuRpm) < .001) systems.apuRpm = target;
+}
+
+export function engineStartAvailability(flight) {
+  if (!editable(flight)) return 'status';
+  const power = aircraftElectrical(flight);
+  return !power.powered ? 'power' : flight.onGround && flight.aircraft.cockpit === 'airliner' && !power.apuReady ? 'apu' : '';
+}
+
+export function restoreAircraftPreflight(flight, previous) {
+  for (const key of ['engineOn', 'parkingBrake', 'reverse', 'autoBrake', 'apuRpm', ...Object.values(AIRCRAFT_SYSTEM_SWITCHES).map(control => control.key)]) flight.systems[key] = previous.systems[key];
+  flight.throttle = previous.throttle;Object.assign(flight.systems.trim, previous.systems.trim);
 }
 
 export function reverseThrustAvailability(flight) {
@@ -28,7 +79,7 @@ export function setAutobrake(flight, mode) {
 
 export function autothrottleAvailability(flight) {
   const envelope = aircraftEnvelope(flight), minimum = envelope.stall * 1.3, maximum = envelope.maxSpeed;
-  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : !flight.systems.engineOn ? 'engine' : flight.performance.acceleration <= .01 ? 'power' : minimum > maximum ? 'envelope' : flight.speedBrake ? 'brake' : flight.speed < envelope.stall * 1.1 ? 'stall' : aircraftAirflow(flight).highAngle ? 'aoa' : '';
+  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : !aircraftElectrical(flight).avionics ? 'electrical' : !flight.systems.engineOn ? 'engine' : flight.performance.acceleration <= .01 ? 'power' : minimum > maximum ? 'envelope' : flight.speedBrake ? 'brake' : flight.speed < envelope.stall * 1.1 ? 'stall' : aircraftAirflow(flight).highAngle ? 'aoa' : '';
   return { reason, minimum, maximum };
 }
 
@@ -62,11 +113,18 @@ export function setAircraftThrottle(flight, value) {
 export function commandGoAround(flight) {
   if (!editable(flight) || !flight.systems.engineOn) return false;
   setAutopilot(flight, 'off');setAutothrottle(flight, false);setAutobrake(flight, 'off');
-  flight.systems.reverse = false;flight.speedBrake = false;flight.throttle = 1;return true;
+  flight.systems.reverse = false;flight.systems.spoilerArmed = false;flight.speedBrake = false;flight.throttle = 1;return true;
+}
+
+export function deployArmedSpoilers(flight) {
+  if (flight.onGround && flight.hasFlown && flight.systems.spoilerArmed && flight.throttle < .15 && !flight.speedBrake && aircraftElectrical(flight).powered) {
+    flight.speedBrake = true;flight.events.push('spoilers-deployed');
+  }
 }
 
 function updatePowerSystems(flight, input, dt) {
   const systems = flight.systems, control = systems.autothrottle;
+  deployArmedSpoilers(flight);
   if (!flight.onGround) systems.reverse = false;
   if (input.brake) systems.autoBrake = 'off';
   systems.autoBrakeActive = systems.autoBrake !== 'off' && flight.onGround && flight.hasFlown && flight.speed > 1 && (systems.reverse || (flight.throttle < .15 && axis(input.throttle) <= 0)) && !systems.parkingBrake;
@@ -98,7 +156,7 @@ export function setAircraftTrim(flight, key, value) {
 }
 
 export function toggleEngine(flight) {
-  if (!editable(flight)) return false;
+  if (!editable(flight) || (!flight.systems.engineOn && engineStartAvailability(flight))) return false;
   flight.systems.engineOn = !flight.systems.engineOn;return true;
 }
 
@@ -109,7 +167,7 @@ export function toggleParkingBrake(flight) {
 
 export function autopilotAvailability(flight) {
   const minimumSpeed = aircraftEnvelope(flight).stall * 1.15;
-  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < minimumSpeed ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .45 ? 'attitude' : aircraftAirflow(flight).highAngle ? 'aoa' : '';
+  const reason = !editable(flight) ? 'status' : flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !aircraftElectrical(flight).avionics ? 'electrical' : !flight.systems.engineOn ? 'engine' : flight.speed < minimumSpeed ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .45 ? 'attitude' : aircraftAirflow(flight).highAngle ? 'aoa' : '';
   return { reason, minimumSpeed };
 }
 
@@ -130,6 +188,7 @@ export function setAutopilotTarget(flight, key, value) {
 }
 
 export function updateAircraftSystems(flight, input, dt, stall) {
+  updateAircraftElectrical(flight, dt);
   const { trim, settings, autopilot, controls } = flight.systems;
   trim.pitch = axis(trim.pitch + axis(input.trimPitch) * settings.trimRate * dt);
   for (const key in trim) controls[key] = axis(axis(input[key]) + trim[key] * settings.trimAuthority);
@@ -137,7 +196,7 @@ export function updateAircraftSystems(flight, input, dt, stall) {
   updatePowerSystems(flight, input, dt);
   if (autopilot.mode === 'off') return controls;
   const override = Number.isFinite(input.pilotOverride) ? Math.abs(axis(input.pilotOverride)) : Math.max(Math.abs(axis(input.pitch)), Math.abs(axis(input.roll)), Math.abs(axis(input.yaw)));
-  const reason = flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !flight.systems.engineOn ? 'engine' : flight.speed < stall * 1.1 ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .55 ? 'attitude' : aircraftAirflow(flight).highAngle ? 'aoa' : override >= settings.overrideThreshold ? 'manual' : '';
+  const reason = flight.onGround ? 'ground' : flight.physics.mode !== 'assisted' ? 'mode' : !aircraftElectrical(flight).avionics ? 'electrical' : !flight.systems.engineOn ? 'engine' : flight.speed < stall * 1.1 ? 'stall' : Math.abs(flight.roll) > Math.PI / 3 || Math.abs(flight.pitch) > .55 ? 'attitude' : aircraftAirflow(flight).highAngle ? 'aoa' : override >= settings.overrideThreshold ? 'manual' : '';
   if (reason) {
     autopilot.mode = 'off';autopilot.reason = reason;flight.events.push('ap-disconnect');return controls;
   }

@@ -1,19 +1,20 @@
 import * as THREE from 'three';
 import { batchMeshes } from './model-utils.js';
 import { RUNWAY } from './airport.js';
-import { autopilotAvailability, autothrottleAvailability, reverseThrustAvailability } from './aircraft-systems.js';
+import { autopilotAvailability, autothrottleAvailability, reverseThrustAvailability, AIRCRAFT_SYSTEM_SWITCHES, aircraftElectrical, aircraftSystemAvailability, engineStartAvailability } from './aircraft-systems.js';
 
 export const COCKPIT_SWITCH_COLUMNS = 6;
 export const COCKPIT_SWITCHES = Object.freeze([
   { action: 'engine', label: 'ENG' }, { action: 'parking', label: 'PARK' }, { action: 'reverse', label: 'REV' }, { action: 'autobrake', label: 'A/BRK' }, { action: 'go-around', label: 'TOGA' }, { action: 'trim-reset', label: 'TRIM 0' },
   { action: 'ap-level', label: 'AP LVL' }, { action: 'ap-hold', label: 'AP HOLD' }, { action: 'autothrottle', label: 'A/THR' }, { action: 'gear', label: 'GEAR' }, { action: 'flaps', label: 'FLAP' }, { action: 'speed-brake', label: 'BRK' },
+  ...Object.entries(AIRCRAFT_SYSTEM_SWITCHES).map(([action, control]) => ({ action, label: control.label })),
 ]);
 const switchColor = new THREE.Color();
-export const cockpitWidth = aircraft => aircraft.cockpit === 'airliner' ? 4.2 : aircraft.cockpit === 'transport' ? 3.4 : 2.05;
+export const cockpitWidth = aircraft => aircraft.cockpit === 'airliner' ? aircraft.length < 50 ? 3.6 : 4.2 : aircraft.cockpit === 'transport' ? 3.4 : 2.05;
 export const cockpitSwitchSpacing = aircraft => Math.min(cockpitWidth(aircraft) * .62, 2) / COCKPIT_SWITCH_COLUMNS;
 
 export function cockpitSeat(aircraft) {
-  return aircraft.cockpit === 'airliner' ? [-1.15, 2.2, -aircraft.length * .36] : aircraft.cockpit === 'transport' ? [-.55, .8, -aircraft.length * .28] : [0, .55, -aircraft.length * .24];
+  return aircraft.cockpit === 'airliner' ? aircraft.length < 50 ? [-.85, 1.05, -aircraft.length * .4] : [-1.15, 2.2, -aircraft.length * .36] : aircraft.cockpit === 'transport' ? [-.55, .8, -aircraft.length * .28] : [0, .55, -aircraft.length * .24];
 }
 
 export function cockpitInstruments(flight) {
@@ -42,6 +43,7 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   }
   box(dashboard, 'shell', [0, -.78, -1.6], [width, .85, .36]);
   box(dashboard, 'dark', [0, -.32, -1.56], [width + .08, .1, .55]);
+  box(dashboard, 'dark', [airliner ? -.16 : 0, .4, -1.3], [Math.min(width * .62, 2) + .03, .12, .14]);
   box(shell, 'shell', [-width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'shell', [width / 2, -.7, -.1], [.16, 1, 3.3]);
   box(shell, 'dark', [0, -1.45, -.1], [width, .1, 3.3]);
@@ -51,7 +53,6 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   if (airliner) {
     bar([.6, -.27, -1.58], [.6, 1.05, -1.45], .04);
     box(shell, 'shell', [.7, 1.06, -.5], [1, .12, 1.1]);
-    for (let row = 0; row < 3; row++) for (let column = 0; column < 7; column++) box(shell, row === 1 ? 'amber' : 'dark', [.35 + column * .11, .988, -.85 + row * .23], [.05, .025, .09]);
     box(shell, 'shell', [width / 2 - 1.15, -1.1, -.3], [.5, .55, 1.3]);
     box(shell, 'seat', [width / 2 - .45, -.9, .3], [.75, .2, .8]);
     box(shell, 'seat', [width / 2 - .45, -.4, .7], [.75, .9, .16]);
@@ -84,7 +85,8 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   const button = new THREE.Object3D(), spacing = cockpitSwitchSpacing(aircraft);
   const labels = new THREE.Group(), labelMaterial = labelsTexture ? new THREE.MeshBasicMaterial({ map: labelsTexture, toneMapped: false }) : null;
   COCKPIT_SWITCHES.forEach((control, index) => {
-    button.position.set((index % COCKPIT_SWITCH_COLUMNS - (COCKPIT_SWITCH_COLUMNS - 1) / 2) * spacing - (airliner ? .16 : 0), -.23 - Math.floor(index / COCKPIT_SWITCH_COLUMNS) * .1, -1.25);button.scale.set(spacing * .72, .055, .04);button.updateMatrix();switches.setMatrixAt(index, button.matrix);
+    const overhead = index >= 12;
+    button.position.set((index % COCKPIT_SWITCH_COLUMNS - (COCKPIT_SWITCH_COLUMNS - 1) / 2) * spacing - (airliner ? .16 : 0), overhead ? .4 : -.23 - Math.floor(index / COCKPIT_SWITCH_COLUMNS) * .1, overhead ? -1.2 : -1.25);button.scale.set(spacing * .72, .055, .04);button.updateMatrix();switches.setMatrixAt(index, button.matrix);
     switches.setColorAt(index, switchColor.set(0x29434c));
     if (labelMaterial) {
       const geometry = new THREE.PlaneGeometry(spacing * .68, .045), uv = geometry.attributes.uv;
@@ -105,13 +107,15 @@ export function updateCockpitControls(root, flight, input = {}) {
   for (const lever of throttles) lever.rotation.x = .35 - flight.throttle * .8;
   gear.rotation.x = flight.gearDown ? .5 : -.5;
   const systems = flight.systems;
+  const power = aircraftElectrical(flight);
   const editable = ['ready', 'running', 'paused'].includes(flight.status), apUnavailable = !!autopilotAvailability(flight).reason;
   let changed = false;
   for (let index = 0; index < COCKPIT_SWITCHES.length; index++) {
     const action = COCKPIT_SWITCHES[index].action;
-    let active = false, unavailable = !editable;
+    const extra = AIRCRAFT_SYSTEM_SWITCHES[action];
+    let active = extra ? systems[extra.key] : false, unavailable = !editable || (extra && !!aircraftSystemAvailability(flight, action));
     switch (action) {
-      case 'engine': active = systems.engineOn;break;
+      case 'engine': active = systems.engineOn;unavailable ||= !active && !!engineStartAvailability(flight);break;
       case 'parking': active = systems.parkingBrake;unavailable ||= !flight.onGround || (!active && flight.speed >= 1);break;
       case 'reverse': active = systems.reverse;unavailable ||= !active && !!reverseThrustAvailability(flight);break;
       case 'autobrake': active = systems.autoBrakeActive;break;
@@ -124,17 +128,19 @@ export function updateCockpitControls(root, flight, input = {}) {
       case 'trim-reset': active = Math.abs(systems.trim.pitch) + Math.abs(systems.trim.roll) + Math.abs(systems.trim.yaw) > .001;break;
       case 'go-around': unavailable ||= !systems.engineOn;break;
     }
-    const color = unavailable ? 0x59646b : active ? 0x4fd6ac : action === 'autobrake' && systems.autoBrake !== 'off' ? 0xd9ad63 : 0x29434c;
+    const armed = action === 'autobrake' && systems.autoBrake !== 'off' && !systems.autoBrakeActive || action === 'apu' && systems.apuOn && !power.apuReady || action === 'spoiler-arm' && systems.spoilerArmed && !flight.speedBrake || action === 'generator' && systems.generatorOn && !power.generatorOnline || action === 'yaw-damper' && systems.yawDamper && (!power.avionics || flight.onGround);
+    const color = unavailable ? 0x59646b : armed ? 0xd9ad63 : active ? 0x4fd6ac : 0x29434c;
     if (switchStates[index] !== color) { switchStates[index] = color;switches.setColorAt(index, switchColor.set(color));changed = true; }
   }
   if (changed) switches.instanceColor.needsUpdate = true;
-  root.userData.display.material.color.setScalar(flight.systems.settings.displayBrightness);
+  root.userData.display.material.color.setScalar(power.avionics ? flight.systems.settings.displayBrightness : 0);
 }
 
 export function drawCockpitDisplay(ctx, flight) {
   const data = cockpitInstruments(flight), airliner = flight.aircraft.cockpit === 'airliner' || flight.aircraft.cockpit === 'transport', engines = flight.aircraft.engines;
   const width = ctx.canvas.width, height = ctx.canvas.height;
   ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#111c23'; ctx.fillRect(0, 0, width, height);
+  if (!aircraftElectrical(flight).avionics) { ctx.fillStyle = '#000';ctx.fillRect(0, 0, width, height);return; }
   const text = (value, x, y, size = 22, color = '#c8eee4') => { ctx.fillStyle = color; ctx.font = `${size}px monospace`; ctx.fillText(String(value), x, y); };
   const tiles = airliner ? 4 : 3, gap = 16, tile = (width - gap * (tiles + 1)) / tiles;
   for (let i = 0; i < tiles; i++) { ctx.fillStyle = '#050f15'; ctx.fillRect(gap + i * (tile + gap), 18, tile, height - 36); ctx.strokeStyle = '#3c545c'; ctx.strokeRect(gap + i * (tile + gap), 18, tile, height - 36); }
@@ -167,6 +173,9 @@ export function drawCockpitDisplay(ctx, flight) {
     const fourth = gap * 4 + tile * 3;
     text('NAV / ISLAND', fourth + 14, 47, 20); text(`HDG ${data.heading}`, fourth + 14, 102, 28);
     text(`HOME`, fourth + 14, 153, 18, '#7da6b4'); text(`${(Math.hypot(flight.x, flight.z - RUNWAY.center) / 1000).toFixed(1)} KM`, fourth + 14, 190, 27);
-    text('RWY 18 / 36', fourth + 14, 235, 21); text(flight.onGround ? 'GROUND' : 'AIRBORNE', fourth + 14, height - 39, 20, '#96efb0');
+    const power = aircraftElectrical(flight);
+    text(`ELEC ${power.generatorOnline ? 'GEN' : power.apuReady ? 'APU' : 'BAT'}`, fourth + 14, 225, 19);
+    text(`APU ${power.apuReady ? 'READY' : `${Math.round(flight.systems.apuRpm * 100)}%`}`, fourth + 14, 252, 18, flight.systems.apuOn && !power.apuReady ? '#ffcf86' : '#96efb0');
+    text(flight.systems.spoilerArmed ? 'SPLR ARMED' : flight.onGround ? 'GROUND' : 'AIRBORNE', fourth + 14, height - 39, 20, '#96efb0');
   }
 }

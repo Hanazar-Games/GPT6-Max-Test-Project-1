@@ -8,6 +8,8 @@ export const AIRCRAFT_MODEL_URLS = {
   b62: new URL('../assets/aircraft/b62.glb', import.meta.url).href,
   c24: new URL('../assets/aircraft/c24.glb', import.meta.url).href,
   d9: new URL('../assets/aircraft/d9.glb', import.meta.url).href,
+  r220: new URL('../assets/aircraft/r220.glb', import.meta.url).href,
+  w350: new URL('../assets/aircraft/w350.glb', import.meta.url).href,
 };
 
 export function disposeAircraftObject(root) {
