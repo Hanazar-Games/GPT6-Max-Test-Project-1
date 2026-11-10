@@ -155,7 +155,8 @@ let ghostEnabled = true;
 let splitFlashUntil = 0;
 const audio = new AudioEngine();
 let aviationActive = false;
-$('open-hangar').insertAdjacentHTML('afterend', `<button id="open-aviation" class="hangar-button aircraft-entry" disabled><span>飞机机库 · 空中试飞<small>6 款飞机 · 起飞、飞行与降落</small></span>${icon('arrow')}</button>`);
+const aviationEntryCopy = '客机、战机与螺旋桨飞机 · 起飞、飞行与降落';
+$('open-hangar').insertAdjacentHTML('afterend', `<button id="open-aviation" class="hangar-button aircraft-entry" disabled><span>飞机机库 · 空中试飞<small>${aviationEntryCopy}</small></span>${icon('arrow')}</button>`);
 $('open-aviation').addEventListener('click', async () => {
   if (aviationActive || !world || game.status !== 'menu') return;
   aviationActive = true;
@@ -170,7 +171,7 @@ $('open-aviation').addEventListener('click', async () => {
       aviationActive = false;
       $('app').hidden = false; $('app').inert = false;
       entry.disabled = false;
-      entry.querySelector('small').textContent = '6 款飞机 · 起飞、飞行与降落';
+      entry.querySelector('small').textContent = aviationEntryCopy;
       world.resize(); frameTime = performance.now(); accumulator = 0; hudDirty = true;
       for (const bus of ['music', 'sfx']) {
         const volume = Math.round(audio.volumes[bus] * 100);
@@ -183,7 +184,7 @@ $('open-aviation').addEventListener('click', async () => {
   } catch (error) {
     console.error('Unable to enter aircraft mode:', error);
     aviationActive = false; $('app').hidden = false; $('app').inert = false; entry.disabled = false;
-    entry.querySelector('small').textContent = '6 款飞机 · 起飞、飞行与降落';
+    entry.querySelector('small').textContent = aviationEntryCopy;
     toast('飞机模式未能启动，请重试。', 'warning'); entry.focus({ preventScroll: true });
   }
 });

@@ -15,6 +15,7 @@ export class AudioEngine {
     this.state = 'menu';
     this.volumes = { music: 0.45, sfx: 0.8 };
     this.voices = new Set();
+    this.targets = new WeakMap();
     this.beat = 0;
     this.nextBeat = 0;
     this.alertUntil = 0;
@@ -98,9 +99,13 @@ export class AudioEngine {
   }
 
   target(parameter, value, fade = 0.025) {
+    const previous = this.targets.get(parameter);
+    if (previous?.value === value && previous.fade === fade) return;
     const now = this.context.currentTime;
     parameter.cancelScheduledValues(now);
     parameter.setTargetAtTime(value, now, fade);
+    if (previous) { previous.value = value; previous.fade = fade; }
+    else this.targets.set(parameter, { value, fade });
   }
 
   mix() {
@@ -181,6 +186,8 @@ export class AudioEngine {
 
   event(type, kind) {
     if (type === 'cockpit-switch') this.tone(920, .045, 0, 'triangle', 'sfx', .08);
+    if (type === 'gear-locked') this.tone(240, .11, 0, 'triangle', 'sfx', .1);
+    if (type === 'gear-retracted') this.tone(180, .08, 0, 'triangle', 'sfx', .08);
     if (type === 'ap-disconnect') { this.tone(880, .12, 0, 'triangle', 'sfx', .16, 'alert');this.tone(660, .16, .15, 'triangle', 'sfx', .16, 'alert'); }
     const alertTone = (frequency, duration, offset = 0, wave = 'triangle') => this.tone(frequency, duration, offset, wave, 'sfx', .3, 'alert');
     if (type === 'powerup') {

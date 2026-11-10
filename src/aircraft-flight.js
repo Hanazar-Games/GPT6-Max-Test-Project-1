@@ -67,7 +67,7 @@ export function createAircraftFlight(id = 'a380', airborne = false, { runwayDire
     heading: south ? Math.PI : 0, trackHeading: south ? Math.PI : 0, sideslip: 0, pitch: 0, roll: 0, speed: 0,
     verticalSpeed: 0, throttle: airborne ? .65 : 0, engineOutput: airborne ? .65 : 0, gearDown: !airborne, gearPosition: airborne ? 0 : 1, onGround: !airborne,
     flaps: 0, speedBrake: false, runwayDirection: south ? '18' : '36',
-    hasFlown: airborne, stalling: false, elapsed: 0, distance: 0, gates: 0, events: [], reason: '',
+    hasFlown: airborne, stalling: false, elapsed: 0, distance: 0, gates: 0, events: [], reason: '', touchdownSpeed: 0,
     pitchRate: 0, rollRate: 0, yawRate: 0, angleOfAttack: 0, loadFactor: airborne ? 1 : 0,
     systems: createAircraftSystems(systems),
   };
@@ -131,7 +131,9 @@ function stepFlight(flight, input, dt) {
   const aircraft = flight.aircraft, physics = flight.physics, performance = flight.performance, gravity = 9.81 * physics.gravity;
   const site = flight.airport, RUNWAY = site.runway;
   const gearTarget = flight.gearDown ? 1 : 0, gearStep = dt / (aircraft.cockpit === 'airliner' ? 7 : 4);
+  const previousGear = flight.gearPosition;
   flight.gearPosition += clamp(gearTarget - flight.gearPosition, -gearStep, gearStep);
+  if (previousGear !== gearTarget && flight.gearPosition === gearTarget) flight.events.push(gearTarget ? 'gear-locked' : 'gear-retracted');
   from.set(flight.x, flight.y, flight.z);
   flight.elapsed += dt;
   if (flight.flaps && flight.speed > aircraft.flapLimit + 5) { flight.flaps = 0; flight.events.push('flaps-limit'); }
@@ -241,6 +243,7 @@ function stepFlight(flight, input, dt) {
         return;
       }
       flight.events.push('touchdown');
+      flight.touchdownSpeed = Math.max(0, -flight.verticalSpeed);
       flight.onGround = true;
       deployArmedSpoilers(flight);
       flight.verticalSpeed = 0;

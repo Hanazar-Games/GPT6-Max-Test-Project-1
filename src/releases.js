@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 三地机场与客机起降升级</h2>
-      <p id="release-copy">从海岸、高原或沙漠起飞，驾驶后置双发与四发宽体客机，提前放轮并确认锁定后着陆。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 飞行反馈与声音优化</h2>
+      <p id="release-copy">听清收放轮完成与轻重接地，查看准确的机型信息，保留熟悉的配乐和音量设置。</p>
+      <ul class="release-list">
+        <li><strong>起落架与接地反馈</strong>起落架完全收起或放下锁定时各提示一次；暂停与中途反向不会误报。着陆音效使用实际接地下降率，通知显示下降率；超速自动收襟翼也有操作音。</li>
+        <li><strong>更少的声音重复更新</strong>不变的引擎与配乐混音参数保留原渐变，减少每帧重复设置；改变推力、告警压低配乐、音量、暂停和后台静音仍正常响应。</li>
+        <li><strong>小屏与机库信息修正</strong>修复小屏提示条遮挡操纵区，提示期间暂时隐藏页脚。首页入口去掉过期数量，原创机型署名自动跟随机库，补齐 J-90 与 L-440。1.34.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>93 个版本</span></summary>
+      <article><h3>v1.34.0 · 三地机场与客机起降升级</h3>
+      <p>从海岸、高原或沙漠起飞，驾驶后置双发与四发宽体客机，提前放轮并确认锁定后着陆。</p>
       <ul class="release-list">
         <li><strong>三处不同地形的机场</strong>蓝湾海岸 4,000 × 60 m、海拔 820 m 的云岭高原 3,600 × 45 m、赤沙盆地 4,600 × 60 m；可在机库切换。跑道、滑行道、航站区、地形、建筑碰撞、导航与镜头同步场址，进近区域平整且训练环保留地形净空。</li>
         <li><strong>十二机型与渐进起落架</strong>新增银燕 J-90 后置双发客机、天穹 L-440 四发宽体客机，扩充多轴轮组、支柱、撑杆和轮轴。客机收放约七秒，其余约四秒；阻力跟随伸出比例，暂停冻结收放，仪表显示进度，未放下锁定不能安全着陆，滑行灯等待锁定。</li>
         <li><strong>更完整的机场设施</strong>增加消防站、消防车、货运区、雷达罩、服务车辆和侧向围栏，连通服务道路与停机坪；高原航站区在东侧，沙漠增加机库，三种地景使用独立配色。建筑保持三档简化，切换场址释放旧资源；1.33.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>92 个版本</span></summary>
+      </article>
       <article><h3>v1.33.0 · 扩展机库、外部灯光与机场细节</h3>
       <p>驾驶支线涡桨与双发战机，用真实作用的外灯开关完成飞行准备，近看更丰富的机场，远看更轻的轮廓。</p>
       <ul class="release-list">

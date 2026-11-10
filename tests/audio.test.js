@@ -5,11 +5,12 @@ import { AIRCRAFT, createAircraftFlight, updateAircraftFlight } from '../src/air
 
 class Param {
   value = 0;
+  cancellations = 0;
   setValueAtTime(value) { this.value = value; }
   setTargetAtTime(value) { this.value = value; }
   linearRampToValueAtTime(value) { this.value = value; }
   exponentialRampToValueAtTime(value) { this.value = value; }
-  cancelScheduledValues() {}
+  cancelScheduledValues() { this.cancellations++; }
 }
 class Node {
   gain = new Param(); frequency = new Param(); connections = [];
@@ -37,6 +38,39 @@ async function setup() {
 const running = { status: 'running', speed: 36, boosting: false };
 
 const flightFrame = flight => ({ status: flight.status, speed: flight.speed, aircraft: flight.aircraft, maxSpeed: flight.performance.maxSpeed, engineOutput: flight.engineOutput * flight.physics.thrust, stalling: flight.stalling });
+
+test('steady audio frames retain automation while changed power and warning ducking still respond', async () => {
+  const audio = await setup(), frame = { ...flightFrame(createAircraftFlight('j90', true)), stalling: false };
+  audio.update(frame);
+  const params = [audio.engine.frequency, audio.filter.frequency, audio.engineGain.gain, audio.music.gain];
+  const counts = params.map(param => param.cancellations);
+  for (let i = 0; i < 120; i++) { audio.context.currentTime += 1 / 120; audio.update(frame); }
+  assert.deepEqual(params.map(param => param.cancellations), counts);
+  audio.update({ ...frame, engineOutput: 1 });
+  assert.ok(audio.engine.frequency.cancellations > counts[0]);
+  assert.ok(audio.engineGain.gain.cancellations > counts[2]);
+  audio.event('ap-disconnect');
+  assert.equal(audio.music.gain.value, audio.volumes.music * .4);
+  audio.context.currentTime += 1; audio.update(frame);
+  assert.equal(audio.music.gain.value, audio.volumes.music);
+  audio.setState('paused');
+  assert.equal(audio.engineGain.gain.value, 0);
+});
+
+test('gear completion cues are quiet and obey effects mute, pause and background state', async () => {
+  const audio = await setup();
+  for (const event of ['gear-locked', 'gear-retracted']) {
+    audio.setState('running');audio.event(event);
+    assert.equal(audio.voices.size, 1);
+    audio.stopVoices();
+    for (const silence of [() => audio.setVolume('sfx', 0), () => audio.setState('paused'), () => audio.setBackground(true), () => audio.toggle()]) {
+      silence();audio.event(event);
+      assert.equal(audio.voices.size, 0);
+      audio.setVolume('sfx', .8);audio.setState('running');audio.setBackground(false);
+      if (!audio.enabled) audio.toggle();
+    }
+  }
+});
 
 test('aircraft engine sound follows actual spool and thrust even while stationary or gliding', async () => {
   const audio = await setup(), flight = createAircraftFlight('t6');
