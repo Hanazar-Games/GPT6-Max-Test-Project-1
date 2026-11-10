@@ -1,7 +1,78 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { aircraftKeyBinding, aircraftInput, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut } from '../src/aircraft-controls.js';
+import { aircraftKeyBinding, aircraftInput, smoothAircraftInput, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut } from '../src/aircraft-controls.js';
 import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
+import { setAutopilot } from '../src/aircraft-systems.js';
+
+test('WASD matches forward-stick nose-down input and its help follows inversion', () => {
+  assert.equal(aircraftInput(new Set(['KeyW']), {}, { preset: 'wasd' }).pitch, -1);
+  assert.equal(aircraftInput(new Set(['KeyS']), {}, { preset: 'wasd' }).pitch, 1);
+  assert.equal(aircraftControlHelp({ preset: 'wasd' }).pitch, 'S / W');
+  assert.equal(aircraftControlHelp({ preset: 'wasd', invertPitch: true }).pitch, 'W / S');
+});
+
+test('lateral key exchange keeps three independent axes and arrow-roll aliases', () => {
+  for (const preset of ['flight', 'wasd']) {
+    assert.deepEqual(aircraftKeyBinding('KeyA', preset, 'yaw'), ['yaw', -1]);
+    assert.deepEqual(aircraftKeyBinding('KeyE', preset, 'yaw'), ['roll', 1]);
+    assert.deepEqual(aircraftKeyBinding('ArrowLeft', preset, 'yaw'), ['roll', -1]);
+    const settings = { preset, lateral: 'yaw' };
+    const input = aircraftInput(new Set(['KeyA', 'KeyE', preset === 'wasd' ? 'KeyS' : 'ArrowDown']), {}, settings);
+    assert.equal(input.yaw, -1);assert.equal(input.roll, 1);assert.equal(input.pitch, 1);
+    assert.equal(aircraftInput(new Set(['KeyQ', 'ArrowLeft']), {}, settings).roll, -1);
+    assert.equal(aircraftInput(new Set(['KeyQ', 'KeyE']), {}, settings).roll, 0);
+    assert.equal(aircraftControlHelp(settings).roll, 'Q / E');
+    assert.equal(aircraftControlHelp(settings).yaw, 'A / D');
+  }
+});
+
+test('progressive controls rise, return and reverse consistently across frame rates', () => {
+  const settings = { inputRiseTime: .4, inputReturnTime: .2 };
+  const samples = [];
+  for (const hz of [30, 60, 120]) {
+    const input = {}, target = aircraftInput(new Set(['KeyA', 'KeyE', 'ArrowDown']));
+    const advance = (seconds, target) => {
+      for (let i = 0; i < Math.round(seconds * hz); i++) smoothAircraftInput(input, target, settings, 1 / hz);
+    };
+    advance(.1, target);
+    assert.ok(Math.abs(input.roll + .25) < 1e-12);
+    assert.ok(Math.abs(input.pitch - .25) < 1e-12 && Math.abs(input.yaw - .25) < 1e-12);
+    advance(.1, aircraftInput(new Set(['KeyD'])));
+    assert.ok(Math.abs(input.roll - .125) < 1e-12, 'cross neutral before applying opposite input');
+    samples.push(input.roll);
+    advance(.1, aircraftInput(new Set()));
+    assert.equal(input.pitch, 0);assert.equal(input.roll, 0);assert.equal(input.yaw, 0);
+  }
+  assert.ok(Math.max(...samples) - Math.min(...samples) < 1e-12);
+});
+
+test('input smoothing preserves immediate braking, throttle and autopilot takeover', () => {
+  const flight = createAircraftFlight('a380', true), input = {};
+  assert.equal(setAutopilot(flight, 'level'), true);
+  const target = aircraftInput(new Set(['KeyD', 'KeyW', 'Space']), {}, { rollSensitivity: .2 });
+  smoothAircraftInput(input, target, { inputRiseTime: .8 }, 1 / 120);
+  assert.ok(input.roll > 0 && input.roll < .2);assert.equal(input.pilotOverride, 1);
+  assert.equal(input.brake, true);assert.equal(input.throttle, 1);
+  updateAircraftFlight(flight, input, 1 / 60);
+  assert.equal(flight.systems.autopilot.mode, 'off');
+  assert.equal(flight.systems.autopilot.reason, 'manual');
+  assert.equal(flight.systems.controls.brake, true);
+});
+
+test('zero smoothing is direct, invalid times stay finite, and stopped time cannot advance controls', () => {
+  const input = {}, target = aircraftInput(new Set(['KeyD', 'KeyQ']));
+  smoothAircraftInput(input, target, { inputRiseTime: 0, inputReturnTime: 0 }, 1 / 60);
+  assert.equal(input.roll, 1);assert.equal(input.yaw, -1);
+  const frozen = { ...input };
+  for (const dt of [0, -.1, NaN, Infinity]) {
+    smoothAircraftInput(input, aircraftInput(new Set()), {}, dt);
+    assert.deepEqual(input, frozen);
+  }
+  smoothAircraftInput(input, aircraftInput(new Set()), { inputRiseTime: NaN, inputReturnTime: Infinity }, 1 / 120);
+  assert.ok(Number.isFinite(input.roll) && input.roll > 0 && input.roll < 1);
+  smoothAircraftInput(input, aircraftInput(new Set()), { inputRiseTime: 0, inputReturnTime: 0 }, 1 / 60);
+  assert.equal(input.roll, 0);assert.equal(input.yaw, 0);
+});
 
 test('flight keys retain defaults and alternate keys do not amplify an axis', () => {
   assert.deepEqual(aircraftKeyBinding('ArrowDown'), ['pitch', 1]);
@@ -13,10 +84,10 @@ test('flight keys retain defaults and alternate keys do not amplify an axis', ()
 
 test('WASD preset, pitch inversion and sensitivity apply to keyboard and touch', () => {
   const settings = { preset: 'wasd', pitchSensitivity: .5, rollSensitivity: .5, yawSensitivity: .5, deadzone: 0, invertPitch: true };
-  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: -.5, roll: .5, yaw: -.5, throttle: 1, throttleRate: .3, brake: false, pilotOverride: 1 });
+  assert.deepEqual(aircraftInput(new Set(['KeyW', 'KeyD', 'ArrowUp', 'KeyQ']), {}, settings), { pitch: .5, roll: .5, yaw: -.5, throttle: 1, throttleRate: .3, brake: false, pilotOverride: 1 });
   const touch = aircraftInput(new Set(), { pitch: .6, roll: -.8, brake: true }, settings);
   assert.equal(touch.pitch, -.3); assert.equal(touch.roll, -.4); assert.equal(touch.brake, true);
-  assert.match(aircraftControlHelp(settings).pitch, /S.*W/);
+  assert.match(aircraftControlHelp(settings).pitch, /W.*S/);
   assert.match(aircraftControlHelp(settings).throttle, /↑.*↓/);
 });
 

@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 座舱细节与地面操纵优化</h2>
-      <p id="release-copy">查看更细致的仪表和油门台，用联动踏板操纵方向，沿跑道平稳加速起飞。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 三轴键位与操纵响应优化</h2>
+      <p id="release-copy">选择熟悉的滚转与偏航键位，调节按键渐进和回中，让小幅修正更容易。</p>
+      <ul class="release-list">
+        <li><strong>WASD 与独立横向键位</strong>WASD 标准方向调整为 W 前推低头、S 后拉抬头，支持反向。默认 A / D 滚转、Q / E 偏航，可互换；← / → 始终滚转，经典飞行 W / S 油门保持不变。指南、页脚与起飞提示同步设置。</li>
+        <li><strong>渐进操纵与回中</strong>新增操纵渐进 0–800 ms、回中 0–600 ms，默认 160 / 100 ms；键盘与触屏三轴共同生效，反向操纵先回中，设为 0 直接响应。刹车、油门和自动驾驶手动接管不等待渐进。</li>
+        <li><strong>输入释放更可靠</strong>聚焦编辑框后释放旧键盘操纵，保留手机双指推杆与调油门；暂停、切换操作设置和返回机库清空输入。设置可恢复默认，仅保留在本次飞机模式；1.35.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>95 个版本</span></summary>
+      <article><h3>v1.35.0 · 座舱细节与地面操纵优化</h3>
+      <p>查看更细致的仪表和油门台，用联动踏板操纵方向，沿跑道平稳加速起飞。</p>
       <ul class="release-list">
         <li><strong>驾驶舱模型细化</strong>仪表壳增加截角与倒角，分屏边框和紧固件随面板一起调节；油门台增加底座和槽轨，双踏板随方向舵反向联动。修正窄客机与运输机风挡中柱未随舱宽缩放的接缝问题。</li>
         <li><strong>地面操纵更自然</strong>抬头效力随空速逐渐恢复，静止时不再凭空抬起机头；转向随速度提高而减弱，保留低速滑行能力，降低高速起飞滑跑的敏感度。适用于全部十二款飞机。</li>
         <li><strong>机场停车区完善</strong>三处机场各 54 辆停车车辆补齐车轮、玻璃与灯具，轮胎贴合道面，碰撞同步场址与海拔。近景按材质合批，重复圆柱体源几何共用，远景继续省略车辆细节；1.34.1 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>94 个版本</span></summary>
+      </article>
       <article><h3>v1.34.1 · 飞行反馈与声音优化</h3>
       <p>听清收放轮完成与轻重接地，查看准确的机型信息，保留熟悉的配乐和音量设置。</p>
       <ul class="release-list">
