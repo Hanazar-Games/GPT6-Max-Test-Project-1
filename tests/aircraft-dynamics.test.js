@@ -6,6 +6,35 @@ function advance(flight, seconds, input = {}, step = 1 / 60) {
   for (let time = 0; time < seconds - 1e-9; time += step) updateAircraftFlight(flight, input, Math.min(step, seconds - time));
 }
 
+test('ground rotation requires airflow and progressively returns as takeoff speed builds', () => {
+  for (const aircraft of AIRCRAFT) {
+    const pitches = [0, aircraft.takeoff * .25, aircraft.takeoff * .85].map(speed => {
+      const flight = createAircraftFlight(aircraft.id);
+      Object.assign(flight, { status: 'running', speed });
+      advance(flight, .5, { pitch: 1 });
+      assert.equal(flight.onGround, true);
+      return flight.pitch;
+    });
+    assert.equal(pitches[0], 0, `${aircraft.id}: cannot lift the nose while stationary`);
+    assert.ok(pitches[1] > 0 && pitches[1] < pitches[2] * .4);
+  }
+});
+
+test('ground steering is useful for taxiing and gentler during a high-speed runway roll', () => {
+  for (const aircraft of AIRCRAFT) {
+    const turns = [15, Math.min(aircraft.maxSpeed, 100)].map(speed => {
+      const flight = createAircraftFlight(aircraft.id);
+      Object.assign(flight, { status: 'running', speed });
+      advance(flight, .2, { yaw: .5 });
+      assert.equal(flight.status, 'running');
+      assert.equal(flight.trackHeading, flight.heading);
+      return Math.abs(flight.heading);
+    });
+    assert.ok(turns[0] > .005);
+    assert.ok(turns[1] < turns[0], aircraft.id);
+  }
+});
+
 test('yaw preserves horizontal momentum and lateral response controls gradual track alignment', () => {
   for (const { id } of AIRCRAFT) {
     const flights = [.25, 3].map(lateralResponse => {

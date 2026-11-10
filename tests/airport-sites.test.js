@@ -4,9 +4,34 @@ import * as THREE from 'three';
 import { AIRPORTS, airportHeight } from '../src/airport.js';
 import { AIRCRAFT, createAircraftFlight, updateAircraftFlight, runwayContact, toggleAircraftGear } from '../src/aircraft-flight.js';
 import { createRunway } from '../src/runway-view.js';
-import { createAirportLod } from '../src/airport-view.js';
+import { createAirport, createAirportLod } from '../src/airport-view.js';
 import { createAviationTerrain } from '../src/aviation-terrain.js';
 import { disposeAircraftObject } from '../src/aircraft-models.js';
+
+test('parking vehicles have matching collision envelopes at every airport and clear taxiways', () => {
+  for (const airport of AIRPORTS) {
+    const cars = airport.buildings.filter(building => building.kind === 'parked-car');
+    assert.equal(cars.length, 54);
+    const model = createAirport({ airport });model.position.y = airport.elevation;model.updateMatrixWorld(true);
+    for (const car of cars) {
+      assert.equal(car.base, .3);
+      for (const taxiway of airport.taxiways) assert.ok(Math.abs(car.x - taxiway.x) > (car.width + taxiway.width) / 2 || Math.abs(car.z - taxiway.z) > (car.depth + taxiway.depth) / 2);
+      const roof = new THREE.Raycaster(new THREE.Vector3(car.x, airport.elevation + 10, car.z), new THREE.Vector3(0, -1, 0), 0, 10).intersectObject(model, true)[0];
+      assert.ok(Math.abs(roof.point.y - airport.elevation - car.height) < .001, 'visible roofs match collision height');
+      const tire = new THREE.Raycaster(new THREE.Vector3(car.x + 2.15, airport.elevation + car.base - .01, car.z + car.depth * .3), new THREE.Vector3(0, 1, 0), 0, 1).intersectObject(model, true)[0];
+      assert.ok(Math.abs(tire.point.y - airport.elevation - car.base) < .001, 'tires rest on the parking surface');
+    }
+    disposeAircraftObject(model);
+    const car = cars[0], hit = createAircraftFlight('t6', true, { airport: airport.id });
+    Object.assign(hit, { x: car.x, z: car.z, y: airport.elevation + 2.5, speed: 0 });
+    updateAircraftFlight(hit, {}, 1 / 120);
+    assert.equal(hit.status, 'crashed');
+    const clear = createAircraftFlight('t6', true, { airport: airport.id });
+    Object.assign(clear, { x: car.x, z: car.z, y: airport.elevation + 12, speed: 0 });
+    updateAircraftFlight(clear, {}, 1 / 120);
+    assert.equal(clear.status, 'running');
+  }
+});
 
 test('three independent airport sites have supported runways, facilities and clear approaches', () => {
   assert.equal(AIRPORTS.length, 3);

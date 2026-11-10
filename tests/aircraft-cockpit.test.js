@@ -6,6 +6,55 @@ import { createAircraftCockpit, updateCockpitControls, cockpitInstruments, cockp
 import { disposeAircraftObject } from '../src/aircraft-models.js';
 import { AviationWorld, AVIATION_VIEW_DEFAULTS } from '../src/aviation-world.js';
 
+test('narrow flight decks keep the center windshield post connected to its scaled frame', () => {
+  for (const aircraft of AIRCRAFT.filter(aircraft => ['airliner', 'transport'].includes(aircraft.cockpit))) {
+    const cockpit = createAircraftCockpit(aircraft);
+    const width = aircraft.cockpit === 'transport' ? 3.4 : aircraft.length < 50 ? 3.6 : 4.2;
+    cockpit.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(.6 * width / 4.2, .75, 0), new THREE.Vector3(0, 0, -1), 1.35, 1.65);
+    assert.ok(ray.intersectObject(cockpit, true).length, aircraft.id);
+    disposeAircraftObject(cockpit);
+  }
+});
+
+test('rudder pedals move in opposite directions and retain unchanged instance transforms', () => {
+  for (const aircraft of AIRCRAFT) {
+    const flight = createAircraftFlight(aircraft.id, true), cockpit = createAircraftCockpit(aircraft);
+    const pedals = cockpit.userData.controls.pedals;
+    assert.equal(pedals?.count, 2);
+    const positions = () => [0, 1].map(index => {
+      const matrix = new THREE.Matrix4();pedals.getMatrixAt(index, matrix);
+      return new THREE.Vector3().setFromMatrixPosition(matrix).z;
+    });
+    const rest = positions();
+    updateCockpitControls(cockpit, flight, { yaw: 1 });
+    const right = positions();
+    assert.ok(right[0] > rest[0] && right[1] < rest[1]);
+    const version = pedals.instanceMatrix.version;
+    updateCockpitControls(cockpit, flight, { yaw: 1 });
+    assert.equal(pedals.instanceMatrix.version, version);
+    updateCockpitControls(cockpit, flight);
+    assert.deepEqual(positions(), rest);
+    disposeAircraftObject(cockpit);
+  }
+});
+
+test('instrument housings and bezels leave the display content visible through panel adjustments', () => {
+  for (const aircraft of AIRCRAFT) {
+    const cockpit = createAircraftCockpit(aircraft), screen = cockpit.userData.display, panel = cockpit.userData.panel;
+    const tiles = ['airliner', 'transport'].includes(aircraft.cockpit) ? 4 : 3;
+    for (const scale of [.8, 1, 1.1]) {
+      panel.scale.setScalar(scale);panel.position.set(0, -.2, .25);cockpit.updateMatrixWorld(true);
+      for (let tile = 0; tile < tiles; tile++) for (const y of [-.2, 0, .2]) {
+        const target = screen.localToWorld(new THREE.Vector3((tile + .5 - tiles / 2) * screen.geometry.parameters.width / tiles, y, 0));
+        const ray = new THREE.Raycaster(target.clone().add(new THREE.Vector3(0, 0, .04)), new THREE.Vector3(0, 0, -1), .001, .1);
+        assert.equal(ray.intersectObject(cockpit, true)[0]?.object, screen, aircraft.id);
+      }
+    }
+    disposeAircraftObject(cockpit);
+  }
+});
+
 test('each cockpit has a clear forward window, distinct controls and a seat inside its aircraft', () => {
   for (const aircraft of AIRCRAFT) {
     const cockpit = createAircraftCockpit(aircraft);

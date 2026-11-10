@@ -9,6 +9,18 @@ export const COCKPIT_SWITCHES = Object.freeze([
   ...Object.entries(AIRCRAFT_SYSTEM_SWITCHES).map(([action, control]) => ({ action, label: control.label })),
 ]);
 const switchColor = new THREE.Color();
+const pedalTransform = new THREE.Object3D();
+
+function updateRudderPedals(pedals, yaw) {
+  if (pedals.userData.yaw === yaw) return;
+  for (let index = 0; index < 2; index++) {
+    const side = index * 2 - 1;
+    pedalTransform.position.set(side * .18, -1.31, -1.28 - side * yaw * .08);
+    pedalTransform.rotation.set(-.28, 0, 0);pedalTransform.updateMatrix();
+    pedals.setMatrixAt(index, pedalTransform.matrix);
+  }
+  pedals.userData.yaw = yaw;pedals.instanceMatrix.needsUpdate = true;pedals.computeBoundingSphere();
+}
 export const cockpitWidth = aircraft => aircraft.cockpit === 'airliner' ? aircraft.length < 50 ? 3.6 : 4.2 : aircraft.cockpit === 'transport' ? 3.4 : 2.05;
 export const cockpitSwitchSpacing = aircraft => Math.min(cockpitWidth(aircraft) * .62, 2) / COCKPIT_SWITCH_COLUMNS;
 
@@ -41,7 +53,12 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, delta.length(), 8), materials.dark);
     mesh.position.copy(a).addScaledVector(delta, .5); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()); shell.add(mesh);
   }
-  box(dashboard, 'shell', [0, -.78, -1.6], [width, .85, .36]);
+  const outline = new THREE.Shape();
+  outline.moveTo(-width / 2 + .1, -1.2);
+  for (const [x, y] of [[width / 2 - .1, -1.2], [width / 2, -1.1], [width / 2, -.46], [width / 2 - .1, -.36], [-width / 2 + .1, -.36], [-width / 2, -.46], [-width / 2, -1.1]]) outline.lineTo(x, y);
+  outline.closePath();
+  const instrumentHousing = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: .36, steps: 1, bevelEnabled: true, bevelSegments: 1, bevelSize: .015, bevelThickness: .015 }), materials.shell);
+  instrumentHousing.position.z = -1.8;dashboard.add(instrumentHousing);
   box(dashboard, 'dark', [0, -.32, -1.56], [width + .08, .1, .55]);
   box(dashboard, 'dark', [airliner ? -.16 : 0, .46, -1.3], [Math.min(width * .62, 2) + .03, .24, .14]);
   box(shell, 'shell', [-width / 2, -.7, -.1], [.16, 1, 3.3]);
@@ -51,7 +68,8 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   if (airliner) for (const point of frame) point[0] *= width / 4.2;
   for (let i = 1; i < frame.length; i++) bar(frame[i - 1], frame[i], airliner ? .045 : .035);
   if (airliner) {
-    bar([.6, -.27, -1.58], [.6, 1.05, -1.45], .04);
+    const centerPost = .6 * width / 4.2;
+    bar([centerPost, -.27, -1.58], [centerPost, 1.05, -1.45], .04);
     box(shell, 'shell', [.7, 1.06, -.5], [1, .12, 1.1]);
     box(shell, 'shell', [width / 2 - 1.15, -1.1, -.3], [.5, .55, 1.3]);
     box(shell, 'seat', [width / 2 - .45, -.9, .3], [.75, .2, .8]);
@@ -64,8 +82,22 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   for (const side of [-1, 1]) for (let i = 0; i < 9; i++) {
     box(dashboard, i % 3 ? 'trim' : 'amber', [side * width * .38, -.292, -1.43 + i * .025], [.045, .025, .012]);
   }
+  const screenWidth = airliner ? 3 : width * .92, pixels = airliner ? 1536 : 960, tiles = airliner ? 4 : 3;
+  const gap = 16 / pixels * screenWidth, tileWidth = (screenWidth - gap * (tiles + 1)) / tiles, tileHeight = .64 * (1 - 36 / 320);
+  for (let i = 0; i < tiles; i++) {
+    const x = -screenWidth / 2 + gap + tileWidth / 2 + i * (tileWidth + gap);
+    for (const side of [-1, 1]) {
+      box(dashboard, 'dark', [x + side * (tileWidth / 2 + .004), -.7, -1.408], [.008, tileHeight + .018, .025]);
+      box(dashboard, 'dark', [x, -.7 + side * (tileHeight / 2 + .004), -1.408], [tileWidth + .016, .008, .025]);
+      for (const edge of [-1, 1]) box(dashboard, 'trim', [x + side * (tileWidth / 2 + .004), -.7 + edge * (tileHeight / 2 + .004), -1.392], [.006, .006, .004]);
+    }
+  }
+  const throttleX = airliner ? width / 2 - 1.32 : -.72;
+  box(shell, 'shell', [throttleX + (aircraft.engines - 1) * .05, -1.1, -1.04], [aircraft.engines * .1 + .1, .12, .62]);
+  for (let i = 0; i < aircraft.engines; i++) box(shell, 'dark', [throttleX + i * .1, -1.035, -1.04], [.025, .012, .49]);
+  for (const side of [-1, 1]) box(shell, 'dark', [side * .18, -1.39, -1.28], [.08, .1, .4]);
   batchMeshes(shell);batchMeshes(dashboard);
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(airliner ? 3 : width * .92, .64), new THREE.MeshBasicMaterial({ map: texture, color: texture ? 0xffffff : 0x0d2730, toneMapped: false }));
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(screenWidth, .64), new THREE.MeshBasicMaterial({ map: texture, color: texture ? 0xffffff : 0x0d2730, toneMapped: false }));
   screen.name = 'live-flight-displays'; screen.position.set(0, -.7, -1.411); panel.add(screen);
   const stick = new THREE.Group(); stick.position.set(0, -1.17, -1.05); root.add(stick);
   box(stick, 'dark', [0, .2, 0], [.055, .4, .055]);
@@ -75,7 +107,7 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
   } else box(stick, 'dark', [0, .44, -.02], [.09, .16, .13]);
   batchMeshes(stick);
   const throttles = Array.from({ length: aircraft.engines }, (_, index) => {
-    const lever = new THREE.Group(); lever.position.set((airliner ? width / 2 - 1.32 : -.72) + index * .1, -1, -1.08); root.add(lever);
+    const lever = new THREE.Group(); lever.position.set(throttleX + index * .1, -1, -1.08); root.add(lever);
     box(lever, 'trim', [0, .12, 0], [.025, .24, .025]);
     box(lever, 'dark', [0, .24, 0], [.075, .065, .1]); batchMeshes(lever); return lever;
   });
@@ -95,15 +127,18 @@ export function createAircraftCockpit(aircraft, texture = null, labelsTexture = 
     }
   });
   switches.computeBoundingSphere();panel.add(switches);batchMeshes(labels);panel.add(labels);
-  root.userData.controls = { stick, throttles, gear, switches, switchStates: [] };
+  const pedals = new THREE.InstancedMesh(new THREE.BoxGeometry(.16, .045, .25), materials.trim, 2);
+  pedals.name = 'rudder-pedals';updateRudderPedals(pedals, 0);root.add(pedals);
+  root.userData.controls = { stick, throttles, pedals, gear, switches, switchStates: [] };
   root.userData.display = screen;
   root.userData.panel = panel;
   return root;
 }
 
 export function updateCockpitControls(root, flight, input = {}) {
-  const { stick, throttles, gear, switches, switchStates } = root.userData.controls;
+  const { stick, throttles, pedals, gear, switches, switchStates } = root.userData.controls;
   stick.rotation.set((input.pitch || 0) * .22, 0, -(input.roll || 0) * .28);
+  updateRudderPedals(pedals, Math.max(-1, Math.min(1, input.yaw || 0)));
   for (const lever of throttles) lever.rotation.x = .35 - flight.throttle * .8;
   gear.rotation.x = flight.gearDown ? .5 : -.5;
   const systems = flight.systems;

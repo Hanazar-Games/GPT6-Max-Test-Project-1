@@ -148,7 +148,8 @@ function stepFlight(flight, input, dt) {
   const authority = clamp((flight.speed / stall) ** 2, .03, 1) * (1 - airflow.separation * .25);
   const pitchInput = controls.pitch, rollInput = controls.roll, yawInput = controls.yaw;
   if (flight.onGround) {
-    flight.pitch += (pitchInput * performance.pitchLimit - flight.pitch) * (1 - Math.exp(-performance.response * dt));
+    const rotationAuthority = clamp((flight.speed / takeoff) ** 2, 0, 1);
+    flight.pitch += (pitchInput * performance.pitchLimit * rotationAuthority - flight.pitch) * (1 - Math.exp(-performance.response * dt));
     flight.pitch = clamp(flight.pitch, -.02, .13); flight.roll = 0;
     flight.pitchRate = 0; flight.rollRate = 0; flight.yawRate = 0;
   } else {
@@ -190,7 +191,7 @@ function stepFlight(flight, input, dt) {
   const speed = (flight.speed + nextSpeed) * .5;
   flight.speed = nextSpeed;
   if (flight.onGround) {
-    flight.heading += (yawInput + rollInput * .75) * .2 * clamp(speed / 25, 0, 1) * dt;
+    flight.heading += (yawInput + rollInput * .75) * .2 * clamp(speed / 25, 0, 1) / (1 + (speed / 55) ** 2) * dt;
     if (speed >= takeoff && flight.pitch > .045 && !controls.brake && !flight.speedBrake && !flight.systems.reverse) {
       flight.onGround = false;
       flight.verticalSpeed = Math.max(1, speed * Math.sin(flight.pitch) * .4);
