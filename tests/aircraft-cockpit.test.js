@@ -204,7 +204,8 @@ test('cockpit camera follows the aircraft attitude and side looking preserves it
     scene: new THREE.Scene(), cockpitScene: new THREE.Scene(), cockpitCamera: new THREE.PerspectiveCamera(68, 1, .06, 8),
     camera: new THREE.PerspectiveCamera(68, 1, 8, 65000), gateMeshes: [], cameraMode: 2,
     shadow: new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial()),
-    displayTime: -100, resetCamera: false, lookTarget: 0, lookAngle: 0,
+    displayTime: 0, resetCamera: false, lookTarget: 0, lookAngle: 0,
+    cockpitTexture: {}, cockpitContext: new Proxy({ canvas: { width: 960, height: 320 } }, { get: (object, key) => object[key] ?? (() => {}) }),
     viewSettings: { ...AVIATION_VIEW_DEFAULTS }, displayHz: 10,
     renderer: { info: { reset() {} }, autoClear: true, clearDepth() {}, render(scene, camera) { passes.push({ scene, near: camera.near, far: camera.far }); } },
   });

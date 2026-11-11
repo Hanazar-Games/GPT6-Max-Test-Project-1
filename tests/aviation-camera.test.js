@@ -176,6 +176,32 @@ test('cockpit display refreshes at the selected cadence and stays idle outside t
   }
 });
 
+test('unpowered cockpit instruments stop uploading and refresh immediately when power returns', () => {
+  for (const hz of [5, 10, 20]) {
+    const { world, flight } = fixture(); let uploads = 0;
+    world.cockpit = createAircraftCockpit(flight.aircraft);
+    world.cockpitCamera = new THREE.PerspectiveCamera(68, 1, .06, 8);
+    world.renderer.clearDepth = () => {};
+    world.cockpitContext = new Proxy({ canvas: { width: 960, height: 320 } }, { get: (object, key) => object[key] ?? (() => {}) });
+    world.cockpitTexture = { set needsUpdate(value) { if (value) uploads++; } };
+    world.displayHz = hz; world.displayTime = 0;
+    world.setCameraMode(2); world.render(flight, 0);
+    const poweredUploads = uploads;
+    flight.systems.avionicsOn = false;
+    for (let i = 0; i < 120; i++) world.render(flight, 1 / 60);
+    assert.equal(uploads, poweredUploads, 'an unpowered display is already black through its material');
+    assert.equal(world.cockpit.userData.display.material.color.r, 0);
+    flight.systems.avionicsOn = true; world.render(flight, 0);
+    assert.equal(uploads, poweredUploads + 1, 'restored instruments must not wait for their refresh interval');
+    flight.status = 'paused'; flight.systems.batteryOn = false; flight.systems.generatorOn = false;
+    for (let i = 0; i < 3; i++) world.render(flight, 0);
+    assert.equal(uploads, poweredUploads + 1, 'paused edits do not redraw a disconnected display');
+    flight.systems.batteryOn = true; world.render(flight, 0);
+    assert.equal(uploads, poweredUploads + 2);
+    disposeAircraftObject(world.cockpit);
+  }
+});
+
 test('follow response is independent of render rate and the selected response changes actual damping', () => {
   for (const response of [1, 5, 15]) for (const fps of [30, 60, 120]) {
     const { world, flight } = fixture();

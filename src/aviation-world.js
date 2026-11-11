@@ -6,6 +6,7 @@ import { AVIATION_ENVIRONMENT_DEFAULTS, createAviationTerrain, setTerrainDetailD
 import { cockpitSeat, cockpitSwitchSpacing, createAircraftCockpit, updateCockpitControls, drawCockpitDisplay, COCKPIT_SWITCHES } from './aircraft-cockpit.js';
 import { disposeAircraftObject, loadAircraftModel, updateAircraftGearModel } from './aircraft-models.js';
 import { createAircraftLights, updateAircraftLights } from './aircraft-lights.js';
+import { aircraftElectrical } from './aircraft-systems.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const forward = new THREE.Vector3(), offset = new THREE.Vector3(), target = new THREE.Vector3();
@@ -248,12 +249,14 @@ export class AviationWorld {
       cockpitLook.setFromEuler(lookRotation.set(-.08 + view.lookPitch * Math.PI / 180, this.lookAngle, 0));
       this.camera.quaternion.copy(this.aircraftRoot.quaternion).multiply(cockpitLook);
       updateCockpitControls(this.cockpit, flight, flight.systems.controls);
-      this.displayTime += dt;
+      const powered = aircraftElectrical(flight).avionics;
+      this.displayTime = powered ? this.displayTime + dt : 0;
       const interval = 1 / this.displayHz;
-      if (this.displayTime + 1e-9 >= interval || this.resetCamera || flight.status !== 'running') {
+      if (powered && (this.displayTime + 1e-9 >= interval || !this.displayPowered || this.resetCamera || flight.status !== 'running')) {
         drawCockpitDisplay(this.cockpitContext, flight); this.cockpitTexture.needsUpdate = true;
-        this.displayTime = this.resetCamera ? 0 : Math.max(0, this.displayTime - Math.floor((this.displayTime + 1e-9) / interval) * interval);
+        this.displayTime = this.resetCamera || !this.displayPowered ? 0 : Math.max(0, this.displayTime - Math.floor((this.displayTime + 1e-9) / interval) * interval);
       }
+      this.displayPowered = powered;
     } else {
       if (this.cameraLocked && flight.status !== 'ready') {
         this.lockedOffset ??= offset.clone();

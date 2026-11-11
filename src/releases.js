@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 三轴键位与操纵响应优化</h2>
-      <p id="release-copy">选择熟悉的滚转与偏航键位，调节按键渐进和回中，让小幅修正更容易。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 窄横屏交互与仪表性能修复</h2>
+      <p id="release-copy">窄横屏更容易操纵，展开面板后仍可暂停；断电仪表停止无效刷新。</p>
+      <ul class="release-list">
+        <li><strong>窄横屏控件修复</strong>480–559 px 窄横屏紧凑排列油门、快捷按钮、导航、方向舵与制动，避免顶部按钮被盖住，保留驾驶舱观察操作。</li>
+        <li><strong>面板避开顶部操作</strong>480–700 px 短横屏的镜头、系统和暂停面板下移，顶部设置与返回基地保持可点击，面板内容可滚动查看。</li>
+        <li><strong>断电仪表按需刷新</strong>关闭航电或母线断电后，黑屏不再持续重绘与上传纹理；恢复供电立即刷新，再按所选频率更新。操纵、物理与声音设置保持原规则；1.36.0 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>96 个版本</span></summary>
+      <article><h3>v1.36.0 · 三轴键位与操纵响应优化</h3>
+      <p>选择熟悉的滚转与偏航键位，调节按键渐进和回中，让小幅修正更容易。</p>
       <ul class="release-list">
         <li><strong>WASD 与独立横向键位</strong>WASD 标准方向调整为 W 前推低头、S 后拉抬头，支持反向。默认 A / D 滚转、Q / E 偏航，可互换；← / → 始终滚转，经典飞行 W / S 油门保持不变。指南、页脚与起飞提示同步设置。</li>
         <li><strong>渐进操纵与回中</strong>新增操纵渐进 0–800 ms、回中 0–600 ms，默认 160 / 100 ms；键盘与触屏三轴共同生效，反向操纵先回中，设为 0 直接响应。刹车、油门和自动驾驶手动接管不等待渐进。</li>
         <li><strong>输入释放更可靠</strong>聚焦编辑框后释放旧键盘操纵，保留手机双指推杆与调油门；暂停、切换操作设置和返回机库清空输入。设置可恢复默认，仅保留在本次飞机模式；1.35.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>95 个版本</span></summary>
+      </article>
       <article><h3>v1.35.0 · 座舱细节与地面操纵优化</h3>
       <p>查看更细致的仪表和油门台，用联动踏板操纵方向，沿跑道平稳加速起飞。</p>
       <ul class="release-list">
