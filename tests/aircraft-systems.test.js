@@ -27,16 +27,21 @@ test('three-axis trim affects actual attitude and is frozen while paused', () =>
     advance(a, 2);advance(b, 2);
     const field = axis === 'yaw' ? 'heading' : axis;
     assert.ok(Math.abs(a[field] - b[field]) > .005, axis);
-    a.status = 'paused';const snapshot = structuredClone(a);advance(a, 1, { trimPitch: 1 });
+    a.status = 'paused';const snapshot = structuredClone(a);advance(a, 1, { trimPitch: 1, trimRoll: 1, trimYaw: 1 });
     assert.deepEqual(a, { ...snapshot, events: [] });
   }
 });
 
-test('pitch trim keys respect rate and step size without changing target throttle', () => {
+test('three-axis trim commands respect rate, bounds and step size without changing target throttle', () => {
   for (const step of [1 / 30, 1 / 120]) {
     const flight = createAircraftFlight('su30', true);flight.y = 3000;
-    setSystemSettings(flight, { trimRate: .2 });advance(flight, 2, { trimPitch: 1 }, step);
-    assert.ok(Math.abs(flight.systems.trim.pitch - .4) < 1e-8);assert.equal(flight.throttle, .65);
+    setSystemSettings(flight, { trimRate: .2 });advance(flight, 2, { trimPitch: 1, trimRoll: -1, trimYaw: 1 }, step);
+    assert.ok(Math.abs(flight.systems.trim.pitch - .4) < 1e-8);
+    assert.ok(Math.abs(flight.systems.trim.roll + .4) < 1e-8);
+    assert.ok(Math.abs(flight.systems.trim.yaw - .4) < 1e-8);assert.equal(flight.throttle, .65);
+    for (const axis of ['pitch', 'roll', 'yaw']) setAircraftTrim(flight, axis, .99);
+    advance(flight, .1, { trimPitch: 100, trimRoll: 100, trimYaw: 100 }, step);
+    assert.deepEqual(flight.systems.trim, { pitch: 1, roll: 1, yaw: 1 });
   }
 });
 

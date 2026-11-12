@@ -1,8 +1,56 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { aircraftKeyBinding, aircraftInput, smoothAircraftInput, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut } from '../src/aircraft-controls.js';
+import { aircraftKeyBinding, aircraftInput, smoothAircraftInput, aircraftControlHelp, aircraftThrottleShortcut, aircraftSystemShortcut, aircraftTrimBinding, aircraftTrimInput } from '../src/aircraft-controls.js';
 import { createAircraftFlight, updateAircraftFlight } from '../src/aircraft-flight.js';
 import { setAutopilot } from '../src/aircraft-systems.js';
+
+test('precision control reduces all three axes while retaining immediate braking, throttle and takeover intent', () => {
+  for (const modifier of ['ShiftLeft', 'ShiftRight']) for (const preset of ['flight', 'wasd']) {
+    const held = new Set([modifier, preset === 'wasd' ? 'KeyS' : 'ArrowDown', 'KeyD', 'KeyQ', preset === 'wasd' ? 'ArrowUp' : 'KeyW', 'Space']);
+    const input = aircraftInput(held, {}, { preset });
+    assert.equal(input.pitch, .4); assert.equal(input.roll, .4); assert.equal(input.yaw, -.4);
+    assert.equal(input.throttle, 1); assert.equal(input.throttleRate, .3); assert.equal(input.brake, true); assert.equal(input.pilotOverride, 1);
+    held.delete(modifier); assert.equal(aircraftInput(held, {}, { preset }).pitch, 1);
+  }
+  const input = aircraftInput(new Set(), { pitch: 1, roll: -1, yaw: .5, precision: true }, { deadzone: 0, precisionAuthority: .25, invertPitch: true });
+  assert.equal(input.pitch, -.25); assert.equal(input.roll, -.25); assert.equal(input.yaw, .125); assert.equal(input.pilotOverride, 1);
+});
+
+test('precision authority caps boosted sensitivity, sanitizes its range and does not alter opposing inputs', () => {
+  const held = new Set(['ShiftLeft', 'ShiftRight', 'KeyD']);
+  for (const [value, expected] of [[.1, .1], [.8, .8], [-1, .1], [2, .8], [NaN, .4], [Infinity, .4]]) {
+    assert.equal(aircraftInput(held, {}, { rollSensitivity: 2, precisionAuthority: value }).roll, expected);
+  }
+  held.add('KeyA'); assert.equal(aircraftInput(held).roll, 0);
+  held.delete('KeyA'); held.delete('ShiftLeft');
+  assert.equal(aircraftInput(held).roll, .4, 'either Shift key retains precision mode');
+  assert.equal(aircraftInput(new Set(['ShiftLeft'])).pilotOverride, 0, 'precision alone does not take over AP');
+});
+
+test('the lowest precision authority still disconnects autopilot on the first manual command', () => {
+  const flight = createAircraftFlight('a380', true), input = {};
+  assert.equal(setAutopilot(flight, 'hold'), true);
+  const target = aircraftInput(new Set(['ShiftLeft', 'KeyD']), {}, { precisionAuthority: .1, rollSensitivity: .2 });
+  smoothAircraftInput(input, target, { inputRiseTime: .8 }, 1 / 120);
+  assert.ok(input.roll > 0 && input.roll < .02);
+  updateAircraftFlight(flight, input, 1 / 60);
+  assert.equal(flight.systems.autopilot.mode, 'off'); assert.equal(flight.systems.autopilot.reason, 'manual');
+});
+
+test('three-axis trim keys are independent, cancel opposites and clear a reused output on release', () => {
+  const held = new Set(['BracketRight', 'Comma', 'Quote']), output = { roll: .3 };
+  assert.equal(aircraftTrimInput(held, output), output);
+  assert.deepEqual(output, { roll: .3, trimPitch: 1, trimRoll: -1, trimYaw: 1 });
+  for (const code of ['BracketLeft', 'Period', 'Semicolon']) held.add(code);
+  aircraftTrimInput(held, output);
+  assert.equal(output.trimPitch, 0); assert.equal(output.trimRoll, 0); assert.equal(output.trimYaw, 0);
+  for (const code of held) {
+    assert.ok(aircraftTrimBinding(code));
+    for (const preset of ['flight', 'wasd']) assert.equal(aircraftKeyBinding(code, preset), undefined);
+  }
+  aircraftTrimInput(new Set(['KeyD']), output);
+  assert.deepEqual(output, { roll: .3, trimPitch: 0, trimRoll: 0, trimYaw: 0 });
+});
 
 test('WASD matches forward-stick nose-down input and its help follows inversion', () => {
   assert.equal(aircraftInput(new Set(['KeyW']), {}, { preset: 'wasd' }).pitch, -1);

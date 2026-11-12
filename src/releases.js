@@ -8,14 +8,22 @@ export function mountReleases() {
     <dialog id="releases" aria-labelledby="release-title" aria-describedby="release-copy">
       <div class="dialog-toolbar"><span>更新公告与版本历史</span><button id="close-releases-top" type="button" class="icon-button dialog-close" aria-label="关闭更新公告"><span aria-hidden="true">×</span></button></div>
       <span class="eyebrow">FLIGHT BULLETIN / 当前公告</span>
-      <h2 id="release-title" tabindex="-1">v${version} · 窄横屏交互与仪表性能修复</h2>
-      <p id="release-copy">窄横屏更容易操纵，展开面板后仍可暂停；断电仪表停止无效刷新。</p>
+      <h2 id="release-title" tabindex="-1">v${version} · 精细操纵与三轴配平</h2>
+      <p id="release-copy">用 Shift 小幅修正姿态，持续微调三轴配平，手机保持推杆也能切换精细操纵。</p>
+      <ul class="release-list">
+        <li><strong>可调精细操纵</strong>按住任一 Shift 临时启用，或点按顶部按钮保持；三轴输入幅度可设为 10%–80%，默认 40%。油门、刹车、配平和手动接管保持原规则，Shift 本身不退出自动驾驶。</li>
+        <li><strong>完整三轴配平键</strong>[ / ] 低头 / 抬头，, / . 左右滚转，; / &#39; 左右方向舵；按住按所选速率连续微调，相反键抵消，松开保持，T 三轴归零。系统面板和操作指南同步键位。</li>
+        <li><strong>双指操作与布局</strong>保持摇杆时，第二根手指按下精细按钮即可切换；暂停保留选择，重新起飞或恢复默认关闭。平板宽度顶部按钮保持单行；1.36.1 公告原文移入历史。</li>
+      </ul>
+      <details class="release-history"><summary>历史公告 <span>97 个版本</span></summary>
+      <article><h3>v1.36.1 · 窄横屏交互与仪表性能修复</h3>
+      <p>窄横屏更容易操纵，展开面板后仍可暂停；断电仪表停止无效刷新。</p>
       <ul class="release-list">
         <li><strong>窄横屏控件修复</strong>480–559 px 窄横屏紧凑排列油门、快捷按钮、导航、方向舵与制动，避免顶部按钮被盖住，保留驾驶舱观察操作。</li>
         <li><strong>面板避开顶部操作</strong>480–700 px 短横屏的镜头、系统和暂停面板下移，顶部设置与返回基地保持可点击，面板内容可滚动查看。</li>
         <li><strong>断电仪表按需刷新</strong>关闭航电或母线断电后，黑屏不再持续重绘与上传纹理；恢复供电立即刷新，再按所选频率更新。操纵、物理与声音设置保持原规则；1.36.0 公告原文移入历史。</li>
       </ul>
-      <details class="release-history"><summary>历史公告 <span>96 个版本</span></summary>
+      </article>
       <article><h3>v1.36.0 · 三轴键位与操纵响应优化</h3>
       <p>选择熟悉的滚转与偏航键位，调节按键渐进和回中，让小幅修正更容易。</p>
       <ul class="release-list">

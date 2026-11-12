@@ -4,6 +4,7 @@ const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const axis = value => Number.isFinite(value) ? clamp(value, -1, 1) : 0;
 const editable = flight => ['ready', 'running', 'paused'].includes(flight.status);
 const radians = Math.PI / 180;
+const trimInputs = { pitch: 'trimPitch', roll: 'trimRoll', yaw: 'trimYaw' };
 export const SYSTEM_DEFAULTS = Object.freeze({ trimAuthority: .2, trimRate: .08, apResponse: 1, bankLimit: 22, climbRate: 5, overrideThreshold: .2, displayBrightness: 1, speedResponse: 1, reversePower: 1, autoBrakeStrength: 1 });
 export const SYSTEM_LIMITS = Object.freeze({ trimAuthority: [.05, .4], trimRate: [.01, .3], apResponse: [.25, 2], bankLimit: [5, 35], climbRate: [1, 15], overrideThreshold: [.05, .6], displayBrightness: [.2, 1.2], speedResponse: [.25, 2], reversePower: [.25, 1.5], autoBrakeStrength: [.25, 1.5] });
 export const AUTOBRAKE_MODES = Object.freeze(['off', 'low', 'high']);
@@ -194,8 +195,10 @@ export function setAutopilotTarget(flight, key, value) {
 export function updateAircraftSystems(flight, input, dt, stall) {
   updateAircraftElectrical(flight, dt);
   const { trim, settings, autopilot, controls } = flight.systems;
-  trim.pitch = axis(trim.pitch + axis(input.trimPitch) * settings.trimRate * dt);
-  for (const key in trim) controls[key] = axis(axis(input[key]) + trim[key] * settings.trimAuthority);
+  for (const key in trim) {
+    trim[key] = axis(trim[key] + axis(input[trimInputs[key]]) * settings.trimRate * dt);
+    controls[key] = axis(axis(input[key]) + trim[key] * settings.trimAuthority);
+  }
   controls.brake = !!input.brake || flight.systems.parkingBrake;
   updatePowerSystems(flight, input, dt);
   if (autopilot.mode === 'off') return controls;
